@@ -6,10 +6,10 @@ class CustomUserAdmin(ModelAdmin):
     list_display = ('email', 'first_name', 'last_name', 'is_staff', 'dept', 'roll_no', 'year')
     search_fields = ('email', 'first_name', 'last_name', 'roll_no')
     ordering = ('email',)
-    list_filter = ('is_staff', 'is_superuser', 'dept', 'year', 'student_type', 'degree_type')
+    list_filter = ('is_staff', 'is_superuser', 'dept', 'year', 'student_type', 'degree_type', 'user_type')
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'dept', 'roll_no', 'year', 'phone_number', 'parent_phone_number', 'gender')}),
+        (None, {'fields': ('email', 'password', 'user_type')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'dept', 'roll_no', 'year', 'phone_number', 'gender')}),
         ('Academic info', {'fields': ('student_type', 'degree_type')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),

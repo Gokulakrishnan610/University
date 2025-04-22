@@ -53,6 +53,10 @@ class User(AbstractUser):
         ('UG', 'UG'),
         ('PG', 'PG')
     ]
+    USER_ROLE = [
+        ('teacher', 'Teacher'),
+        ('student', 'Student'),
+    ]
 
     username = None
 
@@ -63,11 +67,11 @@ class User(AbstractUser):
     dept = models.CharField('Department', max_length=50)
     roll_no = models.CharField('Roll No', max_length=50)
     phone_number = models.CharField('Phone Number', max_length=50)
-    parent_phone_number = models.CharField('Parent Ph. No.', max_length=20)
     gender = models.CharField('Gender', max_length=10, blank=False, choices=GENDER_CHOICES)
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     student_type = models.CharField(default='Mgmt', max_length=10, choices=STUDENT_TYPE)
     degree_type = models.CharField(default='UG', max_length=10, choices=DEGREE_TYPE)
+    user_type = models.CharField(default='student', max_length=200, choices=USER_ROLE, blank=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
@@ -78,7 +82,7 @@ class User(AbstractUser):
         verbose_name='groups',
         blank=True,
         help_text='The groups this user belongs to.',
-        related_name='custom_user_set',  # Changed from default
+        related_name='custom_user_set',
         related_query_name='user',
     )
     user_permissions = models.ManyToManyField(
@@ -86,7 +90,7 @@ class User(AbstractUser):
         verbose_name='user permissions',
         blank=True,
         help_text='Specific permissions for this user.',
-        related_name='custom_user_set',  # Changed from default
+        related_name='custom_user_set',
         related_query_name='user',
     )
 

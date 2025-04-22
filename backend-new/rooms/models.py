@@ -23,4 +23,4 @@ class Room(models.Model):
     room_max_cap = models.IntegerField("Max. Cap", default=0, blank=False)
     has_projector = models.BooleanField("Has Projector?", default=False)
     has_ac = models.BooleanField("Has AC?",default=False)
-    tech_level = models.CharField("Tech Level", default='null', blank=True)
+    tech_level = models.CharField("Tech Level", default='null', blank=True, choices=TECH_LEVEL)
