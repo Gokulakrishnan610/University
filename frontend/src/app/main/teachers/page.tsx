@@ -136,8 +136,7 @@ export default function TeacherManagement() {
                     <TableRow 
                       key={teacher.id} 
                       className="cursor-pointer hover:bg-muted/50 transition-colors" 
-                      onClick={() => navigate(`/teachers/${teacher.id}`)}
-                    >
+                      onClick={() => navigate(`/teachers/${teacher.id}`)}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
                           <Avatar className="h-9 w-9 border border-primary/30">

@@ -49,7 +49,7 @@ const TEACHER_ROLES = [
 
 const formSchema = z.object({
   teacher: z.number({ required_error: 'User is required' }),
-  dept: z.number({ required_error: 'Department is required' }),
+  dept: z.number().nullable().optional(),
   staff_code: z.string().optional(),
   teacher_role: z.string({ required_error: 'Role is required' }),
   teacher_specialisation: z.string().optional(),
@@ -69,6 +69,24 @@ export default function TeacherForm({ teacher, mode, onClose, onSuccess, disable
   const { data: currentUser } = useCurrentUser();
   
   const departments = departmentsData || [];
+  const [defaultDeptId, setDefaultDeptId] = useState<number | null>(null);
+  const [defaultDeptName, setDefaultDeptName] = useState<string>('');
+  
+  // Get the HOD's department from the current user
+  useEffect(() => {
+    if (currentUser && mode === 'create') {
+      // Access the teacher and department information directly
+      if (currentUser.teacher?.teacher_role === 'HOD' && currentUser.teacher?.department) {
+        setDefaultDeptId(currentUser.teacher.department.id);
+        setDefaultDeptName(currentUser.teacher.department.dept_name);
+        
+        // Set the form value after the form is initialized
+        if (form) {
+          form.setValue('dept', currentUser.teacher.department.id);
+        }
+      }
+    }
+  }, [currentUser, mode]);
   
   const { mutate: createTeacher, isPending: isCreating } = useCreateTeacher(onSuccess);
   const { mutate: updateTeacher, isPending: isUpdating } = useUpdateTeacher(
@@ -80,7 +98,7 @@ export default function TeacherForm({ teacher, mode, onClose, onSuccess, disable
     resolver: zodResolver(formSchema),
     defaultValues: {
       teacher: teacher?.teacher?.id || (currentUser?.user?.id || 0),
-      dept: teacher?.dept?.id || 0,
+      dept: teacher?.dept?.id || defaultDeptId || null,
       staff_code: teacher?.staff_code || '',
       teacher_role: teacher?.teacher_role || 'Professor',
       teacher_specialisation: teacher?.teacher_specialisation || '',
@@ -88,26 +106,41 @@ export default function TeacherForm({ teacher, mode, onClose, onSuccess, disable
     },
   });
   
+  // Update the department field when HOD department is found or mode changes
   useEffect(() => {
     if (mode === 'update' && teacher) {
       form.reset({
         teacher: teacher.teacher.id,
-        dept: teacher.dept?.id || 0,
+        dept: teacher.dept?.id || null,
         staff_code: teacher.staff_code || '',
         teacher_role: teacher.teacher_role || 'Professor',
         teacher_specialisation: teacher.teacher_specialisation || '',
         teacher_working_hours: teacher.teacher_working_hours || 21,
       });
+    } else if (mode === 'create' && defaultDeptId) {
+      // If creating a new teacher and current user is an HOD, use their department
+      form.setValue('dept', defaultDeptId);
     }
-  }, [form, mode, teacher]);
+  }, [form, mode, teacher, defaultDeptId]);
   
   const isPending = isCreating || isUpdating;
   
   const onSubmit = (values: z.infer<typeof formSchema>) => {
+    const submissionData = {...values};
+    
+    if (mode === 'update' && disableDepartmentEdit) {
+      submissionData.dept = teacher?.dept?.id || null;
+    }
+    
+    // For new teachers, use the HOD's department if none is selected
+    if (mode === 'create' && !submissionData.dept && defaultDeptId) {
+      submissionData.dept = defaultDeptId;
+    }
+    
     if (mode === 'create') {
-      createTeacher(values as CreateTeacherRequest);
+      createTeacher(submissionData as CreateTeacherRequest);
     } else if (mode === 'update') {
-      updateTeacher(values);
+      updateTeacher(submissionData);
     }
   };
   
@@ -189,8 +222,9 @@ export default function TeacherForm({ teacher, mode, onClose, onSuccess, disable
                       <FormItem>
                         <FormLabel>Department</FormLabel>
                         <Select 
-                          onValueChange={(value) => field.onChange(parseInt(value))} 
+                          onValueChange={(value) => field.onChange(value ? parseInt(value) : null)} 
                           defaultValue={field.value ? String(field.value) : undefined}
+                          value={field.value ? String(field.value) : undefined}
                         >
                           <FormControl>
                             <SelectTrigger className="focus-visible:ring-primary">
@@ -205,6 +239,11 @@ export default function TeacherForm({ teacher, mode, onClose, onSuccess, disable
                             ))}
                           </SelectContent>
                         </Select>
+                        {mode === 'create' && defaultDeptId && defaultDeptName && (
+                          <FormDescription>
+                            New teachers will be added to your department ({defaultDeptName}) by default
+                          </FormDescription>
+                        )}
                         <FormMessage />
                       </FormItem>
                     )}
