@@ -1,8 +1,30 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
+from import_export.admin import ImportExportModelAdmin
+from import_export import resources
 from .models import User, BookingOTP, ForgetPassword, BlockedStudents
 
-class CustomUserAdmin(ModelAdmin):
+class UserResource(resources.ModelResource):
+    class Meta:
+        model = User
+        fields = (
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'is_staff',
+            'is_superuser',
+            'user_type',
+            'gender',
+            'phone_number',
+            'last_login',
+            'date_joined',
+        )
+        export_order = fields
+
+class CustomUserAdmin(ImportExportModelAdmin):
+    resource_class = UserResource  
+
     list_display = ('email', 'first_name', 'last_name', 'is_staff')
     search_fields = ('email', 'first_name', 'last_name')
     ordering = ('email',)
@@ -20,17 +42,23 @@ class CustomUserAdmin(ModelAdmin):
             'fields': ('email', 'password1', 'password2'),
         }),
     )
-
-class ForgetPasswordAdmin(admin.ModelAdmin):
+class ForgetPasswordAdmin(ImportExportModelAdmin):
     list_display = ('user', 'code')
     search_fields = ('user__email', 'code')
 
-class BlockedStudentsAdmin(admin.ModelAdmin):
+class BlockedStudentsResource(resources.ModelResource):
+    class Meta:
+        model = BlockedStudents
+        fields = ('id', 'email', 'name', 'dept', 'year')
+        export_order = fields
+
+class BlockedStudentsAdmin(ImportExportModelAdmin):
+    resource_class = BlockedStudentsResource
+
     list_display = ('email', 'name', 'dept', 'year')
     search_fields = ('email', 'name', 'dept')
     list_filter = ('dept', 'year')
 
 admin.site.register(User, CustomUserAdmin)
-# admin.site.register(BookingOTP, BookingOTPAdmin)  # if you need it later
 admin.site.register(ForgetPassword, ForgetPasswordAdmin)
 admin.site.register(BlockedStudents, BlockedStudentsAdmin)
