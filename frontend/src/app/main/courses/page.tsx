@@ -54,7 +54,7 @@ export default function CourseManagement() {
   };
 
   return (
-    <div className="container py-10">
+    <div className="container py-6">
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>

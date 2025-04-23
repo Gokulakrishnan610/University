@@ -61,27 +61,17 @@ export interface ProfileResponse {
 }
 
 // Login user
-export const useLogin = (onSuccess?: () => void) => {
+export const useLogin = (onSuccess?: (result: any) => void) => {
   return useMutationData(
     ['login'],
     async (data: LoginRequest) => {
       try {
         const response = await api.post('/api/auth/login/', data);
         
-        // Store token in localStorage (as fallback)
-        if (response.data.token) {
-          localStorage.setItem('authToken', response.data.token);
-        }
-
-        // Store user info (as fallback)
-        if (response.data.user) {
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-        }
-        
         return {
           status: response.status,
           data: response.data.message || 'Login successful',
-          user: response.data.user,
+          user_type: response.data.user_type,
           code: response.data.code
         };
       } catch (error) {
@@ -100,48 +90,20 @@ export const useLogin = (onSuccess?: () => void) => {
   );
 };
 
-// Get current user with robust fallback mechanisms
+// Get current user using HTTP cookies
 export const useCurrentUser = () => {
   return useQueryData<ProfileResponse | null>(
     ['currentUser'],
     async () => {
       try {
-        // First try getting user from the server using cookies
         const response = await api.get('/api/auth/profile/');
         
         if (response.data && response.data.data) {
-          // Update the localStorage with the latest user data
-          localStorage.setItem('user', JSON.stringify(response.data.data));
           return response.data.data as ProfileResponse;
         }
         throw new Error('Invalid server response');
       } catch (error) {
-        // If server request fails, try getting from localStorage as fallback
-        if (axios.isAxiosError(error)) {
-          console.log('Server profile request failed:', error.message);
-          
-          const storedUser = localStorage.getItem('user');
-          if (storedUser) {
-            try {
-              const user = JSON.parse(storedUser);
-              
-              // Verify token by making a lightweight server call
-              try {
-                await api.get('/api/auth/verify-token/');
-                return user as ProfileResponse;
-              } catch (tokenError) {
-                // Token is invalid, clear localStorage
-                localStorage.removeItem('authToken');
-                localStorage.removeItem('user');
-                return null;
-              }
-            } catch (parseError) {
-              // Invalid JSON in localStorage
-              localStorage.removeItem('user');
-              return null;
-            }
-          }
-        }
+        // If server request fails, user is not authenticated
         return null;
       }
     },
@@ -149,7 +111,17 @@ export const useCurrentUser = () => {
   );
 };
 
-// Logout user - clears both cookies and localStorage
+// Clear auth cookies
+export const clearAuthCookies = async () => {
+  try {
+    // Make a request to the logout endpoint to clear server-side cookies
+    await api.post('/api/auth/logout/');
+  } catch (error) {
+    console.error('Failed to clear auth cookies:', error);
+  }
+};
+
+// Logout user - clears cookies
 export const useLogout = (onSuccess?: () => void) => {
   return useMutationData(
     ['logout'],
@@ -158,19 +130,11 @@ export const useLogout = (onSuccess?: () => void) => {
         // Send logout request to clear server-side cookies
         const response = await api.post('/api/auth/logout/');
         
-        // Clear client-side storage
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        
         return {
           status: response.status,
           data: response.data.message || 'Logout successful',
         };
       } catch (error) {
-        // Even if server logout fails, clear local storage
-        localStorage.removeItem('authToken');
-        localStorage.removeItem('user');
-        
         if (axios.isAxiosError(error) && error.response) {
           return {
             status: error.response.status,

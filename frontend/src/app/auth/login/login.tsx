@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLogin } from "@/action";
+import { useLogin, clearAuthCookies } from "@/action";
 import { toast } from "sonner";
 
 // Define the login schema with Zod
@@ -51,8 +51,44 @@ export default function Login() {
   });
 
   // Use the login mutation
-  const { mutate, isPending } = useLogin(() => {
-    navigate("/dashboard");
+  const { mutate, isPending } = useLogin((result) => {
+    console.log(result)
+    if (result?.status === 200) {
+      // Check if user is a HOD
+      if (result.user_type === 'HOD') {
+        toast.success("Login successful! Welcome back.");
+        navigate("/dashboard");
+      } else {
+        // Not a HOD, clear cookies and show error
+        clearAuthCookies().then(() => {
+          toast.error("Access denied. Only department heads can login to this system.");
+        });
+      }
+    } else {
+      // Handle specific error cases based on error code
+      const errorMessage = typeof result?.data === 'string' ? result.data : 'Login failed';
+      const errorCode = result?.code;
+
+      switch (errorCode) {
+        case 'missing_credentials':
+          toast.error("Please enter both email and password.");
+          break;
+        case 'account_inactive':
+          toast.error("Your account is not active. Please verify your email first.");
+          break;
+        case 'invalid_password':
+          toast.error("Incorrect password. Please try again.");
+          break;
+        case 'user_not_found':
+          toast.error("No account found with this email. Please sign up first.");
+          break;
+        case 'server_error':
+          toast.error("An unexpected error occurred. Please try again later.");
+          break;
+        default:
+          toast.error(errorMessage);
+      }
+    }
   });
 
   const onSubmit = async (data: LoginFormValues) => {
@@ -64,56 +100,6 @@ export default function Login() {
       };
       
       mutate(emailData, {
-        onSuccess: (result) => {
-          if (result?.status === 200) {
-            // Check if user is a HOD
-            if (result.user && result.user.user_type === 'HOD') {
-              // Store user data in localStorage
-              const userData = {
-                id: result.user.id,
-                first_name: result.user.first_name,
-                last_name: result.user.last_name,
-                email: result.user.email,
-                is_verified: result.user.is_verified,
-                user_type: result.user.user_type,
-                department: result.user.department
-              };
-              localStorage.setItem('user', JSON.stringify(userData));
-              toast.success("Login successful! Welcome back.");
-              navigate("/dashboard");
-            } else {
-              // Not a HOD, show error
-              toast.error("Access denied. Only department heads can login to this system.");
-              // Clear any potentially stored data
-              localStorage.removeItem('authToken');
-              localStorage.removeItem('user');
-            }
-          } else {
-            // Handle specific error cases based on error code
-            const errorMessage = typeof result?.data === 'string' ? result.data : 'Login failed';
-            const errorCode = result?.code;
-
-            switch (errorCode) {
-              case 'missing_credentials':
-                toast.error("Please enter both email and password.");
-                break;
-              case 'account_inactive':
-                toast.error("Your account is not active. Please verify your email first.");
-                break;
-              case 'invalid_password':
-                toast.error("Incorrect password. Please try again.");
-                break;
-              case 'user_not_found':
-                toast.error("No account found with this email. Please sign up first.");
-                break;
-              case 'server_error':
-                toast.error("An unexpected error occurred. Please try again later.");
-                break;
-              default:
-                toast.error(errorMessage);
-            }
-          }
-        },
         onError: (error: any) => {
           const errorMessage = error?.response?.data?.detail || error?.message;
           const errorCode = error?.response?.data?.code;

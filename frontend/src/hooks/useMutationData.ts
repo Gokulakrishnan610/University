@@ -11,20 +11,21 @@ export const useMutationData = (
     mutationKey: MutationKey,
     mutationFn: MutationFunction<any, any>,
     queryKey?: string | string[] | string[][],
-    onSuccess?: () => void
+    onSuccess?: (data?: any) => void
 ) => {
     const client = useQueryClient()
     const { mutate, isPending } = useMutation({
         mutationKey,
         mutationFn,
         onSuccess(data) {
-            if (onSuccess) onSuccess()
-            return toast(
-                    data?.status === 200 || data?.status === 201 ? 'Success' : 'Error',
-                    {
-                        description: data?.data,
-                    }
-            )
+            if (onSuccess) onSuccess(data)
+            return
+            // return toast(
+            //         data?.status === 200 || data?.status === 201 ? 'Success' : 'Error',
+            //         {
+            //             description: data?.data,
+            //         }
+            // )
         },
         onSettled: async () => {
             if (typeof queryKey === 'string') {

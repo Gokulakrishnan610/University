@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router";
+import { Link, useLocation, useNavigate } from "react-router";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -10,28 +10,29 @@ import {
   GraduationCap, 
   Building,
   Users,
-  X 
+  X,
+  LogOut
 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useCurrentUser, useLogout } from "@/action";
+import { toast } from "sonner";
 
 interface SidebarProps {
   isOpen: boolean;
   onClose: () => void;
-  toggleSidebar: () => void
 }
 
-export function Sidebar({ isOpen, onClose, toggleSidebar }: SidebarProps) {
+export function Sidebar({ isOpen, onClose }: SidebarProps) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { data: profile } = useCurrentUser();
+  const { mutate: logout } = useLogout();
   
   const routes = [
     {
       title: "Dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
       href: "/dashboard",
-    },
-    {
-      title: "Profile",
-      icon: <User className="h-5 w-5" />,
-      href: "/profile",
     },
     {
       title: "Courses",
@@ -44,14 +45,14 @@ export function Sidebar({ isOpen, onClose, toggleSidebar }: SidebarProps) {
       href: "/teachers",
     },
     {
-      title: "Departments",
-      icon: <Building className="h-5 w-5" />,
-      href: "/departments",
-    },
-    {
       title: "Students",
       icon: <Users className="h-5 w-5" />,
       href: "/students",
+    },
+    {
+      title: "Profile",
+      icon: <User className="h-5 w-5" />,
+      href: "/profile",
     },
     {
       title: "Settings",
@@ -60,8 +61,28 @@ export function Sidebar({ isOpen, onClose, toggleSidebar }: SidebarProps) {
     },
   ];
 
+  const getInitials = (firstName: string, lastName: string) => {
+    if (!firstName && !lastName) return "U";
+    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+  };
+
+  const handleLogout = () => {
+    logout(undefined, {
+      onSuccess: () => {
+        toast.success("Logged out successfully");
+        navigate("/auth/login");
+      },
+      onError: (error: Error) => {
+        toast.error("Logout failed", {
+          description: error.message
+        });
+      }
+    });
+  };
+
   return (
     <>
+      {/* Mobile overlay */}
       {isOpen && (
         <div 
           className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
@@ -85,7 +106,8 @@ export function Sidebar({ isOpen, onClose, toggleSidebar }: SidebarProps) {
           </Button>
         </div>
         
-        <ScrollArea className="h-[calc(100vh-64px)]">
+        <div className="h-[calc(100vh-64px)] flex flex-col justify-between">
+        
           <div className="px-3 py-4">
             <div className="space-y-1">
               {routes.map((route) => (
@@ -109,7 +131,45 @@ export function Sidebar({ isOpen, onClose, toggleSidebar }: SidebarProps) {
               ))}
             </div>
           </div>
-        </ScrollArea>
+          {profile && profile.user && (
+            <div className="p-4 border-t">
+              <div className="flex items-center gap-3 mb-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarImage src="" alt="User Avatar" />
+                  <AvatarFallback>
+                    {getInitials(profile.user.first_name, profile.user.last_name)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <p className="text-sm font-medium leading-none">
+                    {`${profile.user.first_name} ${profile.user.last_name}`}
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    {profile.user.email}
+                  </p>
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground capitalize mb-3">
+                <p>{profile.user.user_type}</p>
+                {profile.student && profile.student.department && (
+                  <p>{profile.student.department.dept_name || "No Department"}</p>
+                )}
+                {profile.teacher && profile.teacher.department && (
+                  <p>{profile.teacher.department.dept_name || "No Department"}</p>
+                )}
+              </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="w-full flex items-center gap-2"
+                onClick={handleLogout}
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
     </>
   );

@@ -12,10 +12,10 @@ const Layout = () => {
     
     return (
         <div className="flex min-h-screen bg-background">
-            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} toggleSidebar={toggleSidebar} />
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             
             <div className="w-full px-4">
-                <Header toggleSidebar={toggleSidebar} />
+                {/* <Header toggleSidebar={toggleSidebar} /> */}
                 <main className="flex-1">
                     <Outlet />
                 </main>

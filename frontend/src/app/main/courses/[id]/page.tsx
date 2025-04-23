@@ -55,7 +55,7 @@ export default function CourseDetails() {
   
   if (isLoading && !course) {
     return (
-      <div className="container py-10">
+      <div className="">
         <div className="mb-6">
           <Button variant="ghost" onClick={() => navigate('/courses')}>
             <ChevronLeft className="mr-2 h-4 w-4" /> Back to Courses
@@ -77,7 +77,7 @@ export default function CourseDetails() {
   }
   
   return (
-    <div className="container py-10">
+    <div className="container py-6">
       <div className="mb-6">
         <Button variant="ghost" onClick={() => navigate('/courses')}>
           <ChevronLeft className="mr-2 h-4 w-4" /> Back to Courses
