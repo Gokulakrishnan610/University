@@ -4,10 +4,26 @@ import axios from "axios";
 import api from "./api";
 
 // Types
+export interface UserDetails {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  gender: string;
+}
+
+export interface DepartmentDetails {
+  id: number;
+  dept_name: string;
+  date_established: string;
+  contact_info: string;
+}
+
 export interface Teacher {
   id: number;
-  teacher: number; // User ID
-  dept: number;
+  teacher: UserDetails; // User details
+  dept: DepartmentDetails; // Department details
   staff_code: string;
   teacher_role: string;
   teacher_specialisation: string;

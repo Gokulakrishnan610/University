@@ -70,7 +70,7 @@ export function Header({ toggleSidebar}: HeaderProps) {
                       {profile.user.email}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground mt-1 capitalize">
-                      {profile.user.user_type}
+                      {profile.user.user_type ==='student' ? 'Student': profile.teacher?.teacher_role}
                     </p>
                     {profile.student && (
                       <p className="text-xs leading-none text-muted-foreground mt-1">

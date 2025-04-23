@@ -1,15 +1,27 @@
-import { Sidebar } from "@/components/global/sidebar"
-import { Outlet } from "react-router"
-import { Header } from "@/components/global/info-bar"
+import { useState } from "react";
+import { Sidebar } from "@/components/global/sidebar";
+import { Outlet } from "react-router";
+import { Header } from "@/components/global/info-bar";
 
 const Layout = () => {
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+    
+    const toggleSidebar = () => {
+        setSidebarOpen(!sidebarOpen);
+    };
+    
     return (
-        <div className="w-full h-full">
-            <Header toggleSidebar={() => {}}/>
-            <Outlet/>
-            {/* <Sidebar isOpen={false} onClose={() => {}} /> */}
+        <div className="flex min-h-screen bg-background">
+            <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} toggleSidebar={toggleSidebar} />
+            
+            <div className="w-full">
+                <Header toggleSidebar={toggleSidebar} />
+                <main className="flex-1">
+                    <Outlet />
+                </main>
+            </div>
         </div>
-    )
-}
+    );
+};
 
-export default Layout
+export default Layout;
