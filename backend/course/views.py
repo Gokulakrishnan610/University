@@ -12,9 +12,10 @@ class CourseListCreateView(generics.ListCreateAPIView):
 
     def get_queryset(self):
         user = self.request.user
-        
         try:
+            print("Uawe", user)
             hod_dept = Department.objects.get(hod=user)
+            print("HOD Dept", hod_dept)
             return Course.objects.filter(department=hod_dept)
         except Department.DoesNotExist:
             return Course.objects.none()

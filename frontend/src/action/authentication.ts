@@ -11,6 +11,12 @@ export interface LoginRequest {
 
 export interface ForgotPasswordRequest {
   email: string;
+  password: string;
+}
+
+export interface VerifyOtpRequest {
+  email: string;
+  token: string;
 }
 
 export interface User {
@@ -167,28 +173,56 @@ export const useGetProfile = () => {
   );
 };
 
-// Forgot password
-export const useForgotPassword = (onSuccess?: () => void) => {
+// Request password reset
+export const useRequestPasswordReset = (onSuccess?: () => void) => {
   return useMutationData(
-    ['forgotPassword'],
+    ['requestPasswordReset'],
     async (data: ForgotPasswordRequest) => {
       try {
         const response = await api.post('/api/auth/forgot_password/', data);
         return {
           status: response.status,
-          data: response.data.message || 'Password reset email sent',
+          data: response.data.detail || 'Password reset email sent',
+          code: response.data.code
         };
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
           return {
             status: error.response.status,
-            data: error.response.data.message || 'Failed to send reset email',
+            data: error.response.data.detail || 'Failed to send reset email',
+            code: error.response.data.code
           };
         }
         throw error;
       }
     },
     undefined,
+    onSuccess
+  );
+};
+
+// Verify OTP and reset password
+export const useVerifyOtp = (onSuccess?: () => void) => {
+  return useMutationData(
+    ['verifyOtp'],
+    async (data: VerifyOtpRequest) => {
+      try {
+        const response = await api.get(`/api/auth/forgot_password/?email=${data.email}&token=${data.token}`);
+        return {
+          status: response.status,
+          data: response.data.detail || 'Password reset successful',
+        };
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          return {
+            status: error.response.status,
+            data: error.response.data.detail || 'Invalid verification code',
+          };
+        }
+        throw error;
+      }
+    },
+    'currentUser',
     onSuccess
   );
 }; 

@@ -8,7 +8,6 @@ import {
   User, 
   BookOpen, 
   GraduationCap, 
-  Building,
   Users,
   X,
   LogOut
@@ -93,7 +92,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Sidebar */}
       <div
         className={cn(
-          "inset-y-0 left-0 z-50 w-72 border-r bg-background transition-transform duration-300 md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-72 h-full border-r bg-background transition-transform duration-300 md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -106,70 +105,69 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
           </Button>
         </div>
         
-        <div className="h-[calc(100vh-64px)] flex flex-col justify-between">
-        
-          <div className="px-3 py-4">
-            <div className="space-y-1">
-              {routes.map((route) => (
-                <Link
-                  key={route.href}
-                  to={route.href}
-                  onClick={() => {
-                    if (window.innerWidth < 768) {
-                      onClose();
-                    }
-                  }}
-                >
-                  <Button
-                    variant={location.pathname === route.href || location.pathname.startsWith(route.href + '/') ? "secondary" : "ghost"}
-                    className="w-full justify-start"
+          <div className="flex flex-col h-[calc(100vh-70px)] justify-between">
+            <div className="px-3 py-4">
+              <div className="space-y-1">
+                {routes.map((route) => (
+                  <Link
+                    key={route.href}
+                    to={route.href}
+                    onClick={() => {
+                      if (window.innerWidth < 768) {
+                        onClose();
+                      }
+                    }}
                   >
-                    {route.icon}
-                    <span className="ml-2">{route.title}</span>
-                  </Button>
-                </Link>
-              ))}
+                    <Button
+                      variant={location.pathname === route.href || location.pathname.startsWith(route.href + '/') ? "secondary" : "ghost"}
+                      className="w-full justify-start"
+                    >
+                      {route.icon}
+                      <span className="ml-2">{route.title}</span>
+                    </Button>
+                  </Link>
+                ))}
+              </div>
             </div>
-          </div>
-          {profile && profile.user && (
-            <div className="p-4 border-t">
-              <div className="flex items-center gap-3 mb-3">
-                <Avatar className="h-10 w-10">
-                  <AvatarImage src="" alt="User Avatar" />
-                  <AvatarFallback>
-                    {getInitials(profile.user.first_name, profile.user.last_name)}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <p className="text-sm font-medium leading-none">
-                    {`${profile.user.first_name} ${profile.user.last_name}`}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {profile.user.email}
-                  </p>
+            {profile && profile.user && (
+              <div className="p-4 border-t mt-auto">
+                <div className="flex items-center gap-3 mb-3">
+                  <Avatar className="h-10 w-10">
+                    <AvatarImage src="" alt="User Avatar" />
+                    <AvatarFallback>
+                      {getInitials(profile.user.first_name, profile.user.last_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="flex flex-col">
+                    <p className="text-sm font-medium leading-none">
+                      {`${profile.user.first_name} ${profile.user.last_name}`}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {profile.user.email}
+                    </p>
+                  </div>
                 </div>
+                <div className="text-xs text-muted-foreground capitalize mb-3">
+                  <p>{profile.user.user_type}</p>
+                  {profile.student && profile.student.department && (
+                    <p>{profile.student.department.dept_name || "No Department"}</p>
+                  )}
+                  {profile.teacher && profile.teacher.department && (
+                    <p>{profile.teacher.department.dept_name || "No Department"}</p>
+                  )}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  className="w-full flex items-center gap-2"
+                  onClick={handleLogout}
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign Out
+                </Button>
               </div>
-              <div className="text-xs text-muted-foreground capitalize mb-3">
-                <p>{profile.user.user_type}</p>
-                {profile.student && profile.student.department && (
-                  <p>{profile.student.department.dept_name || "No Department"}</p>
-                )}
-                {profile.teacher && profile.teacher.department && (
-                  <p>{profile.teacher.department.dept_name || "No Department"}</p>
-                )}
-              </div>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                className="w-full flex items-center gap-2"
-                onClick={handleLogout}
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </Button>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
       </div>
     </>
   );

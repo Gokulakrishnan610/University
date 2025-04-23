@@ -7,6 +7,7 @@ import Dashboard from './app/main/page'
 import AuthLayout from './app/auth/layout'
 import { ProtectedRoute, PublicOnlyRoute } from './components/auth/protected-route'
 import DashboardLayout from './app/main/layout'
+import ForgotPassword from './app/auth/forgot-password/page'
 
 function App() {
   return (
@@ -20,6 +21,11 @@ function App() {
           <Route path="login" element={
             <PublicOnlyRoute>
               <Login />
+            </PublicOnlyRoute>
+          } />
+            <Route path="forgot-password" element={
+            <PublicOnlyRoute>
+              <ForgotPassword />
             </PublicOnlyRoute>
           } />
         </Route>

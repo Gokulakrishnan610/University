@@ -14,9 +14,9 @@ const Layout = () => {
         <div className="flex min-h-screen bg-background">
             <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
             
-            <div className="w-full px-4">
+            <div className="w-full pl-0 md:pl-72 transition-all duration-300">
                 {/* <Header toggleSidebar={toggleSidebar} /> */}
-                <main className="flex-1">
+                <main className="p-4">
                     <Outlet />
                 </main>
             </div>

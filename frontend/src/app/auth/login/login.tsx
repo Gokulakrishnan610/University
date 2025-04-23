@@ -50,22 +50,17 @@ export default function Login() {
     resolver: zodResolver(loginSchema)
   });
 
-  // Use the login mutation
   const { mutate, isPending } = useLogin((result) => {
-    console.log(result)
     if (result?.status === 200) {
-      // Check if user is a HOD
       if (result.user_type === 'HOD') {
         toast.success("Login successful! Welcome back.");
         navigate("/dashboard");
       } else {
-        // Not a HOD, clear cookies and show error
         clearAuthCookies().then(() => {
           toast.error("Access denied. Only department heads can login to this system.");
         });
       }
     } else {
-      // Handle specific error cases based on error code
       const errorMessage = typeof result?.data === 'string' ? result.data : 'Login failed';
       const errorCode = result?.code;
 
@@ -93,7 +88,6 @@ export default function Login() {
 
   const onSubmit = async (data: LoginFormValues) => {
     try {
-      // Add the domain to the roll number before sending
       const emailData = {
         ...data,
         email: `${data.email}@rajalakshmi.edu.in`
