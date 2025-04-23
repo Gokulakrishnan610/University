@@ -18,6 +18,50 @@ class DepartmentSerializerForProfile(serializers.ModelSerializer):
         fields = ['id', 'dept_name', 'date_established', 'contact_info']
 
 # Create your views here.
+class CreateNewUserAPIView(generics.CreateAPIView):
+    """
+    API View to create a new user.
+    Only accessible to authenticated users (e.g., admin or staff).
+    """
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        """
+        Handle POST request to create a new user.
+        Sets a default password if none is provided.
+        """
+        # Add a default password to the request data if not provided
+        request_data = request.data.copy()  # Make a mutable copy of request data
+        if 'password' not in request_data:
+            request_data['password'] = 'Changeme@123'  # Default password
+
+        serializer = self.get_serializer(data=request_data)
+        if serializer.is_valid():
+            # Save the validated data to create a new user
+            user = serializer.save()
+
+            # Optionally, you can send a verification email here
+            # user.send_verification_mail()
+
+            return Response({
+                "status": "success",
+                "message": "User created successfully.",
+                "data": {
+                    "email": user.email,
+                    "first_name": user.first_name,
+                    "last_name": user.last_name,
+                    "phone_number": user.phone_number,
+                    "gender": user.gender,
+                }
+            }, status=status.HTTP_201_CREATED)
+
+        # Return validation errors if the data is invalid
+        return Response({
+            "status": "error",
+            "errors": serializer.errors
+        }, status=status.HTTP_400_BAD_REQUEST)
+
 class LoginAPIView(generics.CreateAPIView):
     serializer_class = LoginSerializer
     permission_classes = (permissions.AllowAny,)

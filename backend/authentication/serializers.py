@@ -8,6 +8,7 @@ class UserSerializer(serializers.ModelSerializer):
     # year = serializers.CharField(required=True)
     # dept = serializers.CharField(required=True)
     gender = serializers.CharField(required=True)
+    
     class Meta:
         model = User
         fields = ('email', 'first_name', 'last_name', 'phone_number', 'gender')
