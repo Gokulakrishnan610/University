@@ -3,9 +3,20 @@ from django.conf import settings
 from django.contrib.auth import authenticate
 from rest_framework.views import APIView
 from rest_framework import generics, permissions, status
+from rest_framework.response import Response
+from rest_framework import serializers
 from .models import *
 from .serializers import *
 from .authentication import IsAuthenticated
+from student.models import Student
+from teacher.models import Teacher
+from department.models import Department
+
+# Create a simplified department serializer for profiles to avoid the hod_detail issue
+class DepartmentSerializerForProfile(serializers.ModelSerializer):
+    class Meta:
+        model = Department
+        fields = ['id', 'dept_name', 'date_established', 'contact_info']
 
 # Create your views here.
 class LoginAPIView(generics.CreateAPIView):
@@ -72,22 +83,62 @@ class ProfileAPIView(generics.CreateAPIView):
             "first_name": user.first_name,
             "last_name": user.last_name,
             "gender": user.gender,
-            "year": user.year,
-            "dept": user.dept,
-            "roll_no": user.roll_no,
             "phone_number": user.phone_number,
             "is_active": user.is_active,
             "is_staff": user.is_staff,
             "is_superuser": user.is_superuser,
             "date_joined": user.date_joined,
             "last_login": user.last_login,
+            "user_type": user.user_type,
         }
+
+        response_data = {
+            "user": user_data,
+        }
+
+        if user.user_type == 'student':
+            try:
+                student = Student.objects.get(student=user)
+                student_data = {
+                    "id": student.id,
+                    "batch": student.batch,
+                    "current_semester": student.current_semester,
+                    "year": student.year,
+                    "roll_no": student.roll_no,
+                    "student_type": student.student_type,
+                    "degree_type": student.degree_type,
+                }
+                
+                if student.dept:
+                    dept_serializer = DepartmentSerializerForProfile(student.dept)
+                    student_data["department"] = dept_serializer.data
+                
+                response_data["student"] = student_data
+            except Student.DoesNotExist:
+                pass
+        
+        elif user.user_type == 'teacher':
+            try:
+                teacher = Teacher.objects.get(teacher=user)
+                teacher_data = {
+                    "id": teacher.id,
+                    "staff_code": teacher.staff_code,
+                    "teacher_role": teacher.teacher_role,
+                    "teacher_specialisation": teacher.teacher_specialisation,
+                    "teacher_working_hours": teacher.teacher_working_hours,
+                }
+                
+                if teacher.dept:
+                    dept_serializer = DepartmentSerializerForProfile(teacher.dept)
+                    teacher_data["department"] = dept_serializer.data
+                
+                response_data["teacher"] = teacher_data
+            except Teacher.DoesNotExist:
+                pass
 
         return Response({
             "message": "Success",
-            "data": {
-                "user": user_data,
-            }
+            "data": response_data
         }, status=status.HTTP_200_OK)
 
 class VerifyTokenAPIView(APIView):

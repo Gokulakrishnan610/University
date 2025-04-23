@@ -19,12 +19,12 @@ interface ProtectedRouteProps {
 }
 
 export function ProtectedRoute({ 
-  children,   requireHOD = true
+  children,   
+  requireHOD = true
 }: ProtectedRouteProps) {
   const location = useLocation();
   const { data: user, isPending } = useCurrentUser();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
   useEffect(() => {
     // Add a small delay to avoid flash of loading state
     const timer = setTimeout(() => {
@@ -53,9 +53,9 @@ export function ProtectedRoute({
 
 
   // Check if HOD access is required but user is not HOD
-  if (requireHOD && currentUser.user_type !== 'HOD') {
-    return <Navigate to="/auth/" state={{ message: "Only department heads can access this area" }} replace />;
-  }
+  // if (requireHOD && currentUser.user_type !== 'HOD') {
+  //   return <Navigate to="/auth/" state={{ message: "Only department heads can access this area" }} replace />;
+  // }
 
   // Authentication and verification checks passed, render the protected component
   return <>{children}</>;
