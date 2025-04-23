@@ -1,3 +1,4 @@
+# serializers.py
 from rest_framework import serializers
 from .models import Student
 from authentication.serializers import UserSerializer
@@ -19,27 +20,20 @@ class StudentSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
-        student_user = data.get('student', self.instance.student if self.instance else None)
-        batch = data.get('batch', self.instance.batch if self.instance else None)
+        instance = self.instance
+
+        student_user = data.get('student', getattr(instance, 'student', None))
+        batch = data.get('batch', getattr(instance, 'batch', None))
+        current_semester = data.get('current_semester', getattr(instance, 'current_semester', None))
 
         if student_user and (not hasattr(student_user, 'user_type') or student_user.user_type != 'student'):
-            raise serializers.ValidationError(
-                {"student": "Associated user must be of type 'student'"}
-            )
+            raise serializers.ValidationError({"student": "Associated user must be of type 'student'"})
 
-        if Student.objects.filter(
-            student=student_user,
-            batch=batch
-        ).exclude(pk=self.instance.pk if self.instance else None).exists():
-            raise serializers.ValidationError(
-                {"batch": "This student already exists in the specified batch"}
-            )
+        if Student.objects.filter(student=student_user, batch=batch).exclude(pk=getattr(instance, 'pk', None)).exists():
+            raise serializers.ValidationError({"batch": "This student already exists in the specified batch"})
 
-        current_semester = data.get('current_semester', self.instance.current_semester if self.instance else None)
-        if current_semester and (current_semester < 1 or current_semester > 10):
-            raise serializers.ValidationError(
-                {"current_semester": "Semester must be between 1 and 10"}
-            )
+        if current_semester is not None and (current_semester < 1 or current_semester > 10):
+            raise serializers.ValidationError({"current_semester": "Semester must be between 1 and 10"})
 
         return data
 

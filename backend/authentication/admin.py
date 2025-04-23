@@ -3,14 +3,14 @@ from django.contrib.admin import ModelAdmin
 from .models import User, BookingOTP, ForgetPassword, BlockedStudents
 
 class CustomUserAdmin(ModelAdmin):
-    list_display = ('email', 'first_name', 'last_name', 'is_staff', 'dept', 'roll_no', 'year')
-    search_fields = ('email', 'first_name', 'last_name', 'roll_no')
+    list_display = ('email', 'first_name', 'last_name', 'is_staff')
+    search_fields = ('email', 'first_name', 'last_name')
     ordering = ('email',)
-    list_filter = ('is_staff', 'is_superuser', 'dept', 'year', 'student_type', 'degree_type', 'user_type')
+    list_filter = ('is_staff', 'is_superuser', 'user_type', 'gender')
+
     fieldsets = (
         (None, {'fields': ('email', 'password', 'user_type')}),
-        ('Personal info', {'fields': ('first_name', 'last_name', 'dept', 'roll_no', 'year', 'phone_number', 'gender')}),
-        ('Academic info', {'fields': ('student_type', 'degree_type')}),
+        ('Personal info', {'fields': ('first_name', 'last_name', 'phone_number', 'gender')}),
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important dates', {'fields': ('last_login', 'date_joined')}),
     )
@@ -20,11 +20,6 @@ class CustomUserAdmin(ModelAdmin):
             'fields': ('email', 'password1', 'password2'),
         }),
     )
-
-# class BookingOTPAdmin(admin.ModelAdmin):
-#     list_display = ('user', 'code', 'is_verified')
-#     search_fields = ('user__email', 'code')
-#     list_filter = ('is_verified',)
 
 class ForgetPasswordAdmin(admin.ModelAdmin):
     list_display = ('user', 'code')
@@ -36,6 +31,6 @@ class BlockedStudentsAdmin(admin.ModelAdmin):
     list_filter = ('dept', 'year')
 
 admin.site.register(User, CustomUserAdmin)
-# admin.site.register(BookingOTP, BookingOTPAdmin)
+# admin.site.register(BookingOTP, BookingOTPAdmin)  # if you need it later
 admin.site.register(ForgetPassword, ForgetPasswordAdmin)
 admin.site.register(BlockedStudents, BlockedStudentsAdmin)
