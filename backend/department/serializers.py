@@ -3,7 +3,7 @@ from .models import Department
 from authentication.serializers import UserSerializer 
 
 class DepartmentSerializer(serializers.ModelSerializer):
-    hod_detail = UserSerializer(source='hod', read_only=True)
+    # hod_detail = UserSerializer(source='hod', read_only=True)
     
     class Meta:
         model = Department
