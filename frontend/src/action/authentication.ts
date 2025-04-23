@@ -29,7 +29,7 @@ export const useLogin = (onSuccess?: () => void) => {
     ['login'],
     async (data: LoginRequest) => {
       try {
-        const response = await api.post('/auth/login/', data);
+        const response = await api.post('/api/auth/login/', data);
         
         // Store token in localStorage (as fallback)
         if (response.data.token) {
@@ -70,7 +70,7 @@ export const useCurrentUser = () => {
     async () => {
       try {
         // First try getting user from the server using cookies
-        const response = await api.get('/auth/profile/');
+        const response = await api.get('/api/auth/profile/');
         if (response.data && response.data.user) {
           // Update the localStorage with the latest user data
           localStorage.setItem('user', JSON.stringify(response.data.user));

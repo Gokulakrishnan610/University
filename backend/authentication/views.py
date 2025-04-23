@@ -32,12 +32,6 @@ class LoginAPIView(generics.CreateAPIView):
                     'detail': 'No account found with this email. If you think it\'s a mistake, please contact the admin.',
                     'code': 'user_not_found'
                 }, status=status.HTTP_401_UNAUTHORIZED)
-            if not user.tution_fee:
-                return Response({
-                    'detail': 'No account found with this email. If you think it\'s a mistake, please contact the admin.',
-                    'code': 'user_not_found'
-                }, status=status.HTTP_401_UNAUTHORIZED)
-            
             if not user.is_active:
                 return Response({
                     'detail': 'Your account is not active.',
@@ -47,6 +41,7 @@ class LoginAPIView(generics.CreateAPIView):
             
         else:
             try:
+                print("Hello Wiore", email)
                 user = User.objects.get(email=email)
                 is_blocked = BlockedStudents.objects.filter(email=email).exists()
                 if is_blocked:
@@ -81,7 +76,6 @@ class ProfileAPIView(generics.CreateAPIView):
             "dept": user.dept,
             "roll_no": user.roll_no,
             "phone_number": user.phone_number,
-            "parent_phone_number": user.parent_phone_number,
             "is_active": user.is_active,
             "is_staff": user.is_staff,
             "is_superuser": user.is_superuser,
