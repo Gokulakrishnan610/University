@@ -15,14 +15,11 @@ interface User {
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requireVerified?: boolean;
   requireHOD?: boolean;
 }
 
 export function ProtectedRoute({ 
-  children, 
-  requireVerified = true,
-  requireHOD = true
+  children,   requireHOD = true
 }: ProtectedRouteProps) {
   const location = useLocation();
   const { data: user, isPending } = useCurrentUser();
@@ -54,14 +51,10 @@ export function ProtectedRoute({
   // Type assertion to help TypeScript understand user is not null
   const currentUser = user as User;
 
-  // Authenticated but not verified when verification is required
-  if (requireVerified && !currentUser.is_verified) {
-    return <Navigate to="/auth/verify-required" state={{ email: currentUser.email }} replace />;
-  }
 
   // Check if HOD access is required but user is not HOD
   if (requireHOD && currentUser.user_type !== 'HOD') {
-    return <Navigate to="/auth/unauthorized" state={{ message: "Only department heads can access this area" }} replace />;
+    return <Navigate to="/auth/" state={{ message: "Only department heads can access this area" }} replace />;
   }
 
   // Authentication and verification checks passed, render the protected component

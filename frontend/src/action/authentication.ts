@@ -71,10 +71,11 @@ export const useCurrentUser = () => {
       try {
         // First try getting user from the server using cookies
         const response = await api.get('/api/auth/profile/');
-        if (response.data && response.data.user) {
+        console.log(response)
+        if (response.data && response.data.data) {
           // Update the localStorage with the latest user data
-          localStorage.setItem('user', JSON.stringify(response.data.user));
-          return response.data.user as User;
+          localStorage.setItem('user', JSON.stringify(response.data.data));
+          return response.data.data as User;
         }
         throw new Error('Invalid server response');
       } catch (error) {
@@ -82,7 +83,6 @@ export const useCurrentUser = () => {
         if (axios.isAxiosError(error)) {
           console.log('Server profile request failed:', error.message);
           
-          // For unauthorized errors or any other error, try localStorage
           const storedUser = localStorage.getItem('user');
           if (storedUser) {
             try {

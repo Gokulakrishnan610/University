@@ -22,7 +22,7 @@ class Teacher(models.Model):
         verbose_name_plural = 'Teachers'
 
     def __str__(self):
-        return f"{self.teacher.get_full_name()} - {self.dept.name}"
+        return f"{self.teacher.get_full_name()} - {self.dept.dept_name}"
 
     def clean(self):
         if self.teacher_role == 'HOD':
