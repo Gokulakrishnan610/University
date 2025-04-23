@@ -7,6 +7,8 @@ from django.conf import settings
 from django.utils.crypto import get_random_string
 from rest_framework import status
 from rest_framework.response import Response
+from teacher.models import Teacher
+from django.core.exceptions import ValidationError
 # from .utils import send_email
 import uuid
 import jwt
@@ -114,6 +116,13 @@ class User(AbstractUser):
             'exp': timezone.now() + timezone.timedelta(days=30),
             'iat': timezone.now()
         }
+        user_type = 'student'
+        if self.user_type == 'teacher':
+            try:
+                user_type = Teacher.objects.get(teacher__email=self.email).teacher_role
+            except Exception as E:
+                print(E)
+                raise ValidationError("Teacher not found")
         
         token = jwt.encode(payload, settings.JWT_KEY, algorithm='HS256')
         response = Response({
@@ -121,6 +130,8 @@ class User(AbstractUser):
             'first_name': self.first_name,
             'last_name': self.last_name,
             'gender': self.gender,
+            'user_type': user_type,
+            'detail': 'Login successfull!',
         }, status=status.HTTP_200_OK)
 
         response.set_cookie(key='token', value=token, samesite='Lax', httponly=True, secure=False, domain=settings.COOKIE_DOMAIN)
