@@ -13,7 +13,6 @@ class DepartmentSerializer(serializers.ModelSerializer):
             'date_established',
             'contact_info',
             'hod',
-            'hod_detail' 
         ]
         extra_kwargs = {
             'hod': {'write_only': True} 
