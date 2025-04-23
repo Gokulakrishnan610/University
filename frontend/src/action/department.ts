@@ -6,15 +6,17 @@ import api from "./api";
 // Types
 export interface Department {
   id: number;
-  name: string;
-  description: string;
-  hod: number | null;
+  dept_name: string;
+  date_established: string;
+  contact_info: string;
+  hod: number;
 }
 
 export interface CreateDepartmentRequest {
-  name: string;
-  description: string;
-  hod?: number;
+  dept_name: string;
+  date_established: string;
+  contact_info?: string;
+  hod: number;
 }
 
 export type UpdateDepartmentRequest = Partial<CreateDepartmentRequest>;
@@ -25,7 +27,7 @@ export const useGetDepartments = () => {
     ['departments'],
     async () => {
       try {
-        const response = await api.get('/department/');
+        const response = await api.get('/api/department/');
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -43,7 +45,7 @@ export const useGetDepartment = (id: number) => {
     ['department', id.toString()],
     async () => {
       try {
-        const response = await api.get(`/department/${id}/`);
+        const response = await api.get(`/api/department/${id}/`);
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -61,7 +63,7 @@ export const useCreateDepartment = (onSuccess?: () => void) => {
     ['createDepartment'],
     async (data: CreateDepartmentRequest) => {
       try {
-        const response = await api.post('/department/', data);
+        const response = await api.post('/api/department/', data);
         return {
           status: response.status,
           data: response.data.message || 'Department created successfully',
@@ -87,7 +89,7 @@ export const useUpdateDepartment = (id: number, onSuccess?: () => void) => {
     ['updateDepartment', id.toString()],
     async (data: UpdateDepartmentRequest) => {
       try {
-        const response = await api.put(`/department/${id}/`, data);
+        const response = await api.put(`/api/department/${id}/`, data);
         return {
           status: response.status,
           data: response.data.message || 'Department updated successfully',
@@ -113,7 +115,7 @@ export const useDeleteDepartment = (id: number, onSuccess?: () => void) => {
     ['deleteDepartment', id.toString()],
     async () => {
       try {
-        const response = await api.delete(`/department/${id}/`);
+        const response = await api.delete(`/api/department/${id}/`);
         return {
           status: response.status,
           data: response.data.message || 'Department deleted successfully',

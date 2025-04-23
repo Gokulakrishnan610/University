@@ -12,7 +12,6 @@ from student.models import Student
 from teacher.models import Teacher
 from department.models import Department
 
-# Create a simplified department serializer for profiles to avoid the hod_detail issue
 class DepartmentSerializerForProfile(serializers.ModelSerializer):
     class Meta:
         model = Department

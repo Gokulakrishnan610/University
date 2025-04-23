@@ -6,25 +6,21 @@ import api from "./api";
 // Types
 export interface Teacher {
   id: number;
-  teacher_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  gender: string;
-  date_of_birth: string;
-  department: number;
+  teacher: number; // User ID
+  dept: number;
+  staff_code: string;
   teacher_role: string;
+  teacher_specialisation: string;
+  teacher_working_hours: number;
 }
 
 export interface CreateTeacherRequest {
-  teacher_id: string;
-  first_name: string;
-  last_name: string;
-  email: string;
-  gender: string;
-  date_of_birth: string;
-  department: number;
+  teacher: number; // User ID
+  dept: number;
+  staff_code?: string;
   teacher_role: string;
+  teacher_specialisation?: string;
+  teacher_working_hours: number;
 }
 
 export type UpdateTeacherRequest = Partial<CreateTeacherRequest>;
@@ -35,7 +31,7 @@ export const useGetTeachers = () => {
     ['teachers'],
     async () => {
       try {
-        const response = await api.get('/teacher/');
+        const response = await api.get('/api/teacher/');
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -53,7 +49,7 @@ export const useGetTeacher = (id: number) => {
     ['teacher', id.toString()],
     async () => {
       try {
-        const response = await api.get(`/teacher/${id}/`);
+        const response = await api.get(`/api/teacher/${id}/`);
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -71,7 +67,7 @@ export const useCreateTeacher = (onSuccess?: () => void) => {
     ['createTeacher'],
     async (data: CreateTeacherRequest) => {
       try {
-        const response = await api.post('/teacher/', data);
+        const response = await api.post('/api/teacher/', data);
         return {
           status: response.status,
           data: response.data.message || 'Teacher created successfully',
@@ -97,7 +93,7 @@ export const useUpdateTeacher = (id: number, onSuccess?: () => void) => {
     ['updateTeacher', id.toString()],
     async (data: UpdateTeacherRequest) => {
       try {
-        const response = await api.put(`/teacher/${id}/`, data);
+        const response = await api.put(`/api/teacher/${id}/`, data);
         return {
           status: response.status,
           data: response.data.message || 'Teacher updated successfully',
@@ -123,7 +119,7 @@ export const useDeleteTeacher = (id: number, onSuccess?: () => void) => {
     ['deleteTeacher', id.toString()],
     async () => {
       try {
-        const response = await api.delete(`/teacher/${id}/`);
+        const response = await api.delete(`/api/teacher/${id}/`);
         return {
           status: response.status,
           data: response.data.message || 'Teacher deleted successfully',

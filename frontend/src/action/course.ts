@@ -33,7 +33,7 @@ export const useGetCourses = () => {
     ['courses'],
     async () => {
       try {
-        const response = await api.get('/course/');
+        const response = await api.get('/api/course/');
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -51,7 +51,7 @@ export const useGetCourse = (id: number) => {
     ['course', id.toString()],
     async () => {
       try {
-        const response = await api.get(`/course/${id}/`);
+        const response = await api.get(`/api/course/${id}/`);
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -69,7 +69,7 @@ export const useCreateCourse = (onSuccess?: () => void) => {
     ['createCourse'],
     async (data: CreateCourseRequest) => {
       try {
-        const response = await api.post('/course/', data);
+        const response = await api.post('/api/course/', data);
         return {
           status: response.status,
           data: response.data.message || 'Course created successfully',
@@ -95,7 +95,7 @@ export const useUpdateCourse = (id: number, onSuccess?: () => void) => {
     ['updateCourse', id.toString()],
     async (data: UpdateCourseRequest) => {
       try {
-        const response = await api.put(`/course/${id}/`, data);
+        const response = await api.put(`/api/course/${id}/`, data);
         return {
           status: response.status,
           data: response.data.message || 'Course updated successfully',
@@ -121,7 +121,7 @@ export const useDeleteCourse = (id: number, onSuccess?: () => void) => {
     ['deleteCourse', id.toString()],
     async () => {
       try {
-        const response = await api.delete(`/course/${id}/`);
+        const response = await api.delete(`/api/course/${id}/`);
         return {
           status: response.status,
           data: response.data.message || 'Course deleted successfully',

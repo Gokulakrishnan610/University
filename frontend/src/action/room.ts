@@ -41,7 +41,7 @@ export const useGetRooms = () => {
     ['rooms'],
     async () => {
       try {
-        const response = await api.get('/rooms/');
+        const response = await api.get('/api/rooms/');
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -59,7 +59,7 @@ export const useGetRoom = (id: number) => {
     ['room', id.toString()],
     async () => {
       try {
-        const response = await api.get(`/rooms/${id}/`);
+        const response = await api.get(`/api/rooms/${id}/`);
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -77,7 +77,7 @@ export const useCreateRoom = (onSuccess?: () => void) => {
     ['createRoom'],
     async (data: CreateRoomRequest) => {
       try {
-        const response = await api.post('/rooms/', data);
+        const response = await api.post('/api/rooms/', data);
         return {
           status: response.status,
           data: response.data.message || 'Room created successfully',
@@ -103,7 +103,7 @@ export const useUpdateRoom = (id: number, onSuccess?: () => void) => {
     ['updateRoom', id.toString()],
     async (data: UpdateRoomRequest) => {
       try {
-        const response = await api.put(`/rooms/${id}/`, data);
+        const response = await api.put(`/api/rooms/${id}/`, data);
         return {
           status: response.status,
           data: response.data.message || 'Room updated successfully',
@@ -129,7 +129,7 @@ export const useDeleteRoom = (id: number, onSuccess?: () => void) => {
     ['deleteRoom', id.toString()],
     async () => {
       try {
-        const response = await api.delete(`/rooms/${id}/`);
+        const response = await api.delete(`/api/rooms/${id}/`);
         return {
           status: response.status,
           data: response.data.message || 'Room deleted successfully',

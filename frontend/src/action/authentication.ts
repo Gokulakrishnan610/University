@@ -18,9 +18,46 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  is_verified: boolean;
+  gender: string;
+  phone_number: string;
+  is_active: boolean;
   user_type: string;
-  department?: number;
+  date_joined: string;
+  last_login: string | null;
+  is_staff: boolean;
+  is_superuser: boolean;
+}
+
+export interface ProfileResponse {
+  user: User;
+  student?: {
+    id: number;
+    batch: number;
+    current_semester: number;
+    year: number;
+    roll_no: string | null;
+    student_type: string;
+    degree_type: string;
+    department?: {
+      id: number;
+      dept_name: string;
+      date_established: string;
+      contact_info: string;
+    };
+  };
+  teacher?: {
+    id: number;
+    staff_code: string;
+    teacher_role: string;
+    teacher_specialisation: string;
+    teacher_working_hours: number;
+    department?: {
+      id: number;
+      dept_name: string;
+      date_established: string;
+      contact_info: string;
+    };
+  };
 }
 
 // Login user
@@ -65,17 +102,17 @@ export const useLogin = (onSuccess?: () => void) => {
 
 // Get current user with robust fallback mechanisms
 export const useCurrentUser = () => {
-  return useQueryData(
+  return useQueryData<ProfileResponse | null>(
     ['currentUser'],
     async () => {
       try {
         // First try getting user from the server using cookies
         const response = await api.get('/api/auth/profile/');
-        console.log(response)
+        
         if (response.data && response.data.data) {
           // Update the localStorage with the latest user data
           localStorage.setItem('user', JSON.stringify(response.data.data));
-          return response.data.data as User;
+          return response.data.data as ProfileResponse;
         }
         throw new Error('Invalid server response');
       } catch (error) {
@@ -86,12 +123,12 @@ export const useCurrentUser = () => {
           const storedUser = localStorage.getItem('user');
           if (storedUser) {
             try {
-              const user = JSON.parse(storedUser) as User;
+              const user = JSON.parse(storedUser);
               
               // Verify token by making a lightweight server call
               try {
-                await api.get('/auth/verify-token/');
-                return user;
+                await api.get('/api/auth/verify-token/');
+                return user as ProfileResponse;
               } catch (tokenError) {
                 // Token is invalid, clear localStorage
                 localStorage.removeItem('authToken');
@@ -119,7 +156,7 @@ export const useLogout = (onSuccess?: () => void) => {
     async () => {
       try {
         // Send logout request to clear server-side cookies
-        const response = await api.post('/auth/logout/');
+        const response = await api.post('/api/auth/logout/');
         
         // Clear client-side storage
         localStorage.removeItem('authToken');
@@ -154,7 +191,7 @@ export const useGetProfile = () => {
     ['profile'],
     async () => {
       try {
-        const response = await api.get('/auth/profile/');
+        const response = await api.get('/api/auth/profile/');
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -172,7 +209,7 @@ export const useForgotPassword = (onSuccess?: () => void) => {
     ['forgotPassword'],
     async (data: ForgotPasswordRequest) => {
       try {
-        const response = await api.post('/auth/forgot_password/', data);
+        const response = await api.post('/api/auth/forgot_password/', data);
         return {
           status: response.status,
           data: response.data.message || 'Password reset email sent',

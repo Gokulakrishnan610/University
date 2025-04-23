@@ -1,4 +1,4 @@
-import { useCurrentUser, User } from "@/action";
+import { useCurrentUser, User, useLogout } from "@/action";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -8,16 +8,27 @@ import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function ProfilePage() {
-    const { data: user, isPending: isLoading } = useCurrentUser();
+    const { data: userData, isPending: isLoading } = useCurrentUser();
+    const { mutate: logout } = useLogout();
     const navigate = useNavigate();
     
-    // Type cast user to our defined interface or null
-    const typedUser = user as User | null;
+    // Type cast user to our defined User type or null
+    const user = userData?.user as User | undefined;
+    const student = userData?.student;
+    const teacher = userData?.teacher;
 
     // Function to get initials for avatar
     const getInitials = (firstName: string, lastName: string) => {
         if (!firstName && !lastName) return "U";
         return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+    };
+
+    const handleLogout = () => {
+        logout(undefined, {
+            onSuccess: () => {
+                navigate("/auth/login");
+            }
+        });
     };
 
     if (isLoading) {
@@ -45,7 +56,7 @@ export default function ProfilePage() {
         );
     }
 
-    if (!typedUser) {
+    if (!user) {
         return (
             <div className="container mx-auto px-4 py-8 text-center">
                 <Card>
@@ -76,9 +87,9 @@ export default function ProfilePage() {
                             </div>
                             <div className="ml-auto">
                                 <Avatar className="h-16 w-16">
-                                    <AvatarImage src="" alt={`${typedUser.first_name} ${typedUser.last_name}`} />
+                                    <AvatarImage src="" alt={`${user.first_name} ${user.last_name}`} />
                                     <AvatarFallback className="text-lg">
-                                        {getInitials(typedUser.first_name, typedUser.last_name)}
+                                        {getInitials(user.first_name, user.last_name)}
                                     </AvatarFallback>
                                 </Avatar>
                             </div>
@@ -87,24 +98,33 @@ export default function ProfilePage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
                                     <p className="text-sm text-muted-foreground">First Name</p>
-                                    <p className="font-medium text-card-foreground">{typedUser.first_name}</p>
+                                    <p className="font-medium text-card-foreground">{user.first_name}</p>
                                 </div>
                                 <div className="space-y-2">
                                     <p className="text-sm text-muted-foreground">Last Name</p>
-                                    <p className="font-medium text-card-foreground">{typedUser.last_name}</p>
+                                    <p className="font-medium text-card-foreground">{user.last_name}</p>
                                 </div>
                                 <div className="space-y-2">
                                     <p className="text-sm text-muted-foreground">Email</p>
-                                    <p className="font-medium text-card-foreground">{typedUser.email}</p>
+                                    <p className="font-medium text-card-foreground">{user.email}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">Phone Number</p>
+                                    <p className="font-medium text-card-foreground">{user.phone_number || "Not provided"}</p>
                                 </div>
                                 <div className="space-y-2">
                                     <p className="text-sm text-muted-foreground">User ID</p>
-                                    <p className="font-medium text-card-foreground">{typedUser.id}</p>
+                                    <p className="font-medium text-card-foreground">{user.id}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">Gender</p>
+                                    <p className="font-medium text-card-foreground">{user.gender === 'M' ? 'Male' : 'Female'}</p>
                                 </div>
                             </div>
                         </CardContent>
                     </Card>
 
+                    {/* Department Information */}
                     <Card className="bg-card">
                         <CardHeader>
                             <CardTitle className="text-2xl text-card-foreground">Department Information</CardTitle>
@@ -113,15 +133,65 @@ export default function ProfilePage() {
                         <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <p className="text-sm text-muted-foreground">Department ID</p>
-                                    <p className="font-medium text-card-foreground">{typedUser.department || "Not assigned"}</p>
+                                    <p className="text-sm text-muted-foreground">Department</p>
+                                    <p className="font-medium text-card-foreground">
+                                        {student?.department?.dept_name || teacher?.department?.dept_name || "Not assigned"}
+                                    </p>
                                 </div>
                                 <div className="space-y-2">
                                     <p className="text-sm text-muted-foreground">Role</p>
                                     <Badge className="font-normal capitalize text-xs">
-                                        {typedUser.user_type}
+                                        {user.user_type}
                                     </Badge>
                                 </div>
+                                {student && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Roll Number</p>
+                                            <p className="font-medium text-card-foreground">{student.roll_no || "Not assigned"}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Current Semester</p>
+                                            <p className="font-medium text-card-foreground">{student.current_semester}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Batch</p>
+                                            <p className="font-medium text-card-foreground">{student.batch}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Year</p>
+                                            <p className="font-medium text-card-foreground">{student.year}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Student Type</p>
+                                            <p className="font-medium text-card-foreground">{student.student_type}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Degree Type</p>
+                                            <p className="font-medium text-card-foreground">{student.degree_type}</p>
+                                        </div>
+                                    </>
+                                )}
+                                {teacher && (
+                                    <>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Staff Code</p>
+                                            <p className="font-medium text-card-foreground">{teacher.staff_code || "Not assigned"}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Teacher Role</p>
+                                            <p className="font-medium text-card-foreground">{teacher.teacher_role}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Specialization</p>
+                                            <p className="font-medium text-card-foreground">{teacher.teacher_specialisation || "Not specified"}</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <p className="text-sm text-muted-foreground">Working Hours</p>
+                                            <p className="font-medium text-card-foreground">{teacher.teacher_working_hours} hours/week</p>
+                                        </div>
+                                    </>
+                                )}
                             </div>
                         </CardContent>
                     </Card>
@@ -129,15 +199,19 @@ export default function ProfilePage() {
                     <Card className="bg-card">
                         <CardHeader>
                             <CardTitle className="text-2xl text-card-foreground">Account Status</CardTitle>
-                            <CardDescription className="text-muted-foreground">Your account verification details</CardDescription>
+                            <CardDescription className="text-muted-foreground">Your account status details</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <div className="space-y-2">
-                                    <p className="text-sm text-muted-foreground">Verification Status</p>
-                                    <Badge variant={typedUser.is_verified ? "default" : "destructive"} className={typedUser.is_verified ? "bg-green-500" : ""}>
-                                        {typedUser.is_verified ? "Verified" : "Not Verified"}
+                                    <p className="text-sm text-muted-foreground">Account Status</p>
+                                    <Badge variant={user.is_active ? "default" : "destructive"} className={user.is_active ? "bg-green-500" : ""}>
+                                        {user.is_active ? "Active" : "Inactive"}
                                     </Badge>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">Date Joined</p>
+                                    <p className="font-medium text-card-foreground">{new Date(user.date_joined).toLocaleDateString()}</p>
                                 </div>
                             </div>
                         </CardContent>
@@ -171,10 +245,7 @@ export default function ProfilePage() {
                                 <Button 
                                     className="w-full justify-start text-destructive hover:text-destructive" 
                                     variant="ghost"
-                                    onClick={() => {
-                                        // Logout logic here
-                                        navigate("/auth/login");
-                                    }}
+                                    onClick={handleLogout}
                                 >
                                     Log out
                                 </Button>
