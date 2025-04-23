@@ -83,11 +83,7 @@ export const useCreateCourse = (onSuccess?: () => void) => {
     ['createCourse'],
     async (data: CreateCourseRequest) => {
       try {
-        const { department, ...courseData } = data;
-        const response = await api.post('/api/course/', {
-          ...courseData,
-          department_id: department
-        });
+        const response = await api.post('/api/course/', data);
         return {
           status: response.status,
           data: response.data.message || 'Course created successfully',

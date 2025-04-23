@@ -2,9 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
 import {
   useGetCourse,
-  useUpdateCourse,
   useDeleteCourse,
-  Course
 } from '@/action/course';
 import {
   Card,
@@ -42,14 +40,9 @@ export default function CourseDetails() {
   const courseId = parseInt(id as string);
 
   const { data: course, isPending: isLoading, refetch } = useGetCourse(courseId);
-  const { mutate: updateCourse } = useUpdateCourse(courseId, () => {
-    toast.success("Course updated successfully");
-    refetch();
-    setShowEditForm(false);
-  });
+
 
   const { mutate: deleteCourse } = useDeleteCourse(courseId, () => {
-    toast.success("Course deleted successfully");
     navigate('/courses');
   });
 

@@ -51,6 +51,7 @@ class CreateCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = [
+            'department',
             'course_code',
             'course_name',
             'course_year',
@@ -64,7 +65,7 @@ class CreateCourseSerializer(serializers.ModelSerializer):
         ]
 
     def validate(self, data):
-        department = self.context.get('department')
+        department = data.get('department')
         course_code = data.get('course_code')
         course_semester = data.get('course_semester')
 
@@ -80,8 +81,7 @@ class CreateCourseSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        department = self.context.get('department')
-        return Course.objects.create(department=department, **validated_data)
+        return Course.objects.create(**validated_data)
 
 class UpdateCourseSerializer(serializers.ModelSerializer):
     class Meta:

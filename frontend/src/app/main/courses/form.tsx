@@ -65,10 +65,19 @@ export default function CourseForm({ course, mode, onClose, onSuccess }: CourseF
   const { data: departmentsData } = useGetDepartments();
   const departments = departmentsData || [];
 
-  const { mutate: createCourse, isPending: isCreating } = useCreateCourse(onSuccess);
+  const { mutate: createCourse, isPending: isCreating } = useCreateCourse(() => {
+    toast.success('Course created successfully');
+    onClose();
+    onSuccess?.();
+  });
+
   const { mutate: updateCourse, isPending: isUpdating } = useUpdateCourse(
     course?.id || 0,
-    onSuccess
+    () => {
+      toast.success('Course updated successfully');
+      onClose();
+      onSuccess?.();
+    }
   );
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -85,7 +94,7 @@ export default function CourseForm({ course, mode, onClose, onSuccess }: CourseF
       tutorial_hours: course?.tutorial_hours || 0,
       practical_hours: course?.practical_hours || 0,
       credits: course?.credits || 0,
-      department: mode === 'create' ? 0 : course?.department?.id || 0,
+      department: mode === 'create' ? undefined : course?.department?.id,
     },
   });
 

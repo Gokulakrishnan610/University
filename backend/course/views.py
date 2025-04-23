@@ -46,10 +46,15 @@ class AddNewCourse(generics.CreateAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
-class CourseListView(generics.ListAPIView):
+class CourseListView(generics.ListCreateAPIView):
     authentication_classes = [IsAuthenticated]
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = CourseSerializer
+
+    def get_serializer_class(self):
+        if self.request.method == 'POST':
+            return CreateCourseSerializer
+        return CourseSerializer
 
     def get_queryset(self):
         user = self.request.user
@@ -58,6 +63,41 @@ class CourseListView(generics.ListAPIView):
             return Course.objects.filter(department=hod_dept)
         except Department.DoesNotExist:
             return Course.objects.none()
+
+    def post(self, request, *args, **kwargs):
+        try:
+            is_hod = Department.objects.filter(hod=request.user).exists()
+            
+            if not is_hod:
+                return Response(
+                    {
+                        'detail': "Only HOD can add new courses.",
+                        "code": "permission_denied"
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            
+            return Response(
+                {
+                    'detail': "Course added successfully.",
+                    'data': serializer.data
+                },
+                status=status.HTTP_201_CREATED
+            )
+            
+        except Exception as e:
+            print(e)
+            return Response(
+                {
+                    'detail': "Something went wrong!",
+                    "code": "internal_error"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
     authentication_classes = [IsAuthenticated]

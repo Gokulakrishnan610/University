@@ -42,4 +42,5 @@ class Course(models.Model):
         unique_together = ('department', 'course_code', 'course_semester')
 
     def __str__(self):
-        return f"{self.course_code} - {self.course_name} ({self.department.dept_name})"
+        dept_name = self.department.dept_name if self.department else "No Department"
+        return f"{self.course_code} - {self.course_name} ({dept_name})"

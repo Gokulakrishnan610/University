@@ -46,28 +46,26 @@ export default function CourseManagement() {
   const [showCreateForm, setShowCreateForm] = useState(false);
 
   const courses = coursesData || [];
-  const { mutate: deleteCourse } = useDeleteCourse(0, () => {
+  const { mutate: deleteCourse } = useDeleteCourse(courseToDelete?.id || 0, () => {
     refetch();
     setCourseToDelete(null);
+    toast.success('Course deleted successfully');
   });
 
   const handleDelete = () => {
     if (!courseToDelete) return;
-
     deleteCourse(undefined, {
       onSuccess: () => {
-        toast.success('Course deleted', {
-          description: `${courseToDelete.course_name} has been deleted successfully.`,
-        });
+        toast.success('Course deleted successfully');
         refetch();
         setCourseToDelete(null);
       },
-      onError: (error: Error) => {
-        toast.error('Error', {
-          description: `Failed to delete course: ${error.message}`,
+      onError: (error) => {
+        toast.error('Failed to delete course', {
+          description: error.message
         });
         setCourseToDelete(null);
-      },
+      }
     });
   };
 
