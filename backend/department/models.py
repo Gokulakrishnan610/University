@@ -7,7 +7,11 @@ class Department(models.Model):
     contact_info = models.CharField("Contact Details", blank=True, max_length=100)
     hod = models.ForeignKey('authentication.user', blank=True, on_delete=models.DO_NOTHING, max_length=100)
 
+    class Meta:
+        unique_together = ('dept_name',)
+
     def clean(self):
+        self.dept_name = self.dept_name.upper()
         if self.hod and self.hod.user_type != 'teacher':
             raise ValidationError("Only teachers can be assigned as HOD")
         return super().clean()
