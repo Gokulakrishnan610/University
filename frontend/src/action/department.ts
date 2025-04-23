@@ -2,6 +2,7 @@ import { useMutationData } from "@/hooks/useMutationData";
 import { useQueryData } from "@/hooks/useQueryData";
 import axios from "axios";
 import api from "./api";
+import { useQuery } from '@tanstack/react-query';
 
 // Types
 export interface Department {
@@ -9,7 +10,7 @@ export interface Department {
   dept_name: string;
   date_established: string;
   contact_info: string;
-  hod: number;
+  hod?: number;
 }
 
 export interface CreateDepartmentRequest {
@@ -23,38 +24,25 @@ export type UpdateDepartmentRequest = Partial<CreateDepartmentRequest>;
 
 // Get all departments
 export const useGetDepartments = () => {
-  return useQueryData(
-    ['departments'],
-    async () => {
-      try {
-        const response = await api.get('/api/department/');
-        return response.data;
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          throw new Error(error.response.data.message || 'Failed to fetch departments');
-        }
-        throw error;
-      }
+  return useQuery({
+    queryKey: ['departments'],
+    queryFn: async () => {
+      const response = await api.get('/api/departments/');
+      return response.data.data || [];
     }
-  );
+  });
 };
 
 // Get a single department by ID
 export const useGetDepartment = (id: number) => {
-  return useQueryData(
-    ['department', id.toString()],
-    async () => {
-      try {
-        const response = await api.get(`/api/department/${id}/`);
-        return response.data;
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          throw new Error(error.response.data.message || 'Failed to fetch department');
-        }
-        throw error;
-      }
-    }
-  );
+  return useQuery({
+    queryKey: ['department', id.toString()],
+    queryFn: async () => {
+      const response = await api.get(`/api/departments/${id}/`);
+      return response.data.data;
+    },
+    enabled: !!id,
+  });
 };
 
 // Create a new department

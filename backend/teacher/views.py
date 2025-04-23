@@ -3,7 +3,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from authentication.authentication import IsAuthenticated
 from .models import Teacher
-from .serializers import TeacherSerializer, CreateTeacherSerializer
+from .serializers import TeacherSerializer, CreateTeacherSerializer, UpdateTeacherSerializer
 
 class AddNewTeacher(generics.CreateAPIView):
     authentication_classes = [IsAuthenticated]
@@ -68,9 +68,13 @@ class TeacherListView(generics.ListAPIView):
 class TeacherDetailView(generics.RetrieveUpdateAPIView):
     authentication_classes = [IsAuthenticated]
     permission_classes = [permissions.IsAuthenticated]
-    serializer_class = TeacherSerializer
     queryset = Teacher.objects.all()
     lookup_field = 'id'
+    
+    def get_serializer_class(self):
+        if self.request.method in ['PATCH', 'PUT']:
+            return UpdateTeacherSerializer
+        return TeacherSerializer
 
     def get_object(self):
         teacher_id = self.kwargs.get('id')
@@ -96,12 +100,15 @@ class TeacherDetailView(generics.RetrieveUpdateAPIView):
             instance = self.get_object()
             serializer = self.get_serializer(instance, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            updated_teacher = serializer.save()
+            
+            # After updating, use the regular serializer to return the complete data
+            response_serializer = TeacherSerializer(updated_teacher)
             
             return Response(
                 {
                     'detail': "Teacher updated successfully.",
-                    'data': serializer.data
+                    'data': response_serializer.data
                 },
                 status=status.HTTP_200_OK
             )

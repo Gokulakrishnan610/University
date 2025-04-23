@@ -1,6 +1,4 @@
-import { useMutationData } from "@/hooks/useMutationData";
-import { useQueryData } from "@/hooks/useQueryData";
-import axios from "axios";
+import { useMutation, useQuery } from '@tanstack/react-query';
 import api from "./api";
 
 // Types
@@ -39,118 +37,82 @@ export interface CreateTeacherRequest {
   teacher_working_hours: number;
 }
 
-export type UpdateTeacherRequest = Partial<CreateTeacherRequest>;
+export type UpdateTeacherRequest = {
+  dept?: number | null;
+  staff_code?: string;
+  teacher_role?: string;
+  teacher_specialisation?: string;
+  teacher_working_hours?: number;
+};
 
 // Get all teachers
 export const useGetTeachers = () => {
-  return useQueryData(
-    ['teachers'],
-    async () => {
-      try {
-        const response = await api.get('/api/teachers/');
-        return response.data;
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          throw new Error(error.response.data.message || 'Failed to fetch teachers');
-        }
-        throw error;
-      }
+  return useQuery({
+    queryKey: ['teachers'],
+    queryFn: async () => {
+      const response = await api.get('/api/teachers/');
+      return response.data || [];
     }
-  );
+  });
 };
 
 // Get a single teacher by ID
 export const useGetTeacher = (id: number) => {
-  return useQueryData(
-    ['teacher', id.toString()],
-    async () => {
-      try {
-        const response = await api.get(`/api/teachers/${id}/`);
-        return response.data;
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          throw new Error(error.response.data.message || 'Failed to fetch teacher');
-        }
-        throw error;
-      }
-    }
-  );
+  return useQuery({
+    queryKey: ['teacher', id.toString()],
+    queryFn: async () => {
+      const response = await api.get(`/api/teachers/${id}/`);
+      return response.data;
+    },
+    enabled: !!id,
+  });
 };
 
 // Create a new teacher
 export const useCreateTeacher = (onSuccess?: () => void) => {
-  return useMutationData(
-    ['createTeacher'],
-    async (data: CreateTeacherRequest) => {
-      try {
-        const response = await api.post('/api/teachers/', data);
-        return {
-          status: response.status,
-          data: response.data.message || 'Teacher created successfully',
-        };
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          return {
-            status: error.response.status,
-            data: error.response.data.message || 'Failed to create teacher',
-          };
-        }
-        throw error;
-      }
+  return useMutation({
+    mutationFn: async (data: CreateTeacherRequest) => {
+      const response = await api.post('/api/teachers/add/', data);
+      return response.data;
     },
-    'teachers',
-    onSuccess
-  );
+    onSuccess: () => {
+      if (onSuccess) onSuccess();
+    }
+  });
 };
 
 // Update an existing teacher
 export const useUpdateTeacher = (id: number, onSuccess?: () => void) => {
-  return useMutationData(
-    ['updateTeacher', id.toString()],
-    async (data: UpdateTeacherRequest) => {
-      try {
-        const response = await api.put(`/api/teachers/${id}/`, data);
-        return {
-          status: response.status,
-          data: response.data.message || 'Teacher updated successfully',
-        };
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          return {
-            status: error.response.status,
-            data: error.response.data.message || 'Failed to update teacher',
-          };
-        }
-        throw error;
+  return useMutation({
+    mutationFn: async (data: UpdateTeacherRequest) => {
+      console.log('Sending update data:', data); // Add this for debugging
+      
+      // Create a copy of the data to avoid modifying the original
+      const apiData = {...data};
+      
+      // Ensure dept is explicitly null when undefined
+      if ('dept' in apiData && apiData.dept === undefined) {
+        apiData.dept = null;
       }
+      
+      const response = await api.patch(`/api/teachers/${id}/`, apiData);
+      return response.data;
     },
-    [['teachers'], ['teacher', id.toString()]],
-    onSuccess
-  );
+    onSuccess: () => {
+      if (onSuccess) onSuccess();
+    }
+  });
 };
 
 // Delete a teacher
 export const useDeleteTeacher = (id: number, onSuccess?: () => void) => {
-  return useMutationData(
-    ['deleteTeacher', id.toString()],
-    async () => {
-      try {
-        const response = await api.delete(`/api/teachers/${id}/`);
-        return {
-          status: response.status,
-          data: response.data.message || 'Teacher deleted successfully',
-        };
-      } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          return {
-            status: error.response.status,
-            data: error.response.data.message || 'Failed to delete teacher',
-          };
-        }
-        throw error;
-      }
+  return useMutation({
+    mutationFn: async () => {
+      const response = await api.delete(`/api/teachers/${id}/`);
+      return response.data;
     },
-    'teachers',
-    onSuccess
-  );
+    onSuccess: () => {
+      if (onSuccess) onSuccess();
+    }
+  });
 }; 
