@@ -1,6 +1,7 @@
 import { useMutationData } from "@/hooks/useMutationData";
 import { useQueryData } from "@/hooks/useQueryData";
 import axios from "axios";
+import api from "./api";
 
 // Types
 export interface Student {
@@ -29,26 +30,6 @@ export interface CreateStudentRequest {
 }
 
 export type UpdateStudentRequest = Partial<CreateStudentRequest>;
-
-// Create axios instance with default config
-const API_URL = 'http://localhost:8000/api';
-
-const api = axios.create({
-  baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  withCredentials: true,
-});
-
-// Add interceptor to include auth token
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('authToken');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
-});
 
 // Get all students
 export const useGetStudents = () => {

@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useLoginUser } from "@/action/user";
+import { useLogin } from "@/action";
 import { toast } from "sonner";
 
 // Define the login schema with Zod
@@ -51,7 +51,7 @@ export default function Login() {
   });
 
   // Use the login mutation
-  const { mutate, isPending } = useLoginUser(() => {
+  const { mutate, isPending } = useLogin(() => {
     navigate("/dashboard");
   });
 
@@ -62,19 +62,32 @@ export default function Login() {
         ...data,
         email: `${data.email}@rajalakshmi.edu.in`
       };
+      
       mutate(emailData, {
         onSuccess: (result) => {
-          if (result?.status === 200 && typeof result.data !== 'string') {
-            // Store user data in localStorage
-            const userData = {
-              id: result.user?.id,
-              first_name: result.user?.first_name,
-              last_name: result.user?.last_name,
-              gender: result.user?.gender,
-            };
-            localStorage.setItem('user', JSON.stringify(userData));
-            toast.success("Login successful! Welcome back.");
-            navigate("/");
+          if (result?.status === 200) {
+            // Check if user is a HOD
+            if (result.user && result.user.user_type === 'HOD') {
+              // Store user data in localStorage
+              const userData = {
+                id: result.user.id,
+                first_name: result.user.first_name,
+                last_name: result.user.last_name,
+                email: result.user.email,
+                is_verified: result.user.is_verified,
+                user_type: result.user.user_type,
+                department: result.user.department
+              };
+              localStorage.setItem('user', JSON.stringify(userData));
+              toast.success("Login successful! Welcome back.");
+              navigate("/dashboard");
+            } else {
+              // Not a HOD, show error
+              toast.error("Access denied. Only department heads can login to this system.");
+              // Clear any potentially stored data
+              localStorage.removeItem('authToken');
+              localStorage.removeItem('user');
+            }
           } else {
             // Handle specific error cases based on error code
             const errorMessage = typeof result?.data === 'string' ? result.data : 'Login failed';
@@ -150,9 +163,9 @@ export default function Login() {
               className="w-60 h-24 mx-auto object-contain"
             />
             <div className="space-y-2">
-              <CardTitle className="text-2xl font-bold">Login</CardTitle>
+              <CardTitle className="text-2xl font-bold">Department Head Login</CardTitle>
               <CardDescription className="text-base">
-                Enter your email and password to access your account
+                Enter your credentials to access the university management system
               </CardDescription>
             </div>
           </CardHeader>

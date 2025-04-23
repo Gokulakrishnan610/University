@@ -1,16 +1,31 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router";
-import { useCurrentUser } from "@/action/user";
+import { useCurrentUser } from "@/action";
 import { Loader2 } from "lucide-react";
+
+interface User {
+  id: number;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_verified: boolean;
+  user_type: string;
+  department?: number;
+}
 
 interface ProtectedRouteProps {
   children: ReactNode;
   requireVerified?: boolean;
+  requireHOD?: boolean;
 }
 
-export function ProtectedRoute({ children, requireVerified = true }: ProtectedRouteProps) {
+export function ProtectedRoute({ 
+  children, 
+  requireVerified = true,
+  requireHOD = true
+}: ProtectedRouteProps) {
   const location = useLocation();
-  const { data: user, isPending }:{data:any, isPending:boolean} = useCurrentUser();
+  const { data: user, isPending } = useCurrentUser();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
   useEffect(() => {
@@ -21,6 +36,7 @@ export function ProtectedRoute({ children, requireVerified = true }: ProtectedRo
 
     return () => clearTimeout(timer);
   }, []);
+
   // Still loading
   if (isPending || isCheckingAuth) {
     return (
@@ -34,9 +50,18 @@ export function ProtectedRoute({ children, requireVerified = true }: ProtectedRo
   if (!user) {
     return <Navigate to="/auth/login" state={{ from: location }} replace />;
   }
+
+  // Type assertion to help TypeScript understand user is not null
+  const currentUser = user as User;
+
   // Authenticated but not verified when verification is required
-  if (requireVerified && !user.isVerified) {
-    return <Navigate to="/auth/verify-required" state={{ email: user.email }} replace />;
+  if (requireVerified && !currentUser.is_verified) {
+    return <Navigate to="/auth/verify-required" state={{ email: currentUser.email }} replace />;
+  }
+
+  // Check if HOD access is required but user is not HOD
+  if (requireHOD && currentUser.user_type !== 'HOD') {
+    return <Navigate to="/auth/unauthorized" state={{ message: "Only department heads can access this area" }} replace />;
   }
 
   // Authentication and verification checks passed, render the protected component

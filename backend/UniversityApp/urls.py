@@ -16,13 +16,26 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from django.http import JsonResponse
 
-urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('authentication/', include('authentication.urls')),
+# Simple health check view
+def health_check(request):
+    return JsonResponse({"status": "ok", "message": "API is running"})
+
+# API URL patterns with a prefix
+api_urlpatterns = [
+    path('auth/', include('authentication.urls')),
     path('teachers/', include('teacher.urls')),
     path('course/', include('course.urls')),
     path('teacher-courses/', include('teacherCourse.urls')),
     path('student-courses/', include('studentCourse.urls')),
     path('students/', include('student.urls')),
+    # Health check endpoint
+    path('health/', health_check, name='health_check'),
+]
+
+urlpatterns = [
+    path('admin/', admin.site.urls),
+    # Include all API endpoints under 'api/' prefix
+    path('api/', include(api_urlpatterns)),
 ]

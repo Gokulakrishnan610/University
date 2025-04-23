@@ -1,45 +1,42 @@
-import { useCurrentUser } from "@/action/user";
+import { useCurrentUser, User } from "@/action";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router";
-import { User } from "@/types/index.types";
+import { Separator } from "@/components/ui/separator";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-const Profile = () => {
-    const { data: user, isPending } = useCurrentUser();
+export default function ProfilePage() {
+    const { data: user, isPending: isLoading } = useCurrentUser();
     const navigate = useNavigate();
     
+    // Type cast user to our defined interface or null
     const typedUser = user as User | null;
-    
-    const isValidUser = (user: any): user is User => {
-        return user && typeof user.id === 'number';
+
+    // Function to get initials for avatar
+    const getInitials = (firstName: string, lastName: string) => {
+        if (!firstName && !lastName) return "U";
+        return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
     };
 
-    if (isPending) {
+    if (isLoading) {
         return (
-            <div className="container mx-auto p-6">
-                <Card className="w-full max-w-3xl mx-auto">
+            <div className="container mx-auto px-4 py-8">
+                <Card>
                     <CardHeader>
-                        <CardTitle><Skeleton className="h-8 w-1/3" /></CardTitle>
-                        <CardDescription><Skeleton className="h-4 w-1/2" /></CardDescription>
+                        <Skeleton className="h-8 w-1/3" />
+                        <Skeleton className="h-4 w-1/4" />
                     </CardHeader>
                     <CardContent>
-                        <div className="space-y-6">
-                            <div className="flex items-center gap-4">
-                                <Skeleton className="h-16 w-16 rounded-full" />
-                                <div className="space-y-2">
-                                    <Skeleton className="h-4 w-32" />
-                                    <Skeleton className="h-4 w-48" />
-                                </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div className="space-y-4">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-2/3" />
                             </div>
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-8 w-full" />
-                            </div>
-                            <div className="space-y-2">
-                                <Skeleton className="h-4 w-20" />
-                                <Skeleton className="h-8 w-full" />
+                            <div className="space-y-4">
+                                <Skeleton className="h-4 w-full" />
+                                <Skeleton className="h-4 w-2/3" />
                             </div>
                         </div>
                     </CardContent>
@@ -48,102 +45,144 @@ const Profile = () => {
         );
     }
 
-    if (!isValidUser(typedUser)) {
+    if (!typedUser) {
         return (
-            <div className="container mx-auto p-6 text-center">
-                <h1 className="text-2xl font-bold mb-4">Not Logged In</h1>
-                <p className="mb-4">Please log in to view your profile</p>
-                <Button onClick={() => navigate("/auth/login")}>
-                    Go to Login
-                </Button>
+            <div className="container mx-auto px-4 py-8 text-center">
+                <Card>
+                    <CardContent className="pt-6">
+                        <div className="py-12">
+                            <h3 className="text-xl font-semibold mb-4">You are not logged in</h3>
+                            <p className="text-muted-foreground mb-6">Please sign in to view your profile</p>
+                            <Button onClick={() => navigate("/auth/login")}>
+                                Sign In
+                            </Button>
+                        </div>
+                    </CardContent>
+                </Card>
             </div>
         );
     }
 
-    // Generate initials for avatar fallback
-    const getInitials = (name: string | null) => {
-        if (!name) return "U";
-        return name
-            .split(" ")
-            .map(part => part[0])
-            .join("")
-            .toUpperCase()
-            .substring(0, 2);
-    };
-
-    // Format date in a readable way
-    const formatDate = (dateString: string) => {
-        const date = new Date(dateString);
-        return date.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric"
-        });
-    };
-
     return (
-        <div className="mx-auto p-6">
-            <Card className="w-full  mx-auto">
-                <CardHeader>
-                    <CardTitle>Your Profile</CardTitle>
-                    <CardDescription>View and manage your account information</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-8">
-                        <div className="flex items-center gap-4">
-                            <Avatar className="h-16 w-16">
-                                <AvatarImage src="" alt={typedUser.name || "User"} />
-                                <AvatarFallback className="text-lg">{getInitials(typedUser.name)}</AvatarFallback>
-                            </Avatar>
-                            <div>
-                                <h3 className="text-xl font-semibold">{typedUser.name || "User"}</h3>
-                                <p className="text-muted-foreground">{typedUser.email}</p>
+        <div className="container mx-auto px-4 py-8">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Profile Information */}
+                <div className="lg:col-span-2 space-y-8">
+                    <Card className="bg-card">
+                        <CardHeader className="flex flex-row items-center">
+                            <div className="flex flex-col space-y-1.5">
+                                <CardTitle className="text-2xl text-card-foreground">Profile Information</CardTitle>
+                                <CardDescription className="text-muted-foreground">Your personal and account details</CardDescription>
                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div>
-                                <h4 className="text-sm font-medium text-muted-foreground mb-2">User ID</h4>
-                                <p className="text-sm">{typedUser.id}</p>
+                            <div className="ml-auto">
+                                <Avatar className="h-16 w-16">
+                                    <AvatarImage src="" alt={`${typedUser.first_name} ${typedUser.last_name}`} />
+                                    <AvatarFallback className="text-lg">
+                                        {getInitials(typedUser.first_name, typedUser.last_name)}
+                                    </AvatarFallback>
+                                </Avatar>
                             </div>
-                            <div>
-                                <h4 className="text-sm font-medium text-muted-foreground mb-2">Email Verification</h4>
-                                <p className="text-sm">
-                                    {typedUser.isVerified ? (
-                                        <span className="text-green-600 dark:text-green-400">Verified</span>
-                                    ) : (
-                                        <span className="text-red-600 dark:text-red-400">Not Verified</span>
-                                    )}
-                                </p>
-                            </div>
-                            {typedUser.createdAt && (
-                                <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Member Since</h4>
-                                    <p className="text-sm">{formatDate(typedUser.createdAt)}</p>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">First Name</p>
+                                    <p className="font-medium text-card-foreground">{typedUser.first_name}</p>
                                 </div>
-                            )}
-                            {typedUser.updatedAt && (
-                                <div>
-                                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Last Updated</h4>
-                                    <p className="text-sm">{formatDate(typedUser.updatedAt)}</p>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">Last Name</p>
+                                    <p className="font-medium text-card-foreground">{typedUser.last_name}</p>
                                 </div>
-                            )}
-                        </div>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">Email</p>
+                                    <p className="font-medium text-card-foreground">{typedUser.email}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">User ID</p>
+                                    <p className="font-medium text-card-foreground">{typedUser.id}</p>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
 
-                        <div className="border-t pt-6">
-                            <Button 
-                                variant="outline" 
-                                onClick={() => navigate("/setting")}
-                                className="mr-2"
-                            >
-                                Settings
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
+                    <Card className="bg-card">
+                        <CardHeader>
+                            <CardTitle className="text-2xl text-card-foreground">Department Information</CardTitle>
+                            <CardDescription className="text-muted-foreground">Your department and role details</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">Department ID</p>
+                                    <p className="font-medium text-card-foreground">{typedUser.department || "Not assigned"}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">Role</p>
+                                    <Badge className="font-normal capitalize text-xs">
+                                        {typedUser.user_type}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+
+                    <Card className="bg-card">
+                        <CardHeader>
+                            <CardTitle className="text-2xl text-card-foreground">Account Status</CardTitle>
+                            <CardDescription className="text-muted-foreground">Your account verification details</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <p className="text-sm text-muted-foreground">Verification Status</p>
+                                    <Badge variant={typedUser.is_verified ? "default" : "destructive"} className={typedUser.is_verified ? "bg-green-500" : ""}>
+                                        {typedUser.is_verified ? "Verified" : "Not Verified"}
+                                    </Badge>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+
+                {/* Side Panel */}
+                <div className="lg:col-span-1">
+                    <Card className="bg-card sticky top-24">
+                        <CardHeader>
+                            <CardTitle className="text-xl text-card-foreground">Quick Actions</CardTitle>
+                            <CardDescription className="text-muted-foreground">Manage your account</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="space-y-4">
+                                <Button 
+                                    className="w-full justify-start" 
+                                    variant="outline"
+                                    onClick={() => navigate("/dashboard")}
+                                >
+                                    Dashboard
+                                </Button>
+                                <Button 
+                                    className="w-full justify-start" 
+                                    variant="outline"
+                                    onClick={() => navigate("/setting")}
+                                >
+                                    Settings
+                                </Button>
+                                <Separator className="my-2" />
+                                <Button 
+                                    className="w-full justify-start text-destructive hover:text-destructive" 
+                                    variant="ghost"
+                                    onClick={() => {
+                                        // Logout logic here
+                                        navigate("/auth/login");
+                                    }}
+                                >
+                                    Log out
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
-};
-
-export default Profile;
+} 

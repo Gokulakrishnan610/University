@@ -11,18 +11,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router";
-import { useLogout, useCurrentUser } from "@/action/user";
+import { useLogout, useCurrentUser, User } from "@/action";
 import { Menu } from "lucide-react";
-import { User } from "@/types/index.types";
 
 interface HeaderProps {
   toggleSidebar: () => void;
 }
 
-
-
 export function Header({ toggleSidebar}: HeaderProps) {
-  const {mutate} = useLogout();
+  const { mutate } = useLogout();
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
   
@@ -30,16 +27,16 @@ export function Header({ toggleSidebar}: HeaderProps) {
   const typedUser = user as User | null;
 
   const handleLogout = () => {
-    mutate(undefined);
+    mutate(undefined, {
+      onSuccess: () => {
+        navigate('/auth/login');
+      }
+    });
   };
 
-  const getInitials = (name: string | undefined | null) => {
-    if (!name) return "U";
-    return name
-      .split(' ')
-      .map(part => part[0])
-      .join('')
-      .toUpperCase();
+  const getInitials = (firstName: string, lastName: string) => {
+    if (!firstName && !lastName) return "U";
+    return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
   };
 
   return (
@@ -50,11 +47,13 @@ export function Header({ toggleSidebar}: HeaderProps) {
             <Menu className="h-5 w-5" />
           </Button>
           <Link to="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold">AIVA</span>
+            <span className="text-xl font-bold">University App</span>
           </Link>
         </div>
 
         <div className="flex items-center gap-4">
+          <ModeToggle />
+          
           {typedUser ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -62,7 +61,7 @@ export function Header({ toggleSidebar}: HeaderProps) {
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="" alt="Avatar" />
                     <AvatarFallback>
-                      {typedUser?.name ? getInitials(typedUser.name) : "U"}
+                      {getInitials(typedUser.first_name, typedUser.last_name)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -70,9 +69,14 @@ export function Header({ toggleSidebar}: HeaderProps) {
               <DropdownMenuContent className="w-56" align="end" forceMount>
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
-                    <p className="text-sm font-medium leading-none">{typedUser?.name || "User"}</p>
+                    <p className="text-sm font-medium leading-none">
+                      {`${typedUser.first_name} ${typedUser.last_name}`}
+                    </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {typedUser?.email || "user@example.com"}
+                      {typedUser.email}
+                    </p>
+                    <p className="text-xs leading-none text-muted-foreground mt-1">
+                      {typedUser.user_type}
                     </p>
                   </div>
                 </DropdownMenuLabel>
@@ -90,7 +94,7 @@ export function Header({ toggleSidebar}: HeaderProps) {
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="default" onClick={() => navigate("/login")}>
+            <Button variant="default" onClick={() => navigate("/auth/login")}>
               Sign In
             </Button>
           )}
