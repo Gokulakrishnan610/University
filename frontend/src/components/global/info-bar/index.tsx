@@ -42,9 +42,9 @@ export function Header({ toggleSidebar}: HeaderProps) {
           <Button variant="ghost" size="icon" onClick={toggleSidebar} className="md:hidden">
             <Menu className="h-5 w-5" />
           </Button>
-          <Link to="/" className="flex items-center gap-2">
+          {/* <Link to="/" className="flex items-center gap-2">
             <span className="text-xl font-bold">University App</span>
-          </Link>
+          </Link> */}
         </div>
 
         <div className="flex items-center gap-4">          

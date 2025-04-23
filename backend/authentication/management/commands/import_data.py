@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = 'Import CSV data into the database'
 
     def handle(self, *args, **kwargs):
-        self.import_users()
+        # self.import_users()
         self.import_departments()
         self.import_teachers()
         self.import_courses()
