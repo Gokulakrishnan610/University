@@ -1,6 +1,5 @@
 import { Link } from "react-router";
 import { Button } from "@/components/ui/button";
-import { ModeToggle } from "@/components/global/toggle-mode";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useNavigate } from "react-router";
-import { useLogout, useCurrentUser, User } from "@/action";
+import { useLogout, useCurrentUser, ProfileResponse } from "@/action";
 import { Menu } from "lucide-react";
 
 interface HeaderProps {
@@ -21,10 +20,7 @@ interface HeaderProps {
 export function Header({ toggleSidebar}: HeaderProps) {
   const { mutate } = useLogout();
   const navigate = useNavigate();
-  const { data: user } = useCurrentUser();
-  
-  // Type cast user to our defined interface or null
-  const typedUser = user as User | null;
+  const { data: profile } = useCurrentUser();
 
   const handleLogout = () => {
     mutate(undefined, {
@@ -51,17 +47,15 @@ export function Header({ toggleSidebar}: HeaderProps) {
           </Link>
         </div>
 
-        <div className="flex items-center gap-4">
-          <ModeToggle />
-          
-          {typedUser ? (
+        <div className="flex items-center gap-4">          
+          {profile && profile.user ? (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
                     <AvatarImage src="" alt="Avatar" />
                     <AvatarFallback>
-                      {getInitials(typedUser.first_name, typedUser.last_name)}
+                      {getInitials(profile.user.first_name, profile.user.last_name)}
                     </AvatarFallback>
                   </Avatar>
                 </Button>
@@ -70,19 +64,32 @@ export function Header({ toggleSidebar}: HeaderProps) {
                 <DropdownMenuLabel className="font-normal">
                   <div className="flex flex-col space-y-1">
                     <p className="text-sm font-medium leading-none">
-                      {`${typedUser.first_name} ${typedUser.last_name}`}
+                      {`${profile.user.first_name} ${profile.user.last_name}`}
                     </p>
                     <p className="text-xs leading-none text-muted-foreground">
-                      {typedUser.email}
+                      {profile.user.email}
                     </p>
-                    <p className="text-xs leading-none text-muted-foreground mt-1">
-                      {typedUser.user_type}
+                    <p className="text-xs leading-none text-muted-foreground mt-1 capitalize">
+                      {profile.user.user_type}
                     </p>
+                    {profile.student && (
+                      <p className="text-xs leading-none text-muted-foreground mt-1">
+                        {profile.student.department?.dept_name || "Department: Not assigned"}
+                      </p>
+                    )}
+                    {profile.teacher && (
+                      <p className="text-xs leading-none text-muted-foreground mt-1">
+                        {profile.teacher.department?.dept_name || "Department: Not assigned"}
+                      </p>
+                    )}
                   </div>
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => navigate("/profile")}>
                   Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate("/dashboard")}>
+                  Dashboard
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate("/setting")}>
                   Settings
