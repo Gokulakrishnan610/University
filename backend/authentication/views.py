@@ -46,7 +46,7 @@ class CreateNewUserAPIView(generics.CreateAPIView):
 
             return Response({
                 "status": "success",
-                "message": "User created successfully.",
+                "detail": "User created successfully.",
                 "data": {
                     "email": user.email,
                     "first_name": user.first_name,
