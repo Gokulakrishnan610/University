@@ -124,7 +124,12 @@ class User(AbstractUser):
                 print(E)
                 raise ValidationError("Teacher not found")
         
-        token = jwt.encode(payload, settings.JWT_KEY, algorithm='HS256')
+        token = jwt.encode(
+            payload=payload,
+            key=settings.JWT_KEY,
+            algorithm='HS256'
+        )
+        
         response = Response({
             'id': self.email,
             'first_name': self.first_name,

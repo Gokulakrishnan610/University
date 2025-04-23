@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router';
-import { 
+import {
   useGetTeacher,
   useUpdateTeacher,
-  Teacher 
+  Teacher
 } from '@/action/teacher';
 import {
   Card,
@@ -17,7 +17,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -40,13 +40,14 @@ export default function TeacherDetails() {
   const [showEditForm, setShowEditForm] = useState(isEditMode);
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const teacherId = parseInt(id as string);
-  
+
   const { data: teacher, isPending: isLoading, refetch } = useGetTeacher(teacherId);
   const { mutate: updateTeacher, isPending: isUpdating } = useUpdateTeacher(teacherId, () => {
     toast.success("Teacher updated successfully");
     refetch();
+    setShowEditForm(false);
   });
-  
+
   // Clean up URL if edit parameter exists
   useEffect(() => {
     if (isEditMode) {
@@ -54,7 +55,7 @@ export default function TeacherDetails() {
       window.history.replaceState({}, document.title, cleanUrl);
     }
   }, [isEditMode, location.pathname]);
-  
+
   if (isLoading || !teacher) {
     return (
       <div className="py-10 max-w-5xl mx-auto">
@@ -77,7 +78,7 @@ export default function TeacherDetails() {
       </div>
     );
   }
-  
+
   const department = teacher.dept;
   const getInitials = (name: string) => {
     return name
@@ -88,10 +89,10 @@ export default function TeacherDetails() {
   };
 
   const fullName = `${teacher.teacher.first_name} ${teacher.teacher.last_name}`;
-  
+
   const handleRemoveFromDepartment = () => {
     console.log('Removing teacher from department...');
-    updateTeacher({ 
+    updateTeacher({
       dept: null
     }, {
       onSuccess: () => {
@@ -111,13 +112,13 @@ export default function TeacherDetails() {
   };
 
   return (
-    <div className="py-10 max-w-5xl mx-auto">
+    <div className="py-10 w-full mx-auto">
       <div className="mb-6">
         <Button variant="ghost" onClick={() => navigate('/teachers')} className="transition-colors">
           <ChevronLeft className="mr-2 h-4 w-4" /> Back to Teachers
         </Button>
       </div>
-      
+
       <Card className="shadow-md border-t-4 border-t-primary">
         <CardHeader className="flex flex-row items-start justify-between pb-2">
           <div className="flex items-center space-x-4">
@@ -154,13 +155,13 @@ export default function TeacherDetails() {
             </Button>
           </div>
         </CardHeader>
-        
+
         <CardContent className="pt-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
             <div className="space-y-6">
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold flex items-center">
-                  <User className="h-5 w-5 mr-2 text-primary" /> 
+                  <User className="h-5 w-5 mr-2 text-primary" />
                   Contact Information
                 </h3>
                 <div className="bg-muted/30 p-4 rounded-lg space-y-3">
@@ -179,7 +180,7 @@ export default function TeacherDetails() {
 
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold flex items-center">
-                  <BookOpen className="h-5 w-5 mr-2 text-primary" /> 
+                  <BookOpen className="h-5 w-5 mr-2 text-primary" />
                   Academic Profile
                 </h3>
                 <div className="bg-muted/30 p-4 rounded-lg space-y-3">
@@ -190,11 +191,11 @@ export default function TeacherDetails() {
                 </div>
               </div>
             </div>
-            
+
             <div className="space-y-6">
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold flex items-center">
-                  <Building className="h-5 w-5 mr-2 text-primary" /> 
+                  <Building className="h-5 w-5 mr-2 text-primary" />
                   Department Information
                 </h3>
                 {department ? (
@@ -203,47 +204,35 @@ export default function TeacherDetails() {
                       <span className="text-muted-foreground block mb-1">Department Name:</span>
                       <span className="font-medium">{department.dept_name}</span>
                     </div>
-                    {department.date_established && (
-                      <div>
-                        <span className="text-muted-foreground block mb-1">Established:</span>
-                        <span className="font-medium">{new Date(department.date_established).toLocaleDateString()}</span>
-                      </div>
-                    )}
+                    <div>
+                      <span className="text-muted-foreground block mb-1">Established:</span>
+                      <span className="font-medium">{new Date(department.date_established).toLocaleDateString()}</span>
+                    </div>
                     <div>
                       <span className="text-muted-foreground block mb-1">Contact:</span>
-                      <span className="font-medium">{department.contact_info || 'N/A'}</span>
+                      <span className="font-medium">{department.contact_info}</span>
                     </div>
                   </div>
                 ) : (
                   <div className="bg-muted/30 p-4 rounded-lg">
-                    <p className="text-muted-foreground italic">No department assigned</p>
+                    <p className="text-muted-foreground">No department assigned</p>
                   </div>
                 )}
               </div>
             </div>
           </div>
         </CardContent>
-        
-        <CardFooter className="flex justify-between pt-4 border-t mt-6">
-          <div className="text-sm text-muted-foreground">
-            Teacher ID: {teacher.id}
-          </div>
-          <div className="text-sm text-muted-foreground">
-            Last updated: {new Date().toLocaleDateString()}
-          </div>
-        </CardFooter>
       </Card>
-      
+
       {showEditForm && (
         <TeacherForm
-          mode="update"
           teacher={teacher}
           onClose={() => setShowEditForm(false)}
-          onSuccess={() => {
-            setShowEditForm(false);
-            refetch();
-          }}
           disableDepartmentEdit={true}
+          onSuccess={() => {
+            refetch();
+            setShowEditForm(false);
+          }}
         />
       )}
 
@@ -252,15 +241,15 @@ export default function TeacherDetails() {
           <AlertDialogHeader>
             <AlertDialogTitle>Remove from Department</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove <span className="font-semibold">{fullName}</span> from {department?.dept_name}?
-              This action will only remove the teacher's department association, not delete the teacher profile.
+              Are you sure you want to remove {fullName} from {department?.dept_name}?
+              This action will only remove the teacher's department association.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleRemoveFromDepartment}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90"
             >
               Remove
             </AlertDialogAction>

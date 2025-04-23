@@ -45,9 +45,8 @@ export default function TeacherManagement() {
   const { data: teachersData, isPending: isLoading, refetch } = useGetTeachers();
 
   const teachers = teachersData || [];
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [teacherToRemove, setTeacherToRemove] = useState<Teacher | null>(null);
-  
+
   const { mutate: updateTeacher } = useUpdateTeacher(
     teacherToRemove?.id || 0,
     () => {
@@ -58,7 +57,7 @@ export default function TeacherManagement() {
 
   const handleRemoveFromDepartment = () => {
     if (!teacherToRemove) return;
-    
+
     console.log('Removing teacher from department:', teacherToRemove.id);
     updateTeacher(
       { dept: null },
@@ -86,7 +85,7 @@ export default function TeacherManagement() {
   };
 
   return (
-    <div className="container py-10 max-w-6xl mx-auto">
+    <div className="py-10 w-full mx-auto">
       <Card className="shadow-md border-t-4 border-t-primary">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
@@ -98,9 +97,6 @@ export default function TeacherManagement() {
               Manage teachers in your department
             </CardDescription>
           </div>
-          <Button onClick={() => setIsCreateModalOpen(true)} className="shadow-sm">
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Teacher
-          </Button>
         </CardHeader>
         <CardContent>
           {isLoading ? (
@@ -115,9 +111,6 @@ export default function TeacherManagement() {
               <p className="text-muted-foreground text-lg mb-4">
                 No teachers found in your department
               </p>
-              <Button onClick={() => setIsCreateModalOpen(true)} variant="outline" className="gap-2">
-                <PlusCircle className="h-4 w-4" /> Add Your First Teacher
-              </Button>
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
@@ -133,9 +126,9 @@ export default function TeacherManagement() {
                 </TableHeader>
                 <TableBody>
                   {teachers.map((teacher: Teacher) => (
-                    <TableRow 
-                      key={teacher.id} 
-                      className="cursor-pointer hover:bg-muted/50 transition-colors" 
+                    <TableRow
+                      key={teacher.id}
+                      className="cursor-pointer hover:bg-muted/50 transition-colors"
                       onClick={() => navigate(`/teachers/${teacher.id}`)}>
                       <TableCell>
                         <div className="flex items-center space-x-3">
@@ -196,7 +189,7 @@ export default function TeacherManagement() {
                               <Pencil className="mr-2 h-4 w-4" /> Edit Teacher
                             </DropdownMenuItem>
                             {teacher.dept && (
-                              <DropdownMenuItem 
+                              <DropdownMenuItem
                                 className="text-destructive focus:text-destructive"
                                 onClick={(e) => {
                                   e.stopPropagation();
@@ -218,17 +211,6 @@ export default function TeacherManagement() {
         </CardContent>
       </Card>
 
-      {isCreateModalOpen && (
-        <TeacherForm 
-          mode="create"
-          onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={() => {
-            setIsCreateModalOpen(false);
-            refetch();
-          }}
-        />
-      )}
-      
       <AlertDialog open={!!teacherToRemove} onOpenChange={(open) => !open && setTeacherToRemove(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -243,9 +225,9 @@ export default function TeacherManagement() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleRemoveFromDepartment}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="bg-destructive hover:bg-destructive/90"
             >
               Remove
             </AlertDialogAction>

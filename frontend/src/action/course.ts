@@ -9,20 +9,34 @@ export interface Course {
   course_name: string;
   course_code: string;
   course_description: string;
-  course_semester: string;
-  course_department: number;
-  course_credits: number;
-  course_teacher: number;
+  course_semester: number;
+  course_year: number;
+  course_type: 'T' | 'L' | 'LoT';
+  department: {
+    id: number;
+    dept_name: string;
+  };
+  department_name: string;
+  credits: number;
+  lecture_hours: number;
+  tutorial_hours: number;
+  practical_hours: number;
+  regulation: string;
 }
 
 export interface CreateCourseRequest {
   course_name: string;
   course_code: string;
   course_description: string;
-  course_semester: string;
-  course_department: number;
-  course_credits: number;
-  course_teacher: number;
+  course_semester: number;
+  course_year: number;
+  regulation: string;
+  course_type: 'T' | 'L' | 'LoT';
+  lecture_hours: number;
+  tutorial_hours: number;
+  practical_hours: number;
+  credits: number;
+  department: number;
 }
 
 export type UpdateCourseRequest = Partial<CreateCourseRequest>;
@@ -69,7 +83,11 @@ export const useCreateCourse = (onSuccess?: () => void) => {
     ['createCourse'],
     async (data: CreateCourseRequest) => {
       try {
-        const response = await api.post('/api/course/', data);
+        const { department, ...courseData } = data;
+        const response = await api.post('/api/course/', {
+          ...courseData,
+          department_id: department
+        });
         return {
           status: response.status,
           data: response.data.message || 'Course created successfully',

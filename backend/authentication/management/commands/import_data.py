@@ -10,14 +10,14 @@ class Command(BaseCommand):
     help = 'Import CSV data into the database'
 
     def handle(self, *args, **kwargs):
-        # self.import_users()
+        self.import_users()
         self.import_departments()
         self.import_teachers()
         self.import_courses()
         self.import_rooms()
 
     def import_departments(self):
-        with open('data/departments.csv', newline='') as csvfile:
+        with open('data/departments.csv', newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 # Ensure the HOD user exists
@@ -50,7 +50,7 @@ class Command(BaseCommand):
                 print(f"Department {'created' if created else 'exists'}: {dept.dept_name}")
 
     def import_users(self):
-        with open('data/app_users.csv', newline='') as csvfile:
+        with open('data/app_users.csv', newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 # Split the name into first and last name
@@ -81,7 +81,7 @@ class Command(BaseCommand):
                 print(f"User {'created' if created else 'exists'}: {user.email}")
 
     def import_teachers(self):
-        with open('data/teachers.csv', newline='') as csvfile:
+        with open('data/teachers.csv', newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 # Ensure the teacher user exists
@@ -111,7 +111,7 @@ class Command(BaseCommand):
                 print(f"Teacher {'created' if created else 'exists'}: {teacher_user.email}")
 
     def import_courses(self):
-        with open('data/courses.csv', newline='') as csvfile:
+        with open('data/courses.csv', newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 # Find or create the department with default values
@@ -165,7 +165,7 @@ class Command(BaseCommand):
             }
         )
 
-        with open('data/rooms.csv', newline='') as csvfile:
+        with open('data/rooms.csv', newline='', encoding='utf-8-sig') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 # Try to get the department, fall back to default if not found

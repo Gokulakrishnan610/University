@@ -27,7 +27,7 @@ export const useGetDepartments = () => {
   return useQuery({
     queryKey: ['departments'],
     queryFn: async () => {
-      const response = await api.get('/api/departments/');
+      const response = await api.get('/api/department/');
       return response.data.data || [];
     }
   });
@@ -38,7 +38,7 @@ export const useGetDepartment = (id: number) => {
   return useQuery({
     queryKey: ['department', id.toString()],
     queryFn: async () => {
-      const response = await api.get(`/api/departments/${id}/`);
+      const response = await api.get(`/api/department/${id}/`);
       return response.data.data;
     },
     enabled: !!id,
