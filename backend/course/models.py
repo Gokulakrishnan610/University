@@ -26,7 +26,7 @@ class Course(models.Model):
         (9, 9),
         (10, 10),
     ]
-    department = models.ForeignKey('department.department', on_delete=models.DO_NOTHING, blank=False, max_length=200)
+    department = models.ForeignKey('department.department', on_delete=models.SET_NULL, null=True, blank=False, max_length=200)
     course_code = models.CharField('Course Code', max_length=200, blank=False)
     course_name = models.CharField("Course Name", max_length=200, blank=False)
     course_year = models.IntegerField("Course Year", default=1, blank=True, choices=COURSE_YEAR)

@@ -17,7 +17,7 @@ class Room(models.Model):
     room_number = models.CharField("Room Number", blank=False, max_length=200)
     block = models.CharField("Room Block", blank=False, max_length=200)
     description = models.CharField("Room description", blank=False, max_length=200)
-    maintained_by = models.ForeignKey("department.department", on_delete=models.DO_NOTHING, blank=False)
+    maintained_by = models.ForeignKey("department.department", on_delete=models.SET_NULL, null=True, blank=False)
     is_lab = models.BooleanField("Is lab?", default=False)
     room_type = models.CharField("Room Type", default='NULL', blank=False, max_length=200, choices=ROOM_TYPES)
     room_min_cap = models.IntegerField("Min. Cap", default=0, blank=False)

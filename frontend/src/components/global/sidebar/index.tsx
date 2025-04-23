@@ -44,11 +44,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/teachers",
     },
     {
-      title: "Students",
-      icon: <Users className="h-5 w-5" />,
-      href: "/students",
-    },
-    {
       title: "Profile",
       icon: <User className="h-5 w-5" />,
       href: "/profile",

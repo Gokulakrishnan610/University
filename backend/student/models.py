@@ -16,7 +16,7 @@ class Student(models.Model):
     batch = models.IntegerField('Batch', default=0)
     current_semester = models.IntegerField('Semester', default=1)
     year = models.IntegerField('Year', default=0)
-    dept = models.ForeignKey('department.Department', on_delete=models.DO_NOTHING, blank=True, null=True)
+    dept = models.ForeignKey('department.Department', on_delete=models.SET_NULL, blank=True, null=True)
     roll_no = models.CharField('Roll No', max_length=50, blank=True, null=True)
     student_type = models.CharField(default='Mgmt', max_length=10, choices=STUDENT_TYPE)
     degree_type = models.CharField(default='UG', max_length=10, choices=DEGREE_TYPE)

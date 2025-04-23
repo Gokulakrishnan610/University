@@ -10,7 +10,7 @@ class Teacher(models.Model):
     ]
 
     teacher = models.ForeignKey('authentication.User', on_delete=models.DO_NOTHING, max_length=200, blank=False)
-    dept = models.ForeignKey('department.Department', on_delete=models.DO_NOTHING, blank=False, max_length=200)
+    dept = models.ForeignKey('department.Department', on_delete=models.SET_NULL,null=True, blank=False, max_length=200)
     staff_code = models.CharField("Staff Code", blank=True, max_length=200)
     teacher_role = models.CharField("Teacher Role", default="Professor", blank=False, max_length=200, choices=TEACHER_ROLES)
     teacher_specialisation = models.CharField('Specialisation', default='', blank=True, max_length=100)
