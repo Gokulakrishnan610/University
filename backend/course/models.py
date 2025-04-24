@@ -58,7 +58,8 @@ class Course(models.Model):
     offered_to = models.ManyToManyField('department.department', related_name="available_courses", blank=True)
     lab_type = models.CharField('Lab Type', blank=True, null=True, choices=ROOM_TYPES, default='NULL')
     lab_pref = models.CharField("Lab Preference", max_length=100, blank=True, null=True)
-
+    no_of_students = models.IntegerField("No. of students", blank=False, default=0)
+    
     class Meta:
         unique_together = ('department', 'course_code', 'course_semester')
 
