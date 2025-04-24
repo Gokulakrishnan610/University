@@ -28,7 +28,6 @@ class AddNewCourse(generics.CreateAPIView):
             serializer.is_valid(raise_exception=True)
             course = serializer.save()
             
-            # Return full course details
             response_serializer = CourseSerializer(course)
             
             return Response(
