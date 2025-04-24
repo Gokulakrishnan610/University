@@ -72,7 +72,7 @@ class CreateCourseSerializer(serializers.ModelSerializer):
             'credits',
             'offered_to',
             'lab_type',
-            'lab_pref'
+            'lab_pref',
         ]
 
     def validate(self, data):
