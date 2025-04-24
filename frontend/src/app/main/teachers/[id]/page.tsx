@@ -112,13 +112,7 @@ export default function TeacherDetails() {
   };
 
   return (
-    <div className="py-10 w-full mx-auto">
-      <div className="mb-6">
-        <Button variant="ghost" onClick={() => navigate('/teachers')} className="transition-colors">
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back to Teachers
-        </Button>
-      </div>
-
+    <div className="w-full mx-auto">
       <Card className="shadow-md border-t-4 border-t-primary">
         <CardHeader className="flex flex-row items-start justify-between pb-2">
           <div className="flex items-center space-x-4">

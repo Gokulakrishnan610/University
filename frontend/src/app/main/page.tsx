@@ -6,7 +6,8 @@ import CourseManagement from './courses/page';
 import TeacherManagement from './teachers/page';
 import CourseDetails from "./courses/[id]/page";
 import TeacherDetails from "./teachers/[id]/page";
-import TeacherCourseAssignmentPage from "../teacher-course-assignment/page";
+import TeacherCourseAssignmentPage from "./teacher-course-assignment/page";
+import TeacherCourseAssignmentDetail from "./teacher-course-assignment/[id]/page";
 
 export default function Dashboard() {
   // const {data, isPending} = useGetCourses()
@@ -21,6 +22,7 @@ export default function Dashboard() {
       <Route path="/teachers" element={<TeacherManagement />} />
       <Route path="/teachers/:id" element={<TeacherDetails />} />
       <Route path="/teacher-course-assignment" element={<TeacherCourseAssignmentPage />} />
+      <Route path="/teacher-course-assignment/:id" element={<TeacherCourseAssignmentDetail />} />
     </Routes>
   );
 } 

@@ -31,7 +31,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
     {
       title: "Dashboard",
       icon: <LayoutDashboard className="h-5 w-5" />,
-      href: "/dashboard",
+      href: "/",
     },
     {
       title: "Courses",
@@ -130,7 +130,9 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
             </div>
           </div>
           {profile && profile.user && (
-            <div className="p-4 border-t mt-auto">
+            <div className="p-4 border-t mt-auto cursor-pointer" onClick={() => {
+              navigate('/profile')
+            }}>
               <div className="flex items-center gap-3 mb-3">
                 <Avatar className="h-10 w-10">
                   <AvatarImage src="" alt="User Avatar" />
