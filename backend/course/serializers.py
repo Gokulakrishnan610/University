@@ -5,6 +5,7 @@ from department.serializers import DepartmentSerializer
 class CourseSerializer(serializers.ModelSerializer):
     department_detail = DepartmentSerializer(source='department', read_only=True)
     department_name = serializers.SerializerMethodField()
+    offered_to_details = DepartmentSerializer(source='offered_to', many=True, read_only=True)
     
     class Meta:
         model = Course
@@ -19,13 +20,19 @@ class CourseSerializer(serializers.ModelSerializer):
             'course_semester',
             'regulation',
             'course_type',
+            'elective_type',
             'lecture_hours',
             'tutorial_hours',
             'practical_hours',
-            'credits'
+            'credits',
+            'offered_to',
+            'offered_to_details',
+            'lab_type',
+            'lab_pref',
         ]
         extra_kwargs = {
-            'department': {'write_only': True}
+            'department': {'write_only': True},
+            'offered_to': {'write_only': True}
         }
 
     def get_department_name(self, obj):
@@ -58,10 +65,14 @@ class CreateCourseSerializer(serializers.ModelSerializer):
             'course_semester',
             'regulation',
             'course_type',
+            'elective_type',
             'lecture_hours',
             'tutorial_hours',
             'practical_hours',
-            'credits'
+            'credits',
+            'offered_to',
+            'lab_type',
+            'lab_pref'
         ]
 
     def validate(self, data):
@@ -81,7 +92,10 @@ class CreateCourseSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        return Course.objects.create(**validated_data)
+        offered_to_data = validated_data.pop('offered_to', [])
+        course = Course.objects.create(**validated_data)
+        course.offered_to.set(offered_to_data)
+        return course
 
 class UpdateCourseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -93,10 +107,12 @@ class UpdateCourseSerializer(serializers.ModelSerializer):
             'course_semester',
             'regulation',
             'course_type',
+            'elective_type',
             'lecture_hours',
             'tutorial_hours',
             'practical_hours',
-            'credits'
+            'credits',
+            'offered_to'
         ]
 
     def validate(self, data):
@@ -115,3 +131,10 @@ class UpdateCourseSerializer(serializers.ModelSerializer):
             )
         
         return data
+
+    def update(self, instance, validated_data):
+        offered_to_data = validated_data.pop('offered_to', None)
+        instance = super().update(instance, validated_data)
+        if offered_to_data is not None:
+            instance.offered_to.set(offered_to_data)
+        return instance

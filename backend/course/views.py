@@ -26,12 +26,15 @@ class AddNewCourse(generics.CreateAPIView):
             
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            course = serializer.save()
+            
+            # Return full course details
+            response_serializer = CourseSerializer(course)
             
             return Response(
                 {
                     'detail': "Course added successfully.",
-                    'data': serializer.data
+                    'data': response_serializer.data
                 },
                 status=status.HTTP_201_CREATED
             )
@@ -79,12 +82,14 @@ class CourseListView(generics.ListCreateAPIView):
             
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
-            serializer.save()
+            course = serializer.save()
+            
+            response_serializer = CourseSerializer(course)
             
             return Response(
                 {
                     'detail': "Course added successfully.",
-                    'data': serializer.data
+                    'data': response_serializer.data
                 },
                 status=status.HTTP_201_CREATED
             )

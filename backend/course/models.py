@@ -26,6 +26,23 @@ class Course(models.Model):
         (9, 9),
         (10, 10),
     ]
+    ELECTIVE_TYPE = [
+        ('NE', 'Non-Elective'),
+        ('PE', 'Professional Elective'),
+        ('OE', 'Open Elective'),
+    ]
+    ROOM_TYPES = [
+        ('NULL', 'NULL'),
+        ('TL', 'Technical Lab'),
+        ('NTL', 'Non-Technical Lab')
+    ]
+    TECH_LEVEL = [
+        ('none', 'None'),
+        ('high', 'High'),
+        ('low', 'Low'),
+        ('medium', 'Medium'),
+    ]
+
     department = models.ForeignKey('department.department', on_delete=models.SET_NULL, null=True, blank=False, max_length=200)
     course_code = models.CharField('Course Code', max_length=200, blank=False)
     course_name = models.CharField("Course Name", max_length=200, blank=False)
@@ -33,10 +50,14 @@ class Course(models.Model):
     course_semester = models.IntegerField("Course Semester", default=1, blank=False, choices=COURSE_SEMESTER)
     regulation = models.CharField("Regulation", blank=False, max_length=200)
     course_type = models.CharField("Course Type", default='T', blank=True, max_length=50, choices=COURSE_TYPE)
+    elective_type = models.CharField("Elective Type", default='NE', blank=True, max_length=50, choices=ELECTIVE_TYPE)
     lecture_hours = models.IntegerField("Lecture Hours", default=0, blank=True)
     tutorial_hours = models.IntegerField("Tutorial Hours", default=0, blank=True)
     practical_hours = models.IntegerField("Practical Hours", default=0, blank=True)
     credits = models.IntegerField("Course Credit", default=0, blank=False)
+    offered_to = models.ManyToManyField('department.department', related_name="available_courses", blank=True)
+    lab_type = models.CharField('Lab Type', blank=True, null=True, choices=ROOM_TYPES, default='NULL')
+    lab_pref = models.CharField("Lab Preference", max_length=100, blank=True, null=True)
 
     class Meta:
         unique_together = ('department', 'course_code', 'course_semester')
