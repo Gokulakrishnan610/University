@@ -15,7 +15,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AlterUniqueTogether(
             name='course',
-            unique_together={('department', 'course', 'course_semester', 'managed_by')},
+            unique_together={('department', 'course_semester')},
         ),
         migrations.AddField(
             model_name='course',

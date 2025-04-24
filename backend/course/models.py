@@ -43,8 +43,7 @@ class Course(models.Model):
         ('medium', 'Medium'),
     ]
 
-    department = models.ForeignKey('department.department', on_delete=models.SET_NULL, 
-                                null=True, blank=False, related_name='courses')
+    department = models.ForeignKey('department.department', on_delete=models.SET_NULL, null=True, blank=False, related_name='courses')
     course = models.ForeignKey("courseMaster.CourseMaster", on_delete=models.CASCADE, blank=False)
     course_year = models.IntegerField("Course Year", default=1, blank=False, choices=COURSE_YEAR)
     course_semester = models.IntegerField("Course Semester", default=1, blank=False, choices=COURSE_SEMESTER)
