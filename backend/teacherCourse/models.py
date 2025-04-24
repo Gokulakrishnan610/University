@@ -15,11 +15,26 @@ class TeacherCourse(models.Model):
         verbose_name_plural = 'Teacher Course Assignments'
 
     def clean(self):
+        assigned_courses = TeacherCourse.objects.filter(
+            teacher=self.teacher,
+            academic_year=self.academic_year,
+            semester=self.semester
+        )
+
+        total_hours_assigned = sum(course.course.credits for course in assigned_courses)
+        
+        if total_hours_assigned + self.course.credits > self.teacher.teacher_working_hours:
+            raise ValidationError("Teacher working hour is greater than assigned")
+        # raise ValidationError("Total hours", total_hours_assigned)
         if self.teacher.dept != self.course.department:
             raise ValidationError(
                 "Teacher and course must belong to the same department"
             )
         return super().clean()
+    
+    def save(self, force_insert = ..., force_update = ..., using = ..., update_fields = ...):
+        self.clean()
+        return super().save()
 
     def __str__(self):
         return f"{self.teacher.teacher.get_full_name()} - {self.course.course_name} (Sem {self.semester})"

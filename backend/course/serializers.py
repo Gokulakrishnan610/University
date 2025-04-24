@@ -29,6 +29,7 @@ class CourseSerializer(serializers.ModelSerializer):
             'offered_to_details',
             'lab_type',
             'lab_pref',
+            'no_of_students',
         ]
         extra_kwargs = {
             'department': {'write_only': True},
@@ -72,7 +73,8 @@ class CreateCourseSerializer(serializers.ModelSerializer):
             'credits',
             'offered_to',
             'lab_type',
-            'lab_pref'
+            'lab_pref',
+            'no_of_students',
         ]
 
     def validate(self, data):
