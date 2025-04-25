@@ -93,6 +93,7 @@ INSTALLED_APPS = [
     'teacherCourse',
     'studentCourse',
     'courseMaster',
+    'slot',
 ]
 
 MIDDLEWARE = [

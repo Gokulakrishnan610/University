@@ -4,7 +4,7 @@ from department.serializers import DepartmentSerializer
 from courseMaster.serializers import CourseMasterSerializer  # Assuming you have one
 
 class CourseSerializer(serializers.ModelSerializer):
-    department_detail = DepartmentSerializer(source='department', read_only=True)
+    department_detail = DepartmentSerializer(source='course__course_dept', read_only=True)
     managed_by_detail = DepartmentSerializer(source='managed_by', read_only=True)
     course_detail = CourseMasterSerializer(source='course', read_only=True)
     department_name = serializers.SerializerMethodField()
@@ -13,9 +13,10 @@ class CourseSerializer(serializers.ModelSerializer):
         model = Course
         fields = [
             'id',
-            'department',
+            'course__course_dept',
             'department_detail',
-            'department_name',
+            'for_dept',
+            'managed_by',
             'course',
             'course_detail',
             'course_year',
@@ -32,16 +33,15 @@ class CourseSerializer(serializers.ModelSerializer):
             'lab_type',
             'lab_pref',
             'no_of_students',
+            'is_zero_credit_course',
+            'slot_prefference'
         ]
-        extra_kwargs = {
-            'department': {'write_only': True},
-            'course': {'write_only': True},
-            'managed_by': {'write_only': True}
-        }
-
-    def get_department_name(self, obj):
-        return obj.department.dept_name if obj.department else None
-
+        # extra_kwargs = {
+        #     'department': {'write_only': True},
+        #     'course': {'write_only': True},
+        #     'managed_by': {'write_only': True}
+        # }
+        
     def validate(self, data):
         department = data.get('department', self.instance.department if self.instance else None)
         course = data.get('course', self.instance.course if self.instance else None)
@@ -119,13 +119,13 @@ class UpdateCourseSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         instance = self.instance
-        department = instance.department
+        department = instance.for_dept
         course = instance.course
         course_semester = data.get('course_semester', instance.course_semester)
         managed_by = instance.managed_by
 
         if Course.objects.filter(
-            department=department,
+            for_dept=department,
             course=course,
             course_semester=course_semester,
             managed_by=managed_by

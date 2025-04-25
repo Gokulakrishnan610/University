@@ -5,7 +5,7 @@ class CourseAdmin(admin.ModelAdmin):
     list_display = (
         'get_course_id', 
         'get_course_name', 
-        'department', 
+        'course__course_dept', 
         'course_year', 
         'course_semester', 
         'regulation', 
@@ -13,9 +13,9 @@ class CourseAdmin(admin.ModelAdmin):
         'credits',
         'managed_by'
     )
-    search_fields = ('course__course_id', 'course__course_name', 'department__dept_name')
+    search_fields = ('course__course_id', 'course__course_name', 'course__course_dept')
     list_filter = (
-        'department', 
+        'course__course_dept', 
         'course_year', 
         'course_semester', 
         'regulation', 
@@ -24,7 +24,7 @@ class CourseAdmin(admin.ModelAdmin):
         'managed_by'
     )
     ordering = ('course__course_id',)
-    list_select_related = ('course', 'department', 'managed_by')
+    list_select_related = ('course', 'course__course_dept', 'managed_by')
     
     def get_course_id(self, obj):
         return obj.course.course_id

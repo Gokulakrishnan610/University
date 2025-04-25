@@ -3,13 +3,16 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Department
 from .serializers import DepartmentSerializer
-
+from authentication.authentication import JWTCookieAuthentication
+from rest_framework.permissions import IsAuthenticated
 class DepartmentListCreateView(ListCreateAPIView):
     """
     API View to list all departments or create a new department.
     """
     queryset = Department.objects.all()
     serializer_class = DepartmentSerializer
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTCookieAuthentication]
 
     def list(self, request, *args, **kwargs):
         """

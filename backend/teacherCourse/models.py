@@ -34,4 +34,4 @@ class TeacherCourse(models.Model):
         return super().save()
 
     def __str__(self):
-        return f"{self.teacher.teacher.get_full_name()} - {self.course.course_name} (Sem {self.semester})"
+        return f"{self.teacher.teacher.get_full_name()} - {self.course.course.course_name} (Sem {self.semester})"
