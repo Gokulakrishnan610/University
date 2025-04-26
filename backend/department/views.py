@@ -147,14 +147,48 @@ class DepartmentCoursesView(APIView):
             teaching_dept_id__isnull=False
         ).exclude(teaching_dept_id=department_id)
         
-        # Serialize the data
-        owned_courses_serializer = CourseSerializer(owned_courses, many=True)
-        teaching_courses_serializer = CourseSerializer(teaching_courses, many=True)
-        receiving_courses_serializer = CourseSerializer(receiving_courses, many=True)
+        # Get courses for this department's students but owned and taught by other departments
+        # Exclude courses that are already in owned, teaching, or receiving categories
+        for_dept_courses = Course.objects.filter(for_dept_id=department_id).exclude(
+            # Exclude courses owned by this department (already in owned_courses)
+            course_id__course_dept_id=department_id
+        ).exclude(
+            # Exclude courses taught by this department (already in teaching_courses)
+            teaching_dept_id=department_id
+        )
         
-        return Response({
+        # Create serializer context with request for permission determination
+        context = {'request': request}
+        
+        # Serialize the data
+        owned_courses_serializer = CourseSerializer(owned_courses, many=True, context=context)
+        teaching_courses_serializer = CourseSerializer(teaching_courses, many=True, context=context)
+        receiving_courses_serializer = CourseSerializer(receiving_courses, many=True, context=context)
+        for_dept_courses_serializer = CourseSerializer(for_dept_courses, many=True, context=context)
+        
+        # Add role information to help UI show appropriate controls
+        response_data = {
             "status": "success",
-            "owned_courses": owned_courses_serializer.data,
-            "teaching_courses": teaching_courses_serializer.data,
-            "receiving_courses": receiving_courses_serializer.data
-        }, status=status.HTTP_200_OK)
+            "owned_courses": {
+                "role": "owner",
+                "description": "These courses are owned by your department",
+                "data": owned_courses_serializer.data
+            },
+            "teaching_courses": {
+                "role": "teacher",
+                "description": "These courses are taught by your department but owned by other departments",
+                "data": teaching_courses_serializer.data
+            },
+            "receiving_courses": {
+                "role": "owner_not_teacher",
+                "description": "These courses are owned by your department but taught by other departments",
+                "data": receiving_courses_serializer.data
+            },
+            "for_dept_courses": {
+                "role": "learner",
+                "description": "These courses are for your department's students but owned and taught by other departments",
+                "data": for_dept_courses_serializer.data
+            }
+        }
+        
+        return Response(response_data, status=status.HTTP_200_OK)

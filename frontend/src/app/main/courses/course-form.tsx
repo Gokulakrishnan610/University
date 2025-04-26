@@ -27,7 +27,7 @@ import { DepartmentDetails, Course } from '@/action/course';
 
 // Form schema for course creation and editing
 export const courseFormSchema = z.object({
-  course_id: z.coerce.number().positive("Please select a course"),
+  course_id: z.coerce.number().positive("Please select a course").optional(),
   course_year: z.coerce.number().min(1, "Year must be at least 1").max(10, "Year must be 10 or less"),
   course_semester: z.coerce.number().min(1, "Semester must be at least 1").max(8, "Semester must be 8 or less"),
   lecture_hours: z.coerce.number().min(0, "Lecture hours cannot be negative"),
@@ -57,6 +57,7 @@ export interface CourseFormProps {
   onCancel: () => void;
   submitLabel?: string;
   isEdit?: boolean;
+  editableFields?: string[];
 }
 
 export default function CourseForm({
@@ -67,7 +68,8 @@ export default function CourseForm({
   onSubmit,
   onCancel,
   submitLabel = 'Submit',
-  isEdit = false
+  isEdit = false,
+  editableFields = []
 }: CourseFormProps) {
   const form = useForm<CourseFormValues>({
     resolver: zodResolver(courseFormSchema),
@@ -103,38 +105,59 @@ export default function CourseForm({
     }
   }, [defaultValues, form]);
 
+  // Override onSubmit handler to handle edit mode
+  const handleSubmit = (values: CourseFormValues) => {
+    // If in edit mode, use existing course_id from defaultValues
+    if (isEdit && defaultValues?.course_id) {
+      values.course_id = defaultValues.course_id;
+    }
+    
+    onSubmit(values);
+  };
+
+  // Function to check if a field is editable
+  const isFieldEditable = (fieldName: string): boolean => {
+    if (!isEdit) return true; // If not editing, all fields are editable
+    if (editableFields.length === 0) return true; // If no restrictions, all fields are editable
+    return editableFields.includes(fieldName);
+  };
+
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 py-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6 py-4">
         <div className="grid grid-cols-1 gap-4">
-          <FormField
-            control={form.control}
-            name="course_id"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Course</FormLabel>
-                <Select 
-                  onValueChange={(value) => field.onChange(parseInt(value))} 
-                  defaultValue={field.value as any}
-                  disabled={isEdit}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a course" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {courseMasters.map((course) => (
-                      <SelectItem key={course.id} value={course.id.toString()}>
-                        {course.course_id} - {course.course_name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          {!isEdit && (
+            <FormField
+              control={form.control}
+              name="course_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Course</FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(parseInt(value))} 
+                    defaultValue={field.value as any}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a course" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {courseMasters.map((course) => (
+                        <SelectItem key={course.id} value={course.id.toString()}>
+                          {course.course_id} - {course.course_name} ({course.course_dept_detail.dept_name})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Selecting a course also selects its owning department that controls the curriculum
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
         </div>
         
         <div className="grid grid-cols-2 gap-4">
@@ -145,7 +168,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Year</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input type="number" {...field} disabled={!isFieldEditable('course_year')} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -159,7 +182,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Semester</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input type="number" {...field} disabled={!isFieldEditable('course_semester')} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -177,6 +200,7 @@ export default function CourseForm({
                 <Select 
                   onValueChange={(value) => field.onChange(parseInt(value))} 
                   defaultValue={field.value.toString()}
+                  disabled={!isFieldEditable('for_dept_id')}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -192,7 +216,7 @@ export default function CourseForm({
                   </SelectContent>
                 </Select>
                 <FormDescription>
-                  Department whose students will take this course
+                  Department whose students will take this course as part of their curriculum
                 </FormDescription>
                 <FormMessage />
               </FormItem>
@@ -208,6 +232,7 @@ export default function CourseForm({
                 <Select 
                   onValueChange={(value) => field.onChange(parseInt(value))} 
                   defaultValue={field.value.toString()}
+                  disabled={!isFieldEditable('teaching_dept_id')}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -223,7 +248,7 @@ export default function CourseForm({
                   </SelectContent>
                 </Select>
                 <FormDescription>
-                  Department responsible for teaching this course
+                  Department that will provide faculty to teach this course
                 </FormDescription>
                 <FormMessage />
               </FormItem>

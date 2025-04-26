@@ -54,7 +54,7 @@ export default function Login() {
     if (result?.status === 200) {
       if (result.user_type === 'HOD') {
         toast.success("Login successful! Welcome back.");
-        navigate("/dashboard");
+        navigate("/");
       } else {
         clearAuthCookies().then(() => {
           toast.error("Access denied. Only department heads can login to this system.");

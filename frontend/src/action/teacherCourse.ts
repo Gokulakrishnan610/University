@@ -5,14 +5,14 @@ export interface TeacherCourseAssignment {
     id: number;
     teacher_detail: {
         id: number;
-        teacher: {
+        teacher_id: {
             email: string;
             first_name: string;
             last_name: string;
             phone_number: string;
             gender: string;
         };
-        dept: {
+        dept_id: {
             id: number;
             dept_name: string;
             date_established: string;
@@ -25,23 +25,41 @@ export interface TeacherCourseAssignment {
     };
     course_detail: {
         id: number;
-        department_detail: {
+        course_id: number;
+        course_detail: {
+            id: number;
+            course_id: string;
+            course_name: string;
+            course_dept_id: number;
+            course_dept_detail: {
+                id: number;
+                dept_name: string;
+                date_established: string;
+                contact_info: string;
+            }
+        };
+        course_year: number;
+        course_semester: number;
+        lecture_hours: number;
+        tutorial_hours: number;
+        practical_hours: number;
+        credits: number;
+        for_dept_id: number;
+        for_dept_detail: {
             id: number;
             dept_name: string;
             date_established: string;
             contact_info: string;
         };
-        department_name: string;
-        course_code: string;
-        course_name: string;
-        course_year: number;
-        course_semester: number;
+        teaching_dept_id: number;
+        teaching_dept_detail: {
+            id: number;
+            dept_name: string;
+            date_established: string;
+            contact_info: string;
+        };
         regulation: string;
         course_type: string;
-        lecture_hours: number;
-        tutorial_hours: number;
-        practical_hours: number;
-        credits: number;
     };
     semester: number;
     academic_year: number;
@@ -59,7 +77,6 @@ export const useGetTeacherCourseAssignments = () => {
     });
 };
 
-// Get a single teacher-course assignment by ID
 export const useGetTeacherCourseAssignment = (id: number) => {
     return useQuery({
         queryKey: ['teacherCourseAssignment', id],
@@ -71,12 +88,11 @@ export const useGetTeacherCourseAssignment = (id: number) => {
     });
 };
 
-// Create a new teacher-course assignment
 export const useCreateTeacherCourseAssignment = (onSuccess?: () => void) => {
     return useMutation({
         mutationFn: async (data: {
-            teacher: number;
-            course: number;
+            teacher_id: number;
+            course_id: number;
             semester: number;
             academic_year: number;
             student_count: number;

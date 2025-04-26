@@ -3,7 +3,8 @@ import { useParams, useNavigate } from 'react-router';
 import {
   useGetCourse,
   Course,
-  useUpdateCourse
+  useUpdateCourse,
+  useDeleteCourse
 } from '@/action/course';
 import {
   Card,
@@ -30,7 +31,8 @@ import {
   TimerReset,
   ArrowLeftRight,
   Calendar,
-  Loader2
+  Loader2,
+  Trash
 } from 'lucide-react';
 import { useGetDepartments } from '@/action/department';
 import { useGetCourseMasters } from '@/action/courseMaster';
@@ -46,7 +48,17 @@ import {
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CourseForm, { CourseFormValues } from '../course-form';
-
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { getRelationshipBadgeColor, getRelationshipDisplayName } from '@/lib/utils';
 // Stat item component
 interface StatItemProps {
   icon: LucideIcon;
@@ -65,43 +77,44 @@ const StatItem = ({ icon: Icon, label, value, iconColor = 'text-primary' }: Stat
   </div>
 );
 
-// Function to get color for relationship badge
-const getRelationshipBadgeColor = (relationshipCode: string) => {
-  switch (relationshipCode) {
-    case 'SELF_OWNED_SELF_TAUGHT':
-      return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
-    case 'SELF_OWNED_OTHER_TAUGHT':
-      return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-    case 'OTHER_OWNED_SELF_TAUGHT':
-      return 'bg-green-500/10 text-green-500 border-green-500/20';
-    case 'OTHER_OWNED_OTHER_TAUGHT':
-      return 'bg-purple-500/10 text-purple-500 border-purple-500/20';
-    case 'SELF_OWNED_FOR_OTHER_SELF_TAUGHT':
-      return 'bg-indigo-500/10 text-indigo-500 border-indigo-500/20';
-    case 'SELF_OWNED_FOR_OTHER_OTHER_TAUGHT':
-      return 'bg-pink-500/10 text-pink-500 border-pink-500/20';
-    default:
-      return 'bg-gray-500/10 text-gray-500 border-gray-500/20';
-  }
-};
 
-// Function to get a simplified display name for relationship code
-const getRelationshipDisplayName = (relationshipCode: string) => {
+// Function to get a contextual description based on user's department roles
+const getRelationshipContext = (relationshipCode: string, userRoles: string[], course: any) => {
+  const isOwner = userRoles.includes('owner');
+  const isTeacher = userRoles.includes('teacher');
+  const isLearner = userRoles.includes('learner');
+  
+  const ownerDept = course.course_detail.course_dept_detail.dept_name;
+  const teachingDept = course.teaching_dept_detail.dept_name;
+  const forDept = course.for_dept_detail.dept_name;
+  
   switch (relationshipCode) {
     case 'SELF_OWNED_SELF_TAUGHT':
-      return 'Self-Owned & Self-Taught';
+      return isOwner 
+        ? `This is our course and we teach it.` 
+        : `This course is owned and taught by ${ownerDept}.`;
     case 'SELF_OWNED_OTHER_TAUGHT':
-      return 'Self-Owned, Other-Taught';
+      return isOwner 
+        ? `This is our course, but taught by ${teachingDept}.` 
+        : `This course is owned by ${ownerDept} and taught by ${teachingDept}.`;
     case 'OTHER_OWNED_SELF_TAUGHT':
-      return 'Other-Owned, Self-Taught';
+      return isTeacher 
+        ? `We teach this course for ${ownerDept}.` 
+        : `This course is owned by ${ownerDept} and taught by ${teachingDept}.`;
     case 'OTHER_OWNED_OTHER_TAUGHT':
-      return 'Other-Owned & Other-Taught';
+      return isLearner 
+        ? `Our students take this external course from ${ownerDept}, taught by ${teachingDept}.` 
+        : `This course is owned by ${ownerDept} and taught by ${teachingDept} for ${forDept}.`;
     case 'SELF_OWNED_FOR_OTHER_SELF_TAUGHT':
-      return 'Self-Owned & Taught for Others';
+      return isOwner 
+        ? `We created and teach this course for ${forDept}.` 
+        : `This course is provided and taught by ${ownerDept} for ${forDept}.`;
     case 'SELF_OWNED_FOR_OTHER_OTHER_TAUGHT':
-      return 'Self-Owned for Others, Other-Taught';
+      return isOwner 
+        ? `We created this course for ${forDept}, taught by ${teachingDept}.` 
+        : `This course is provided by ${ownerDept} for ${forDept}, taught by ${teachingDept}.`;
     default:
-      return 'Unknown Relationship';
+      return 'This course has an undefined relationship between departments.';
   }
 };
 
@@ -112,6 +125,7 @@ export default function CourseDetails() {
 
   const [showReassignDialog, setShowReassignDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   
   const { data: courseResponse, isPending: isLoading, refetch } = useGetCourse(courseId);
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
@@ -130,11 +144,27 @@ export default function CourseDetails() {
     setShowEditDialog(false);
   });
   
+  // Delete course mutation
+  const { mutate: deleteCourse, isPending: isDeleting } = useDeleteCourse(courseId, () => {
+    toast.success("Course deleted successfully");
+    navigate('/courses');
+  });
+  
   // Handle form submission for course update
   const handleUpdateCourse = (values: CourseFormValues) => {
     // Remove course_id as it shouldn't be updated
     const { course_id, ...updateData } = values;
     updateCourse(updateData);
+  };
+  
+  // Handle delete confirmation function
+  const handleDeleteCourse = () => {
+    setShowDeleteDialog(true);
+  };
+  
+  const confirmDelete = () => {
+    deleteCourse({});
+    setShowDeleteDialog(false);
   };
   
   if (isLoading || !course) {
@@ -165,6 +195,12 @@ export default function CourseDetails() {
   const isTaughtByUs = course.teaching_dept_id === course.for_dept_id;
   const relationshipCode = course.relationship_type?.code || 'UNKNOWN';
   
+  // Extract permissions data
+  const canEdit = course.permissions?.can_edit || false;
+  const canDelete = course.permissions?.can_delete || false;
+  const editableFields = course.permissions?.editable_fields || [];
+  const userRoles = course.user_department_roles || [];
+  
   // Create default values for the edit form
   const defaultValues = {
     course_id: course.course_id?.id,
@@ -187,7 +223,7 @@ export default function CourseDetails() {
   };
   
   return (
-    <div className="py-6 w-full mx-auto">      
+    <div className="py-4 w-full mx-auto">      
       <Card className="shadow-md border-t-4 border-t-primary mb-6">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
@@ -199,50 +235,61 @@ export default function CourseDetails() {
                 <div>
                   <div className="flex items-center gap-2">
                     <CardTitle className="text-2xl">
-                      {course.course_detail.course_name}
+                      {course.course_detail.course_id} - {course.course_detail.course_name}
                     </CardTitle>
-                    <Badge variant="outline" className="ml-2 bg-primary/5 text-primary border-primary/20">
-                      {course.course_detail.course_id}
-                    </Badge>
-                    <Badge 
-                      variant="outline" 
-                      className={`ml-2 ${getRelationshipBadgeColor(relationshipCode)}`}
-                    >
-                      {getRelationshipDisplayName(relationshipCode)}
-                    </Badge>
+                    <div className="mt-2">
+                      <Badge variant="outline" className={getRelationshipBadgeColor(relationshipCode)}>
+                        {getRelationshipDisplayName(relationshipCode, userRoles)}
+                      </Badge>
+                    </div>
                   </div>
                   <CardDescription className="mt-1">
-                    <div className="flex items-center gap-4">
-                      <span className="flex items-center gap-1.5">
-                        <School className="h-3.5 w-3.5 text-muted-foreground" />
-                        {course.course_detail.course_dept_detail.dept_name}
-                      </span>
-                      <span className="flex items-center gap-1.5">
-                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
-                        Regulation: {course.regulation}
-                      </span>
+                    <div className="flex flex-col space-y-2">
+                      <div className="flex items-center gap-4">
+                        <span className="flex items-center gap-1.5">
+                          <School className="h-3.5 w-3.5 text-muted-foreground" />
+                          {course.course_detail.course_dept_detail.dept_name}
+                        </span>
+                        <span className="flex items-center gap-1.5">
+                          <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                          Regulation: {course.regulation}
+                        </span>
+                      </div>
+                      <p className="text-sm">{getRelationshipContext(relationshipCode, userRoles, course)}</p>
                     </div>
                   </CardDescription>
                 </div>
               </div>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                className="flex items-center gap-1.5"
-                onClick={() => setShowEditDialog(true)}
-              >
-                <Pencil className="h-4 w-4" />
-                Edit Course
-              </Button>
-              {isOwnCourse && !isTaughtByUs && (
+              {canEdit && (
+                <Button 
+                  className="flex gap-1.5 items-center" 
+                  onClick={() => setShowEditDialog(true)}
+                >
+                  <Pencil className="h-4 w-4" /> Edit Course
+                </Button>
+              )}
+              {userRoles.includes('owner') && (
                 <Button 
                   variant="outline" 
+                  className="flex gap-1.5 items-center"
                   onClick={() => setShowReassignDialog(true)}
-                  className="flex items-center gap-1.5"
                 >
-                  <ArrowLeftRight className="h-4 w-4" />
-                  Reassign Teaching
+                  <ArrowLeftRight className="h-4 w-4" /> Reassign Teaching
+                </Button>
+              )}
+              {canDelete && (
+                <Button 
+                  variant="destructive" 
+                  className="flex gap-1.5 items-center"
+                  onClick={handleDeleteCourse}
+                  disabled={isDeleting}
+                >
+                  {isDeleting ? 
+                    <Loader2 className="h-4 w-4 animate-spin" /> : 
+                    <Trash className="h-4 w-4" />}
+                  {isDeleting ? "Deleting..." : "Delete"}
                 </Button>
               )}
             </div>
@@ -286,7 +333,7 @@ export default function CourseDetails() {
                 </TabsTrigger>
                 <TabsTrigger value="relationship" className="flex items-center gap-1.5">
                   <ArrowLeftRight className="h-4 w-4" />
-                  Department Relationship
+                  Department Roles
                 </TabsTrigger>
               </TabsList>
               
@@ -468,10 +515,10 @@ export default function CourseDetails() {
                   <CardHeader className="py-4">
                     <CardTitle className="text-lg flex items-center gap-2">
                       <ArrowLeftRight className="h-5 w-5 text-primary" />
-                      Department Relationship
+                      Course Relationships
                     </CardTitle>
                     <CardDescription>
-                      How this course relates to different departments
+                      How different departments interact with this course
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="pb-6">
@@ -481,9 +528,9 @@ export default function CourseDetails() {
                         <Badge 
                           className={`text-sm py-1 px-3 ${getRelationshipBadgeColor(relationshipCode)}`}
                         >
-                          {getRelationshipDisplayName(relationshipCode)}
+                          {getRelationshipDisplayName(relationshipCode, userRoles)}
                         </Badge>
-                        <p className="mt-2 text-sm text-muted-foreground">
+                        <p className="mt-3 text-muted-foreground">
                           {course.relationship_type?.description}
                         </p>
                       </div>
@@ -496,7 +543,7 @@ export default function CourseDetails() {
                             {course.course_detail.course_dept_detail.dept_name}
                           </p>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Department that created and owns the course
+                            Responsible for curriculum design, course content, and maintaining academic standards
                           </p>
                         </div>
                         
@@ -507,7 +554,7 @@ export default function CourseDetails() {
                             {course.for_dept_detail.dept_name}
                           </p>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Department whose students will take this course
+                            Department whose students will take this course as part of their academic program
                           </p>
                         </div>
                         
@@ -518,8 +565,43 @@ export default function CourseDetails() {
                             {course.teaching_dept_detail.dept_name}
                           </p>
                           <p className="mt-2 text-xs text-muted-foreground">
-                            Department responsible for teaching this course
+                            Department that provides faculty to teach the course and handle course delivery
                           </p>
+                        </div>
+                      </div>
+                      
+                      <div className="p-4 rounded-lg border">
+                        <h3 className="text-base font-medium mb-3">Department Roles</h3>
+                        <div className="space-y-3">
+                          <div>
+                            <strong className="flex items-center gap-1.5 text-blue-600">
+                              <Building className="h-4 w-4" />
+                              Course Owner:
+                            </strong>
+                            <p className="ml-6 mt-1 text-sm text-muted-foreground">
+                              The department that created the course and controls its content
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <strong className="flex items-center gap-1.5 text-green-600">
+                              <Users className="h-4 w-4" />
+                              For Students:
+                            </strong>
+                            <p className="ml-6 mt-1 text-sm text-muted-foreground">
+                              The department whose students take this course
+                            </p>
+                          </div>
+                          
+                          <div>
+                            <strong className="flex items-center gap-1.5 text-orange-600">
+                              <School className="h-4 w-4" />
+                              Teaching Department:
+                            </strong>
+                            <p className="ml-6 mt-1 text-sm text-muted-foreground">
+                              The department responsible for teaching this course
+                            </p>
+                          </div>
                         </div>
                       </div>
                       
@@ -580,10 +662,40 @@ export default function CourseDetails() {
               onCancel={() => setShowEditDialog(false)}
               submitLabel="Save Changes"
               isEdit={true}
+              editableFields={editableFields}
             />
           </ScrollArea>
         </DialogContent>
       </Dialog>
+      
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure you want to delete this course?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the course 
+              <span className="font-semibold"> {course?.course_detail.course_id} - {course?.course_detail.course_name}</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={confirmDelete} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Deleting...
+                </>
+              ) : (
+                "Delete"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       
       {showReassignDialog && (
         <ReassignDialog 
@@ -594,6 +706,7 @@ export default function CourseDetails() {
           onSuccess={() => refetch()}
         />
       )}
+      
     </div>
   );
 } 

@@ -28,10 +28,11 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
-import { Loader2, ArrowLeftRight } from 'lucide-react';
+import { Loader2, ArrowLeftRight, AlertCircle } from 'lucide-react';
 import { Course } from '@/action/course';
 import { useRequestCourseReassignment } from '@/action/course';
 import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const formSchema = z.object({
   teaching_dept_id: z.string({
@@ -61,12 +62,35 @@ export default function ReassignDialog({
   onClose,
   onSuccess
 }: ReassignDialogProps) {
-  const { mutate: requestReassignment, isPending } = useRequestCourseReassignment(() => {
-    onClose();
-    if (onSuccess) onSuccess();
-    toast.success("Reassignment request sent", {
-      description: "The department will be notified about your request."
-    });
+  const [error, setError] = useState<string | null>(null);
+  
+  const { mutate: requestReassignment, isPending } = useRequestCourseReassignment((response) => {
+    if (!response.error) {
+      onClose();
+      if (onSuccess) onSuccess();
+      toast.success("Reassignment request sent", {
+        description: "The department will be notified about your request."
+      });
+    } else {
+      const errorData = response.error;
+      if (errorData.code === 'duplicate_request') {
+        toast.error("Reassignment request not sent", {
+          description: "A request for this course with the selected department already exists.",
+          richColors:true
+        });
+      } else if (errorData.code === 'already_teaching') {
+        toast.error("Reassignment request not sent", {
+          description: "This department is already teaching this course.",
+          richColors:true
+        });
+    
+      } else {
+        toast.error("Reassignment request not sent", {
+          description: "Failed to send request. Please try again.",
+          richColors:true
+        });
+      }
+    }
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -78,6 +102,14 @@ export default function ReassignDialog({
   });
 
   const handleSubmit = (values: z.infer<typeof formSchema>) => {
+    setError(null);
+    
+    // Check if trying to assign to current teaching department
+    if (parseInt(values.teaching_dept_id) === course.teaching_dept_id) {
+      setError("This department is already teaching this course.");
+      return;
+    }
+    
     requestReassignment({
       course_id: course.id,
       teaching_dept_id: parseInt(values.teaching_dept_id),
@@ -97,6 +129,7 @@ export default function ReassignDialog({
             Request another department to teach this course for you.
           </DialogDescription>
         </DialogHeader>
+
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
@@ -130,7 +163,10 @@ export default function ReassignDialog({
                   <FormItem>
                     <FormLabel>Assign to Department</FormLabel>
                     <Select
-                      onValueChange={field.onChange}
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setError(null);
+                      }}
                       defaultValue={field.value}
                     >
                       <FormControl>

@@ -47,3 +47,4 @@ export const useSearch = (key: string, type: 'USERS') => {
 
     return { onSearchQuery, query, isFetching, onUsers }
 }
+

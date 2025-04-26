@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router';
-import { useGetTeachers } from '@/action/teacher';
-import { useGetCourses } from '@/action/course';
+import React, { useState, useMemo, useEffect } from 'react';
+import {  useNavigate } from 'react-router';
+import { useGetTeachers, Teacher } from '@/action/teacher';
+import { useGetCourses, Course } from '@/action/course';
 import { useGetTeacherCourseAssignments, useCreateTeacherCourseAssignment, useDeleteTeacherCourseAssignment, TeacherCourseAssignment as TCAssignment } from '@/action/teacherCourse';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,8 +24,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import type { Teacher } from '@/action/teacher';
-import type { Course } from '@/action/course';
+
+
 
 export function TeacherCourseAssignment() {
     const navigate = useNavigate();
@@ -43,15 +43,20 @@ export function TeacherCourseAssignment() {
     const [selectedAcademicYearFilter, setSelectedAcademicYearFilter] = useState<string[]>([]);
     const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string[]>([]);
 
+    
+    
     // Fetch data with loading states
     const { data: teachers = [], isPending: teachersLoading } = useGetTeachers();
     const { data: courses = [], isPending: coursesLoading } = useGetCourses();
+    
+
     const { 
         data: assignments = [], 
         isPending: assignmentsLoading, 
         refetch: refetchAssignments 
     } = useGetTeacherCourseAssignments();
-    console.log(assignments);
+
+    console.log(assignments)
 
     // Create assignment mutation
     const createAssignment = useCreateTeacherCourseAssignment(() => {
@@ -75,26 +80,14 @@ export function TeacherCourseAssignment() {
         setStudentCount('0');
     };
 
-    // Extract unique values for filters
-    const uniqueSemesters = useMemo(() => {
-        return Array.from(new Set(assignments.map(a => a.semester.toString())));
-    }, [assignments]);
-
-    const uniqueAcademicYears = useMemo(() => {
-        return Array.from(new Set(assignments.map(a => a.academic_year.toString())));
-    }, [assignments]);
-
-    const uniqueDepartments = useMemo(() => {
-        return Array.from(new Set(assignments.map(a => a.course_detail?.department_name || '')));
-    }, [assignments]);
 
     // Get unique teacher names for filter
     const uniqueTeachers = useMemo(() => {
         return Array.from(
             new Set(
-                assignments.map(
-                    a => `${a.teacher_detail.teacher.first_name} ${a.teacher_detail.teacher.last_name}`
-                )
+                assignments.filter(a => a.teacher_detail?.teacher_id)
+                  .map(a => `${a.teacher_detail?.teacher_id?.first_name || ''} ${a.teacher_detail?.teacher_id?.last_name || ''}`.trim())
+                  .filter(name => name !== '')
             )
         );
     }, [assignments]);
@@ -103,9 +96,10 @@ export function TeacherCourseAssignment() {
     const filteredAssignments = useMemo(() => {
         return assignments.filter(assignment => {
             // Apply search query
-            const teacherName = `${assignment.teacher_detail.teacher.first_name} ${assignment.teacher_detail.teacher.last_name}`.toLowerCase();
-            const courseName = assignment.course_detail.course_name.toLowerCase();
-            const courseCode = assignment.course_detail.course_code.toLowerCase();
+            const teacherName = assignment.teacher_detail?.teacher_id ? 
+                `${assignment.teacher_detail.teacher_id.first_name || ''} ${assignment.teacher_detail.teacher_id.last_name || ''}`.toLowerCase() : '';
+            const courseName = assignment.course_detail?.course_detail?.course_name?.toLowerCase() || '';
+            const courseCode = assignment.course_detail?.course_detail?.course_id?.toLowerCase() || '';
             const searchLower = searchQuery.toLowerCase();
             
             const matchesSearch = searchQuery === '' || 
@@ -115,20 +109,34 @@ export function TeacherCourseAssignment() {
             
             // Apply filters
             const matchesSemester = selectedSemesterFilter.length === 0 || 
-                selectedSemesterFilter.includes(assignment.semester.toString());
+                selectedSemesterFilter.includes(assignment.semester?.toString() || '');
             
             const matchesAcademicYear = selectedAcademicYearFilter.length === 0 || 
-                selectedAcademicYearFilter.includes(assignment.academic_year.toString());
+                selectedAcademicYearFilter.includes(assignment.academic_year?.toString() || '');
             
             const matchesDepartment = selectedDepartmentFilter.length === 0 || 
-                selectedDepartmentFilter.includes(assignment.course_detail.department_name);
+                selectedDepartmentFilter.includes(assignment.course_detail?.teaching_dept_detail?.dept_name || '');
             
             const matchesTeacher = selectedTeacherFilter.length === 0 || 
-                selectedTeacherFilter.includes(`${assignment.teacher_detail.teacher.first_name} ${assignment.teacher_detail.teacher.last_name}`);
+                (assignment.teacher_detail?.teacher_id && selectedTeacherFilter.includes(
+                    `${assignment.teacher_detail.teacher_id.first_name || ''} ${assignment.teacher_detail.teacher_id.last_name || ''}`.trim()
+                ));
             
             return matchesSearch && matchesSemester && matchesAcademicYear && matchesDepartment && matchesTeacher;
         });
     }, [assignments, searchQuery, selectedSemesterFilter, selectedAcademicYearFilter, selectedDepartmentFilter, selectedTeacherFilter]);
+
+    // Filter available courses based on selected teacher's department
+    const availableCourses = useMemo(() => {
+        if (!selectedTeacher || !teachers || !courses) return [];
+        
+        const selectedTeacherData = teachers.find((t: Teacher) => t.id.toString() === selectedTeacher);
+        if (!selectedTeacherData || !selectedTeacherData.dept_id) return [];
+
+        return courses.filter(course => 
+            course.teaching_dept_id === selectedTeacherData.dept_id.id
+        );
+    }, [selectedTeacher, teachers, courses]);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -138,11 +146,17 @@ export function TeacherCourseAssignment() {
         }
 
         createAssignment.mutate({
-            teacher: parseInt(selectedTeacher),
-            course: parseInt(selectedCourse),
+            teacher_id: parseInt(selectedTeacher),
+            course_id: parseInt(selectedCourse),
             semester: parseInt(semester),
             academic_year: parseInt(academicYear),
             student_count: parseInt(studentCount)
+        }, {
+            onError: (error: any) => {
+                toast.error('Failed to create assignment', {
+                    description: error.response?.data?.non_field_errors?.[0] || 'An error occurred'
+                });
+            }
         });
     };
 
@@ -183,10 +197,10 @@ export function TeacherCourseAssignment() {
         const csvRows = [
             headers.join(','),
             ...filteredAssignments.map(a => [
-                `"${a.teacher_detail.teacher.first_name} ${a.teacher_detail.teacher.last_name}"`,
-                `"${a.course_detail.course_name}"`,
-                `"${a.course_detail.course_code}"`,
-                `"${a.course_detail.department_name}"`,
+                `"${a.teacher_detail.teacher_id.first_name} ${a.teacher_detail.teacher_id.last_name}"`,
+                `"${a.course_detail.course_detail.course_name}"`,
+                `"${a.course_detail.course_detail.course_id}"`,
+                `"${a.course_detail.teaching_dept_detail.dept_name}"`,
                 a.semester,
                 a.academic_year,
                 a.student_count || 0
@@ -207,6 +221,8 @@ export function TeacherCourseAssignment() {
 
     return (
         <div className="container mx-auto px-4 space-y-8">
+
+            {/* Form to create assignment */}
             <Card>
                 <CardHeader>
                     <CardTitle>Teacher Course Assignment</CardTitle>
@@ -224,61 +240,95 @@ export function TeacherCourseAssignment() {
                                 >
                                     <SelectTrigger className="w-full">
                                         <SelectValue placeholder={teachersLoading ? "Loading teachers..." : "Select a teacher"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {teachers.map((teacher: Teacher) => (
-                                    <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                                        {teacher.teacher.first_name} {teacher.teacher.last_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {teachers.map((teacher: Teacher) => (
+                                            <SelectItem key={teacher.id} value={teacher.id.toString()}>
+                                                <div className="flex flex-col">
+                                                    <span>{teacher.teacher_id?.first_name} {teacher.teacher_id?.last_name}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {teacher.staff_code} • {teacher.teacher_role} • {teacher.dept_id?.dept_name || 'No Department'}
+                                                    </span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
                             <div className="space-y-2">
                                 <Label htmlFor="course">Course</Label>
                                 <Select 
                                     value={selectedCourse} 
                                     onValueChange={setSelectedCourse}
-                                    disabled={coursesLoading || createAssignment.isPending}
+                                    disabled={coursesLoading || createAssignment.isPending || !selectedTeacher}
                                 >
                                     <SelectTrigger className="w-full">
-                                        <SelectValue placeholder={coursesLoading ? "Loading courses..." : "Select a course"} />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {courses.map((course: Course) => (
-                                    <SelectItem key={course.id} value={course.id.toString()}>
-                                        {course.course_name}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                                        <SelectValue placeholder={
+                                            !selectedTeacher 
+                                                ? "Select a teacher first" 
+                                                : coursesLoading 
+                                                    ? "Loading courses..." 
+                                                    : availableCourses.length === 0 
+                                                        ? "No courses available for selected teacher's department"
+                                                        : "Select a course"
+                                        } />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableCourses.length === 0 && selectedTeacher ? (
+                                            <SelectItem value="none" disabled>
+                                                <div className="text-muted-foreground">
+                                                    No courses available for this teacher's department
+                                                </div>
+                                            </SelectItem>
+                                        ) : (
+                                            availableCourses.map((course: Course) => (
+                                                <SelectItem key={course.id} value={course.id.toString()}>
+                                                    <div className="flex flex-col">
+                                                        <span>{course.course_detail.course_name}</span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            {course.course_detail.course_id} • {course.credits} credits • {course.teaching_dept_detail.dept_name}
+                                                        </span>
+                                                        <span className="text-xs text-muted-foreground">
+                                                            L:{course.lecture_hours} T:{course.tutorial_hours} P:{course.practical_hours}
+                                                        </span>
+                                                    </div>
+                                                </SelectItem>
+                                            ))
+                                        )}
+                                    </SelectContent>
+                                </Select>
+                                {selectedTeacher && availableCourses.length === 0 && (
+                                    <p className="text-sm text-muted-foreground mt-2">
+                                        Only courses from the teacher's department can be assigned
+                                    </p>
+                                )}
+                            </div>
 
                             <div className="space-y-2">
-                        <Label htmlFor="semester">Semester</Label>
+                                <Label htmlFor="semester">Semester</Label>
                                 <Select value={semester} onValueChange={setSemester} disabled={createAssignment.isPending}>
                                     <SelectTrigger className="w-full">
-                                <SelectValue placeholder="Select semester" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                                    <SelectItem key={sem} value={sem.toString()}>
-                                        Semester {sem}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                                        <SelectValue placeholder="Select semester" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                                            <SelectItem key={sem} value={sem.toString()}>
+                                                Semester {sem}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
 
                             <div className="space-y-2">
-                        <Label htmlFor="academicYear">Academic Year</Label>
-                        <Input
-                            type="number"
-                            id="academicYear"
-                            value={academicYear}
-                            onChange={(e) => setAcademicYear(e.target.value)}
-                            placeholder="Enter academic year"
+                                <Label htmlFor="academicYear">Academic Year</Label>
+                                <Input
+                                    type="number"
+                                    id="academicYear"
+                                    value={academicYear}
+                                    onChange={(e) => setAcademicYear(e.target.value)}
+                                    placeholder="Enter academic year"
                                     disabled={createAssignment.isPending}
                                     min={2000}
                                     max={2099}
@@ -295,9 +345,9 @@ export function TeacherCourseAssignment() {
                                     placeholder="Number of students"
                                     disabled={createAssignment.isPending}
                                     min={0}
-                        />
-                    </div>
-                </div>
+                                />
+                            </div>
+                        </div>
 
                         <Button 
                             type="submit" 
@@ -306,9 +356,9 @@ export function TeacherCourseAssignment() {
                         >
                             {createAssignment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                             <Plus className="mr-2 h-4 w-4" />
-                    Create Assignment
-                </Button>
-            </form>
+                            Create Assignment
+                        </Button>
+                    </form>
                 </CardContent>
             </Card>
 
@@ -316,8 +366,12 @@ export function TeacherCourseAssignment() {
                 <CardHeader className="pb-3">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                         <div>
-                            <CardTitle>Current Assignments</CardTitle>
-                            <CardDescription>List of all teacher course assignments</CardDescription>
+                            <CardTitle>
+                                Current Assignments
+                            </CardTitle>
+                            <CardDescription>
+                                List of teacher course assignments
+                            </CardDescription>
                         </div>
                         <Button 
                             variant="outline" 
@@ -378,111 +432,10 @@ export function TeacherCourseAssignment() {
                                     </DropdownMenuContent>
                                 </DropdownMenu>
 
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-9">
-                                            <Filter className="mr-2 h-4 w-4" />
-                                            Semester
-                                            {selectedSemesterFilter.length > 0 && (
-                                                <Badge variant="secondary" className="ml-1 px-1 rounded-full">
-                                                    {selectedSemesterFilter.length}
-                                                </Badge>
-                                            )}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        {uniqueSemesters.map((sem: string) => (
-                                            <DropdownMenuItem key={sem} className="flex items-center gap-2">
-                                                <Checkbox
-                                                    id={`semester-${sem}`}
-                                                    checked={selectedSemesterFilter.includes(sem)}
-                                                    onCheckedChange={(checked: boolean) => {
-                                                        if (checked) {
-                                                            setSelectedSemesterFilter(prev => [...prev, sem]);
-                                                        } else {
-                                                            setSelectedSemesterFilter(prev => prev.filter(s => s !== sem));
-                                                        }
-                                                    }}
-                                                />
-                                                <label htmlFor={`semester-${sem}`} className="flex-1 cursor-pointer">
-                                                    Semester {sem}
-                                                </label>
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-9">
-                                            <Filter className="mr-2 h-4 w-4" />
-                                            Academic Year
-                                            {selectedAcademicYearFilter.length > 0 && (
-                                                <Badge variant="secondary" className="ml-1 px-1 rounded-full">
-                                                    {selectedAcademicYearFilter.length}
-                                                </Badge>
-                                            )}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        {uniqueAcademicYears.map((year: string) => (
-                                            <DropdownMenuItem key={year} className="flex items-center gap-2">
-                                                <Checkbox
-                                                    id={`year-${year}`}
-                                                    checked={selectedAcademicYearFilter.includes(year)}
-                                                    onCheckedChange={(checked: boolean) => {
-                                                        if (checked) {
-                                                            setSelectedAcademicYearFilter(prev => [...prev, year]);
-                                                        } else {
-                                                            setSelectedAcademicYearFilter(prev => prev.filter(y => y !== year));
-                                                        }
-                                                    }}
-                                                />
-                                                <label htmlFor={`year-${year}`} className="flex-1 cursor-pointer">
-                                                    {year}
-                                                </label>
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-9">
-                                            <Filter className="mr-2 h-4 w-4" />
-                                            Department
-                                            {selectedDepartmentFilter.length > 0 && (
-                                                <Badge variant="secondary" className="ml-1 px-1 rounded-full">
-                                                    {selectedDepartmentFilter.length}
-                                                </Badge>
-                                            )}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        {uniqueDepartments.map((dept: string) => dept && (
-                                            <DropdownMenuItem key={dept} className="flex items-center gap-2">
-                                                <Checkbox
-                                                    id={`dept-${dept}`}
-                                                    checked={selectedDepartmentFilter.includes(dept)}
-                                                    onCheckedChange={(checked: boolean) => {
-                                                        if (checked) {
-                                                            setSelectedDepartmentFilter(prev => [...prev, dept]);
-                                                        } else {
-                                                            setSelectedDepartmentFilter(prev => prev.filter(d => d !== dept));
-                                                        }
-                                                    }}
-                                                />
-                                                <label htmlFor={`dept-${dept}`} className="flex-1 cursor-pointer">
-                                                    {dept}
-                                                </label>
-                                            </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-
-                                {(searchQuery || selectedSemesterFilter.length > 0 || 
-                                  selectedAcademicYearFilter.length > 0 || selectedDepartmentFilter.length > 0 ||
-                                  selectedTeacherFilter.length > 0) && (
+                                {/* Other filters */}
+                                {(searchQuery || selectedTeacherFilter.length > 0 || 
+                                  selectedSemesterFilter.length > 0 || selectedAcademicYearFilter.length > 0 || 
+                                  selectedDepartmentFilter.length > 0) && (
                                     <Button 
                                         variant="ghost" 
                                         size="sm" 
@@ -512,41 +465,41 @@ export function TeacherCourseAssignment() {
                                     </div>
                                 ) : (
                                     <div className="rounded-md border overflow-hidden">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Teacher</TableHead>
-                            <TableHead>Course</TableHead>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>Teacher</TableHead>
+                                                    <TableHead>Course</TableHead>
                                                     <TableHead>Department</TableHead>
-                            <TableHead>Semester</TableHead>
-                            <TableHead>Academic Year</TableHead>
+                                                    <TableHead>Semester</TableHead>
+                                                    <TableHead>Academic Year</TableHead>
                                                     <TableHead>Student Count</TableHead>
                                                     <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
                                                 {filteredAssignments.map((assignment: TCAssignment) => (
                                                     <TableRow key={assignment.id} className="cursor-pointer hover:bg-muted/50">
                                                         <TableCell className="font-medium">
                                                             <Button variant="link" className="p-0 h-auto" onClick={() => viewDetails(assignment.id)}>
-                                                                {assignment.teacher_detail.teacher.first_name} {assignment.teacher_detail.teacher.last_name}
+                                                                {assignment.teacher_detail?.teacher_id?.first_name || ''} {assignment.teacher_detail?.teacher_id?.last_name || ''}
                                                             </Button>
                                                         </TableCell>
                                                         <TableCell>
                                                             <Button variant="link" className="p-0 h-auto" onClick={() => viewDetails(assignment.id)}>
-                                                                {assignment.course_detail.course_name}
+                                                                {assignment.course_detail?.course_detail?.course_name || ''}
                                                             </Button>
                                                             <div className="text-xs text-muted-foreground mt-1">
-                                                                {assignment.course_detail.course_code}
+                                                                {assignment.course_detail?.course_detail?.course_id || ''}
                                                             </div>
-                                </TableCell>
-                                    <TableCell>
+                                                        </TableCell>
+                                                        <TableCell>
                                                             <Badge variant="outline" className="font-normal">
-                                                                {assignment.course_detail.department_name}
+                                                                {assignment.course_detail?.teaching_dept_detail?.dept_name || ''}
                                                             </Badge>
-                                    </TableCell>
-                                    <TableCell>{assignment.semester}</TableCell>
-                                    <TableCell>{assignment.academic_year}</TableCell>
+                                                        </TableCell>
+                                                        <TableCell>{assignment.semester || ''}</TableCell>
+                                                        <TableCell>{assignment.academic_year || ''}</TableCell>
                                                         <TableCell>{assignment.student_count || 0}</TableCell>
                                                         <TableCell className="text-right">
                                                             <div className="flex justify-end gap-2">
@@ -561,8 +514,8 @@ export function TeacherCourseAssignment() {
                                                                     <Eye className="h-4 w-4" />
                                                                     <span className="sr-only">View details</span>
                                                                 </Button>
-                                        <Button
-                                            variant="destructive"
+                                                                <Button
+                                                                    variant="destructive"
                                                                     size="icon"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
@@ -576,14 +529,14 @@ export function TeacherCourseAssignment() {
                                                                         <Trash2 className="h-4 w-4" />
                                                                     )}
                                                                     <span className="sr-only">Delete</span>
-                                        </Button>
+                                                                </Button>
                                                             </div>
-                                    </TableCell>
-                                </TableRow>
+                                                        </TableCell>
+                                                    </TableRow>
                                                 ))}
-                    </TableBody>
-                </Table>
-            </div>
+                                            </TableBody>
+                                        </Table>
+                                    </div>
                                 )}
                                 <div className="text-sm text-muted-foreground mt-2">
                                     Showing {filteredAssignments.length} of {assignments.length} assignments
@@ -600,9 +553,9 @@ export function TeacherCourseAssignment() {
                         <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
                         <AlertDialogDescription>
                             Are you sure you want to delete the assignment for <span className="font-semibold">
-                                {assignmentToDelete?.teacher_detail.teacher.first_name} {assignmentToDelete?.teacher_detail.teacher.last_name}
+                                {assignmentToDelete?.teacher_detail?.teacher_id?.first_name || ''} {assignmentToDelete?.teacher_detail?.teacher_id?.last_name || ''}
                             </span> to teach <span className="font-semibold">
-                                {assignmentToDelete?.course_detail.course_name}
+                                {assignmentToDelete?.course_detail?.course_detail?.course_name || ''}
                             </span>?
                             <br /><br />
                             This action cannot be undone.

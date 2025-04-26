@@ -8,7 +8,16 @@ import {
   BreadcrumbSeparator 
 } from "@/components/ui/breadcrumb";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight, Bell } from "lucide-react";
+import { useCheckPendingAllocations } from "@/action/course";
+import { useCurrentUser } from "@/action/authentication";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger, 
+} from "@/components/ui/tooltip";
 
 interface HeaderProps {
   backButtonHref?: string;
@@ -23,6 +32,12 @@ export default function Header({
 }: HeaderProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { data: pendingAllocations } = useCheckPendingAllocations();
+  const { data: currentUser } = useCurrentUser();
+  
+  // Only show for HODs
+  const isHOD = currentUser?.teacher?.teacher_role === 'HOD';
+  const hasPendingRequests = isHOD && pendingAllocations?.hasPendingRequests;
   
   // Split the pathname into segments
   const segments = location.pathname
@@ -101,16 +116,44 @@ export default function Header({
         </BreadcrumbList>
       </Breadcrumb>
       
-      {showBackButton && (
-        <Button
-          variant="outline"
-          onClick={handleBackClick}
-          size="sm"
-        >
-          <ArrowLeft className="mr-2 h-4 w-4" />
-          Back
-        </Button>
-      )}
+      <div className="flex items-center gap-3">
+        {isHOD && hasPendingRequests && (
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="relative"
+                  onClick={() => navigate('/courses/allocations')}
+                >
+                  <ArrowLeftRight className="h-4 w-4" />
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 flex items-center justify-center h-5 min-w-5 px-1 text-xs"
+                  >
+                    {pendingAllocations?.pendingCount || 0}
+                  </Badge>
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>You have {pendingAllocations?.pendingCount} pending allocation {pendingAllocations?.pendingCount === 1 ? 'request' : 'requests'}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        )}
+        
+        {showBackButton && (
+          <Button
+            variant="outline"
+            onClick={handleBackClick}
+            size="sm"
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back
+          </Button>
+        )}
+      </div>
     </div>
   );
 }

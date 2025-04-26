@@ -1,11 +1,12 @@
 from django.shortcuts import render
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, serializers
 from rest_framework.response import Response
 from authentication.authentication import IsAuthenticated
 from .models import TeacherCourse
 from .serializers import TeacherCourseSerializer
 from department.models import Department
 from django.core.exceptions import ValidationError
+from teacher.models import Teacher
 
 # Create your views here.
 class TeacherCourseListCreateView(generics.ListCreateAPIView):
@@ -17,33 +18,47 @@ class TeacherCourseListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         
         try:
-            hod_dept = Department.objects.get(hod_id=user)
-            return TeacherCourse.objects.filter(
-                teacher_id__dept_id=hod_dept,
-                course_id__teaching_dept_id=hod_dept
-            )
-        except Department.DoesNotExist:
+            teacher = Teacher.objects.get(teacher_id=user)
+            
+            # If user is HOD, return all department assignments
+            if teacher.teacher_role == 'HOD' and teacher.dept_id:
+                return TeacherCourse.objects.filter(
+                    teacher_id__dept_id=teacher.dept_id,
+                    course_id__teaching_dept_id=teacher.dept_id
+                )
+            # For regular teachers, only show their own assignments
+            else:
+                return TeacherCourse.objects.filter(teacher_id=teacher)
+        except Teacher.DoesNotExist:
             return TeacherCourse.objects.none()
 
     def perform_create(self, serializer):
-        user = self.request.user
+        user = self.request.user    
+        print(user)
         try:
-            hod_dept = Department.objects.get(hod_id=user)
-            teacher = serializer.validated_data['teacher_id']
+            teacher = Teacher.objects.get(teacher_id=user)
+            
+            teacher_to_assign = serializer.validated_data['teacher_id']
             course = serializer.validated_data['course_id']
             
-            if teacher.dept_id != hod_dept or course.teaching_dept_id != hod_dept:
-                raise serializer.ValidationError(
+            if teacher.teacher_role != 'HOD':
+                raise serializers.ValidationError(
+                    {"detail": "Only HOD can create teacher course assignments."}
+                )
+            
+            # HOD can only assign teachers and courses from their own department
+            if teacher_to_assign.dept_id != teacher.dept_id or course.teaching_dept_id != teacher.dept_id:
+                raise serializers.ValidationError(
                     "You can only assign teachers and courses from your own department"
                 )
                 
             try:
                 serializer.save()
             except ValidationError as e:
-                raise serializer.ValidationError(e.message_dict if hasattr(e, 'message_dict') else str(e))
-        except Department.DoesNotExist:
-            raise serializer.ValidationError(
-                {"detail": "Only HOD can create teacher course assignments."}
+                raise serializers.ValidationError(e.message_dict if hasattr(e, 'message_dict') else str(e))
+        except Teacher.DoesNotExist:
+            raise serializers.ValidationError(
+                {"detail": "Teacher profile not found. Cannot create assignments."}
             )
 
 class TeacherCourseRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
@@ -56,34 +71,64 @@ class TeacherCourseRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIVi
         user = self.request.user
         
         try:
-            hod_dept = Department.objects.get(hod_id=user)
-            return TeacherCourse.objects.filter(
-                teacher_id__dept_id=hod_dept,
-                course_id__teaching_dept_id=hod_dept
-            )
-        except Department.DoesNotExist:
+            teacher = Teacher.objects.get(teacher_id=user)
+            
+            # If user is HOD, return all department assignments
+            if teacher.teacher_role == 'HOD' and teacher.dept_id:
+                return TeacherCourse.objects.filter(
+                    teacher_id__dept_id=teacher.dept_id,
+                    course_id__teaching_dept_id=teacher.dept_id
+                )
+            # For regular teachers, only show their own assignments
+            else:
+                return TeacherCourse.objects.filter(teacher_id=teacher)
+        except Teacher.DoesNotExist:
             return TeacherCourse.objects.none()
 
     def perform_update(self, serializer):
         user = self.request.user
         try:
-            hod_dept = Department.objects.get(hod_id=user)
+            teacher = Teacher.objects.get(teacher_id=user)
+            
+            # Only HOD can update assignments
+            if teacher.teacher_role != 'HOD':
+                raise serializers.ValidationError(
+                    {"detail": "Only HOD can update teacher course assignments."}
+                )
+            
             instance = self.get_object()
             
             if 'teacher_id' in serializer.validated_data:
-                if serializer.validated_data['teacher_id'].dept_id != hod_dept:
+                if serializer.validated_data['teacher_id'].dept_id != teacher.dept_id:
                     raise serializers.ValidationError(
-                        {"teacher_id": "You can only assign teachers from your department. Bro do u remember the dept u r from?"}
+                        {"teacher_id": "You can only assign teachers from your department."}
                     )
             
             if 'course_id' in serializer.validated_data:
-                if serializer.validated_data['course_id'].teaching_dept_id != hod_dept:
+                if serializer.validated_data['course_id'].teaching_dept_id != teacher.dept_id:
                     raise serializers.ValidationError(
-                        {"course_id": "You can only assign courses from your department. WTF u r doing bro"}
+                        {"course_id": "You can only assign courses from your department."}
                     )
             
             serializer.save()
-        except Department.DoesNotExist:
-            raise serializer.ValidationError(
-                {"detail": "Only HOD can update teacher course assignments. Who are u?"}
+        except Teacher.DoesNotExist:
+            raise serializers.ValidationError(
+                {"detail": "Teacher profile not found. Cannot update assignments."}
+            )
+            
+    def perform_destroy(self, instance):
+        user = self.request.user
+        try:
+            teacher = Teacher.objects.get(teacher_id=user)
+            
+            # Only HOD can delete assignments
+            if teacher.teacher_role != 'HOD':
+                raise serializers.ValidationError(
+                    {"detail": "Only HOD can delete teacher course assignments."}
+                )
+                
+            instance.delete()
+        except Teacher.DoesNotExist:
+            raise serializers.ValidationError(
+                {"detail": "Teacher profile not found. Cannot delete assignments."}
             )

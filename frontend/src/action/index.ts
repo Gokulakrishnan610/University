@@ -7,4 +7,3 @@ export * from './course';
 export * from './department';
 export * from './room';
 export * from './student';
-export * from './teacher'; 

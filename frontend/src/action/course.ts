@@ -2,6 +2,7 @@ import { useMutationData } from "@/hooks/useMutationData";
 import { useQueryData } from "@/hooks/useQueryData";
 import axios from "axios";
 import api from "./api";
+import { toast } from "sonner";
 
 // Types
 export interface DepartmentDetails {
@@ -44,6 +45,12 @@ export interface Course {
     code: string;
     description: string;
   };
+  permissions?: {
+    can_edit: boolean;
+    can_delete: boolean;
+    editable_fields: string[];
+  };
+  user_department_roles?: string[];
 }
 
 export interface ResourceAllocation {
@@ -60,9 +67,27 @@ export interface ResourceAllocation {
 }
 
 export interface DepartmentCoursesResponse {
-  owned_courses: Course[];
-  teaching_courses: Course[];
-  receiving_courses: Course[];
+  status: string;
+  owned_courses: {
+    role: string;
+    description: string;
+    data: Course[];
+  };
+  teaching_courses: {
+    role: string;
+    description: string;
+    data: Course[];
+  };
+  receiving_courses: {
+    role: string;
+    description: string;
+    data: Course[];
+  };
+  for_dept_courses: {
+    role: string;
+    description: string;
+    data: Course[];
+  };
 }
 
 // Get courses for current department
@@ -72,10 +97,20 @@ export const useGetCurrentDepartmentCourses = () => {
     async () => {
       try {
         const response = await api.get('/api/department/courses/');
-        return response.data || { owned_courses: [], teaching_courses: [], receiving_courses: [] };
+        return response.data || { 
+          owned_courses: { role: '', description: '', data: [] }, 
+          teaching_courses: { role: '', description: '', data: [] }, 
+          receiving_courses: { role: '', description: '', data: [] },
+          for_dept_courses: { role: '', description: '', data: [] }
+        };
       } catch (error) {
         console.error('Error fetching department courses:', error);
-        return { owned_courses: [], teaching_courses: [], receiving_courses: [] };
+        return { 
+          owned_courses: { role: '', description: '', data: [] }, 
+          teaching_courses: { role: '', description: '', data: [] }, 
+          receiving_courses: { role: '', description: '', data: [] },
+          for_dept_courses: { role: '', description: '', data: [] }
+        };
       }
     }
   );
@@ -151,7 +186,7 @@ export const useUpdateCourse = (id: number, onSuccess?: () => void) => {
 };
 
 // Request course reassignment
-export const useRequestCourseReassignment = (onSuccess?: () => void) => {
+export const useRequestCourseReassignment = (onSuccess?: (data?: any) => void) => {
   return useMutationData(
     ['requestReassignment'],
     async (data: {
@@ -163,13 +198,15 @@ export const useRequestCourseReassignment = (onSuccess?: () => void) => {
         const response = await api.post('/api/course/resource-allocation/', data);
         return {
           status: response.status,
-          data: response.data.message || 'Reassignment request sent successfully',
+          data: response.data.detail || 'Reassignment request sent successfully',
+          error: null
         };
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
           return {
             status: error.response.status,
-            data: error.response.data.message || 'Failed to request reassignment',
+            data: error.response.data.detail || 'Failed to request reassignment',
+            error: error.response.data
           };
         }
         throw error;
@@ -177,6 +214,37 @@ export const useRequestCourseReassignment = (onSuccess?: () => void) => {
     },
     'courses',
     onSuccess
+  );
+};
+
+// Get resource allocations
+export const useGetResourceAllocations = () => {
+  return useQueryData<{
+    incoming_allocations: ResourceAllocation[];
+    outgoing_allocations: ResourceAllocation[];
+    user_department_id: number;
+    user_department_name: string;
+  }>(
+    ['resource-allocations'],
+    async () => {
+      try {
+        const response = await api.get('/api/course/resource-allocation/');
+        return response.data || {
+          incoming_allocations: [],
+          outgoing_allocations: [],
+          user_department_id: 0,
+          user_department_name: ''
+        };
+      } catch (error) {
+        console.error('Error fetching resource allocations:', error);
+        return {
+          incoming_allocations: [],
+          outgoing_allocations: [],
+          user_department_id: 0,
+          user_department_name: ''
+        };
+      }
+    }
   );
 };
 
@@ -245,5 +313,42 @@ export const useGetCourses = () => {
         return [];
       }
     }
+  );
+};
+
+// Check for pending allocation requests
+export const useCheckPendingAllocations = () => {
+  return useQueryData<{
+    hasPendingRequests: boolean;
+    pendingCount: number;
+  }>(
+    ['pending-allocations'],
+    async () => {
+      try {
+        const response = await api.get('/api/course/resource-allocation/');
+        const data = response.data || {
+          incoming_allocations: [],
+          outgoing_allocations: [],
+          user_department_id: 0,
+          user_department_name: ''
+        };
+        
+        // Check for pending allocations
+        const pendingIncoming = data.incoming_allocations.filter((a: ResourceAllocation) => a.status === 'pending');
+        const pendingCount = pendingIncoming.length;
+        
+        return {
+          hasPendingRequests: pendingCount > 0,
+          pendingCount
+        };
+      } catch (error) {
+        console.error('Error checking pending allocations:', error);
+        return {
+          hasPendingRequests: false,
+          pendingCount: 0
+        };
+      }
+    },
+    true // Enable the query
   );
 }; 

@@ -10,6 +10,7 @@ class CourseSerializer(serializers.ModelSerializer):
     for_dept_detail = DepartmentSerializer(source='for_dept_id', read_only=True)
     teaching_dept_detail = DepartmentSerializer(source='teaching_dept_id', read_only=True)
     relationship_type = serializers.SerializerMethodField()
+    permissions = serializers.SerializerMethodField()
     
     class Meta:
         model = Course
@@ -35,16 +36,95 @@ class CourseSerializer(serializers.ModelSerializer):
             'no_of_students',
             'is_zero_credit_course',
             'teaching_status',
-            'relationship_type'
+            'relationship_type',
+            'permissions'
         ]
+    
+    def get_permissions(self, obj):
+        """
+        Determine what permissions the current user has for this course.
+        
+        Returns a dictionary of permissions based on the user's department role:
+        - can_edit: Whether the user can edit this course
+        - can_delete: Whether the user can delete this course
+        - editable_fields: List of fields the user can edit (if can_edit is True)
+        """
+        request = self.context.get('request')
+        if not request or not request.user:
+            return {
+                'can_edit': False,
+                'can_delete': False,
+                'editable_fields': []
+            }
+            
+        # Get user's department (if HOD)
+        user_dept = None
+        try:
+            from department.models import Department
+            user_dept = Department.objects.filter(hod_id=request.user).first()
+        except:
+            pass
+            
+        if not user_dept:
+            return {
+                'can_edit': False,
+                'can_delete': False,
+                'editable_fields': []
+            }
+            
+        # Get department relationships
+        owning_dept_id = obj.course_id.course_dept_id.id if obj.course_id and obj.course_id.course_dept_id else None
+        for_dept_id = obj.for_dept_id.id if obj.for_dept_id else None
+        teaching_dept_id = obj.teaching_dept_id.id if obj.teaching_dept_id else None
+        
+        # Owner department - full rights (edit and delete)
+        is_owner = user_dept.id == owning_dept_id
+        
+        # Teaching department - limited edit rights, no delete
+        is_teacher = user_dept.id == teaching_dept_id if teaching_dept_id else False
+        
+        # For department - no edit or delete rights
+        is_learner = user_dept.id == for_dept_id if for_dept_id else False
+        
+        # Only owner department can delete
+        can_delete = is_owner
+        
+        # Owner or teaching department can edit
+        can_edit = is_owner or is_teacher
+        
+        # Determine which fields can be edited based on role
+        editable_fields = []
+        if is_owner:
+            # Owner can edit all fields
+            editable_fields = [
+                'course_year', 'course_semester', 'lecture_hours', 
+                'tutorial_hours', 'practical_hours', 'credits',
+                'for_dept_id', 'teaching_dept_id', 'need_assist_teacher',
+                'regulation', 'course_type', 'elective_type', 'lab_type',
+                'no_of_students', 'is_zero_credit_course', 'teaching_status'
+            ]
+        elif is_teacher:
+            # Teaching department can only edit teaching-related fields
+            editable_fields = ['teaching_status', 'no_of_students']
+        
+        return {
+            'can_edit': can_edit,
+            'can_delete': can_delete,
+            'editable_fields': editable_fields
+        }
     
     def get_relationship_type(self, obj):
         """
         Determine the relationship type between departments for this course:
+        
+        OWNING DEPARTMENT: Department that created and maintains the course curriculum
+        FOR DEPARTMENT: Department whose students will take this course
+        TEACHING DEPARTMENT: Department responsible for providing teachers and teaching the course
+        
         1. SELF_OWNED_SELF_TAUGHT: course owned by dept X, for dept X, taught by dept X
         2. SELF_OWNED_OTHER_TAUGHT: course owned by dept X, for dept X, taught by dept Y
         3. OTHER_OWNED_SELF_TAUGHT: course owned by dept Y, for dept X, taught by dept X
-        4. OTHER_OWNED_OTHER_TAUGHT: course owned by dept Y, for dept X, taught by dept Y
+        4. OTHER_OWNED_OTHER_TAUGHT: course owned by dept Y, for dept X, taught by dept Z
         5. SELF_OWNED_FOR_OTHER_SELF_TAUGHT: course owned by dept X, for dept Y, taught by dept X
         6. SELF_OWNED_FOR_OTHER_OTHER_TAUGHT: course owned by dept X, for dept Y, taught by dept Z
         """
@@ -55,37 +135,37 @@ class CourseSerializer(serializers.ModelSerializer):
         if owning_dept_id == for_dept_id == teaching_dept_id:
             return {
                 "code": "SELF_OWNED_SELF_TAUGHT",
-                "description": "Course owned, taught, and taken by the same department"
+                "description": "This course is owned, taught, and taken by the same department. The department controls the curriculum, provides teachers, and its students take this course."
             }
             
         elif owning_dept_id == for_dept_id and owning_dept_id != teaching_dept_id:
             return {
                 "code": "SELF_OWNED_OTHER_TAUGHT",
-                "description": "Course owned and taken by this department, but taught by another department"
+                "description": "This course belongs to and is taken by this department, but the teaching is done by another department's faculty."
             }
             
         elif owning_dept_id != for_dept_id and for_dept_id == teaching_dept_id:
             return {
                 "code": "OTHER_OWNED_SELF_TAUGHT",
-                "description": "Course owned by another department, but taught and taken by this department"
+                "description": "This course is owned by another department that controls the curriculum, but this department's students take the course and it's taught by this department's faculty."
             }
             
         elif owning_dept_id != for_dept_id and owning_dept_id != teaching_dept_id and for_dept_id != teaching_dept_id:
             return {
                 "code": "OTHER_OWNED_OTHER_TAUGHT",
-                "description": "Course owned by one department, taken by this department, taught by a third department"
+                "description": "This course is owned by one department, taken by this department's students, and taught by a third department's faculty."
             }
             
         elif owning_dept_id == teaching_dept_id and owning_dept_id != for_dept_id:
             return {
                 "code": "SELF_OWNED_FOR_OTHER_SELF_TAUGHT",
-                "description": "Course owned and taught by this department for another department"
+                "description": "This course is owned and taught by this department, but provided as a service to another department's students."
             }
             
         elif owning_dept_id != teaching_dept_id and owning_dept_id != for_dept_id and for_dept_id != teaching_dept_id:
             return {
                 "code": "SELF_OWNED_FOR_OTHER_OTHER_TAUGHT",
-                "description": "Course owned by this department, for another department, taught by a third department"
+                "description": "This course is owned by this department, taken by another department's students, and taught by a third department's faculty."
             }
             
         return {
