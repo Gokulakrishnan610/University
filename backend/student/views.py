@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, serializers
 from rest_framework.response import Response
 from authentication.authentication import IsAuthenticated
 from .models import Student
@@ -16,25 +16,25 @@ class StudentListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         
         try:
-            hod_dept = Department.objects.get(hod=user)
-            return Student.objects.filter(student__dept=hod_dept)
+            hod_dept = Department.objects.get(hod_id=user)
+            return Student.objects.filter(dept_id=hod_dept)
         except Department.DoesNotExist:
             return Student.objects.none()
 
     def perform_create(self, serializer):
         user = self.request.user
         try:
-            hod_dept = Department.objects.get(hod=user)
-            student_user = serializer.validated_data['student']
+            hod_dept = Department.objects.get(hod_id=user)
+            student_user = serializer.validated_data['student_id']
             
-            if student_user.dept != hod_dept:
-                raise self.serializer_class.ValidationError(
+            if serializer.validated_data.get('dept_id') != hod_dept:
+                raise serializers.ValidationError(
                     "You can only add students to your own department"
                 )
                 
             serializer.save()
         except Department.DoesNotExist:
-            raise self.serializer_class.ValidationError(
+            raise serializers.ValidationError(
                 {"detail": "Only HOD can create student records."}
             )
 
@@ -48,25 +48,25 @@ class StudentRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
         user = self.request.user
         
         try:
-            hod_dept = Department.objects.get(hod=user)
-            return Student.objects.filter(student__dept=hod_dept)
+            hod_dept = Department.objects.get(hod_id=user)
+            return Student.objects.filter(dept_id=hod_dept)
         except Department.DoesNotExist:
             return Student.objects.none()
 
     def perform_update(self, serializer):
         user = self.request.user
         try:
-            hod_dept = Department.objects.get(hod=user)
+            hod_dept = Department.objects.get(hod_id=user)
             instance = self.get_object()
             
-            if 'student' in serializer.validated_data:
-                if serializer.validated_data['student'].dept != hod_dept:
+            if 'dept_id' in serializer.validated_data:
+                if serializer.validated_data['dept_id'] != hod_dept:
                     raise serializers.ValidationError(
-                        {"student": "You can only manage students from your department"}
+                        {"dept_id": "You can only manage students from your department"}
                     )
             
             serializer.save()
         except Department.DoesNotExist:
-            raise self.serializer_class.ValidationError(
+            raise serializers.ValidationError(
                 {"detail": "Only HOD can update student records."}
             )

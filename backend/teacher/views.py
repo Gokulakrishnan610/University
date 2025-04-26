@@ -13,7 +13,7 @@ class AddNewTeacher(generics.CreateAPIView):
     def post(self, request):
         try:
             is_hod = Teacher.objects.filter(
-                teacher=request.user,
+                teacher_id=request.user,
                 teacher_role='HOD'
             ).exists()
             
@@ -58,12 +58,12 @@ class TeacherListView(generics.ListAPIView):
         
         try:
             hod_dept = Teacher.objects.get(
-                teacher=user,
+                teacher_id=user,
                 teacher_role='HOD'
-            ).dept
-            return Teacher.objects.filter(dept=hod_dept)
+            ).dept_id
+            return Teacher.objects.filter(dept_id=hod_dept)
         except Teacher.DoesNotExist:
-            return Teacher.objects.filter(teacher=user)
+            return Teacher.objects.filter(teacher_id=user)
 
 class TeacherDetailView(generics.RetrieveUpdateAPIView):
     authentication_classes = [IsAuthenticated]
@@ -82,12 +82,12 @@ class TeacherDetailView(generics.RetrieveUpdateAPIView):
         
         user = self.request.user
         is_hod = Teacher.objects.filter(
-            teacher=user,
+            teacher_id=user,
             teacher_role='HOD',
-            dept=teacher.dept
+            dept_id=teacher.dept_id
         ).exists()
         
-        if not is_hod and teacher.teacher != user:
+        if not is_hod and teacher.teacher_id != user:
             self.permission_denied(
                 self.request,
                 message="You don't have permission to access this teacher's details."

@@ -10,7 +10,7 @@ class RoomResource(resources.ModelResource):
             'id',
             'room_number',
             'block',
-            'maintained_by',
+            'maintained_by_id',
             'is_lab',
             'room_type',
             'room_min_cap',
@@ -22,9 +22,9 @@ class RoomResource(resources.ModelResource):
 
 class RoomAdmin(ImportExportModelAdmin):
     resource_class = RoomResource
-    list_display = ('room_number', 'block', 'maintained_by', 'is_lab', 'room_type', 'room_min_cap', 'room_max_cap', 'has_projector', 'has_ac')
+    list_display = ('room_number', 'block', 'maintained_by_id', 'is_lab', 'room_type', 'room_min_cap', 'room_max_cap', 'has_projector', 'has_ac')
     search_fields = ('room_number', 'block', 'description')
-    list_filter = ('block', 'is_lab', 'room_type', 'has_projector', 'has_ac', 'maintained_by')
+    list_filter = ('block', 'is_lab', 'room_type', 'has_projector', 'has_ac', 'maintained_by_id')
     ordering = ('block', 'room_number')
 
 admin.site.register(Room, RoomAdmin)

@@ -13,7 +13,7 @@ class AddNewCourse(generics.CreateAPIView):
 
     def post(self, request):
         try:
-            is_hod = Department.objects.filter(hod=request.user).exists()
+            is_hod = Department.objects.filter(hod_id=request.user).exists()
             
             if not is_hod:
                 return Response(
@@ -61,14 +61,14 @@ class CourseListView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         try:
-            hod_dept = Department.objects.get(hod=user)
-            return Course.objects.filter(course__course_dept=hod_dept)
+            hod_dept = Department.objects.get(hod_id=user)
+            return Course.objects.filter(course_id__course_dept_id=hod_dept)
         except Department.DoesNotExist:
             return Course.objects.none()
 
     def post(self, request, *args, **kwargs):
         try:
-            is_hod = Department.objects.filter(hod=request.user).exists()
+            is_hod = Department.objects.filter(hod_id=request.user).exists()
             
             if not is_hod:
                 return Response(
@@ -120,8 +120,8 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
         
         user = self.request.user
         is_hod = Department.objects.filter(
-            hod=user,
-            id=course.department.id
+            hod_id=user,
+            id=course.course_id.course_dept_id.id
         ).exists()
         
         if not is_hod:

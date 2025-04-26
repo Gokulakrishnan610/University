@@ -8,10 +8,10 @@ class TeacherResource(resources.ModelResource):
         model = Teacher
         fields = (
             'id',
-            'teacher__email',
-            'teacher__first_name',
-            'teacher__last_name',
-            'dept',
+            'teacher_id__email',
+            'teacher_id__first_name',
+            'teacher_id__last_name',
+            'dept_id',
             'staff_code',
             'teacher_specialisation',
             'teacher_working_hours',
@@ -21,9 +21,9 @@ class TeacherResource(resources.ModelResource):
 class TeacherAdmin(ImportExportModelAdmin):
     resource_class = TeacherResource
 
-    list_display = ('teacher', 'dept', 'staff_code', 'teacher_specialisation', 'teacher_working_hours')
-    search_fields = ('teacher__email', 'teacher__first_name', 'teacher__last_name', 'staff_code', 'teacher_specialisation')
-    list_filter = ('dept', 'teacher_working_hours')
+    list_display = ('teacher_id', 'dept_id', 'staff_code', 'teacher_specialisation', 'teacher_working_hours')
+    search_fields = ('teacher_id__email', 'teacher_id__first_name', 'teacher_id__last_name', 'staff_code', 'teacher_specialisation')
+    list_filter = ('dept_id', 'teacher_working_hours')
     ordering = ('staff_code',)
 
 admin.site.register(Teacher, TeacherAdmin)

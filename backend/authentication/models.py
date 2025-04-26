@@ -47,38 +47,23 @@ class User(AbstractUser):
         ('M', "Male"),
         ('F', 'Female')
     ]
-    STUDENT_TYPE = [
-        ('Mgmt', 'Management'),
-        ('Govt', 'Govt'),
-    ]
-    DEGREE_TYPE = [
-        ('UG', 'UG'),
-        ('PG', 'PG')
-    ]
-    USER_ROLE = [
+    USER_TYPE = [
         ('teacher', 'Teacher'),
         ('student', 'Student'),
     ]
 
     username = None
-
-    email = models.EmailField('Email', unique=True)
-    first_name = models.CharField('First Name',max_length=255, blank=False)
-    last_name = models.CharField('Last Name',max_length=255, blank=False)
-    # year = models.IntegerField('Year', blank=False, default=0)
-    # dept = models.CharField('Department', max_length=50)
-    # roll_no = models.CharField('Roll No', max_length=50)
-    phone_number = models.CharField('Phone Number', max_length=50)
+    email = models.EmailField('Email', unique=True, primary_key=True)
+    first_name = models.CharField('First Name', max_length=255, blank=False)
+    last_name = models.CharField('Last Name', max_length=255, blank=False)
+    phone_number = models.CharField('Phone Number', max_length=20)
     gender = models.CharField('Gender', max_length=10, blank=False, choices=GENDER_CHOICES)
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    # student_type = models.CharField(default='Mgmt', max_length=10, choices=STUDENT_TYPE)
-    # degree_type = models.CharField(default='UG', max_length=10, choices=DEGREE_TYPE)
-    user_type = models.CharField(default='student', max_length=200, choices=USER_ROLE, blank=False)
+    user_type = models.CharField(default='student', max_length=20, choices=USER_TYPE, blank=False)
 
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = []
 
-        
     groups = models.ManyToManyField(
         'auth.Group',
         verbose_name='groups',
@@ -116,13 +101,6 @@ class User(AbstractUser):
             'exp': timezone.now() + timezone.timedelta(days=30),
             'iat': timezone.now()
         }
-        user_type = 'student'
-        if self.user_type == 'teacher':
-            try:
-                user_type = Teacher.objects.get(teacher__email=self.email).teacher_role
-            except Exception as E:
-                print(E)
-                raise ValidationError("Teacher not found")
         
         token = jwt.encode(
             payload=payload,
@@ -130,76 +108,48 @@ class User(AbstractUser):
             algorithm='HS256'
         )
         
+        user_type = 'student'
+        if self.user_type == 'teacher':
+            try:
+                user_type = Teacher.objects.get(teacher_id=self.email).teacher_role
+            except Exception as E:
+                print(E)
+        
         response = Response({
             'id': self.email,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'gender': self.gender,
             'user_type': user_type,
-            'detail': 'Login successfull!',
+            'detail': 'Login successful!',
         }, status=status.HTTP_200_OK)
 
         response.set_cookie(key='token', value=token, samesite='Lax', httponly=True, secure=False, domain=settings.COOKIE_DOMAIN)
         return response
-    
-    
-    # def send_verification_mail(self):
-    #     verfication_code = get_random_string(length=8)
-    #     start_content = f'Hostel Room Booking: Initiated\nOTP: {verfication_code}'
-    #     subject = "Hostel Room Booking"
-    #     to_email = self.email
-    #     verfication, created = BookingOTP.objects.get_or_create(user=self)
-    #     verfication.code = verfication_code
-    #     verfication.save()
-    #     send_email(subject, to_email, {
-    #         "startingcontent": start_content,
-    #     })
-
-    def send_forgot_password_mail(self, new_password):
-        verification_code = get_random_string(length=8)
-        
-        subject = "Password Reset - Hostel Room Booking"
-        to_email = self.email
-        
-        verification, created = ForgetPassword.objects.get_or_create(user=self)
-        verification.code = verification_code
-        verification.new_password = new_password
-        verification.save()
-        
-        # send_email(
-        #     subject=subject, 
-        #     to_email=to_email, 
-        #     context={
-        #         "verification_code": verification_code,
-        #     },
-        #     template_name="forgot_password_template.html"  # Path to your HTML template
-        # )
-        print("Mail data", )
-
-
-class BookingOTP(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    code = models.CharField(max_length=10)
-    is_verified = models.BooleanField(default=False)
-
-    def __str__(self):
-        return f"{self.user}"
 
 class ForgetPassword(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    new_password = models.CharField(max_length=128)
+    user_id = models.ForeignKey(User, on_delete=models.CASCADE, related_name='forget_password', null=True)
+    new_password = models.CharField(max_length=255)
     code = models.CharField(max_length=10)
     
     def __str__(self):
-        return f"{self.user}"
+        return f"{self.user_id}"
     
-    def __save__(self, *args, **kwargs):
+    def save(self, *args, **kwargs):
         if not self.new_password.startswith('pbkdf2_sha256$'):
             self.new_password = make_password(self.new_password)
         super().save(*args, **kwargs)
 
+class BookingOTP(models.Model):
+    user_id = models.OneToOneField(User, on_delete=models.CASCADE, null=True)
+    code = models.CharField(max_length=10)
+    is_verified = models.BooleanField(default=False)
+
+    def __str__(self):
+        return f"{self.user_id}"
+
 class BlockedStudents(models.Model):
-    email = models.CharField(unique=True, blank=False,max_length=200)
+    email = models.CharField(unique=True, blank=False, max_length=200)
     name = models.CharField(max_length=200, blank=False)
     dept = models.CharField(max_length=50, blank=False)
     year = models.IntegerField(blank=False)

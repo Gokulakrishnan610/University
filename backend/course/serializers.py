@@ -1,23 +1,20 @@
 from rest_framework import serializers
-from .models import Course
+from .models import Course, CourseResourceAllocation, CourseSlotPreference, CourseRoomPreference
 from department.serializers import DepartmentSerializer
-from courseMaster.serializers import CourseMasterSerializer  # Assuming you have one
+from courseMaster.serializers import CourseMasterSerializer
+from slot.serializers import SlotSerializer
+from rooms.serializers import RoomSerializer
 
 class CourseSerializer(serializers.ModelSerializer):
-    department_detail = DepartmentSerializer(source='course__course_dept', read_only=True)
-    managed_by_detail = DepartmentSerializer(source='managed_by', read_only=True)
-    course_detail = CourseMasterSerializer(source='course', read_only=True)
-    department_name = serializers.SerializerMethodField()
+    course_detail = CourseMasterSerializer(source='course_id', read_only=True)
+    for_dept_detail = DepartmentSerializer(source='for_dept_id', read_only=True)
+    teaching_dept_detail = DepartmentSerializer(source='teaching_dept_id', read_only=True)
     
     class Meta:
         model = Course
         fields = [
             'id',
-            'course__course_dept',
-            'department_detail',
-            'for_dept',
-            'managed_by',
-            'course',
+            'course_id',
             'course_detail',
             'course_year',
             'course_semester',
@@ -25,34 +22,31 @@ class CourseSerializer(serializers.ModelSerializer):
             'tutorial_hours',
             'practical_hours',
             'credits',
-            'managed_by',
-            'managed_by_detail',
+            'for_dept_id',
+            'for_dept_detail',
+            'teaching_dept_id',
+            'teaching_dept_detail',
+            'need_assist_teacher',
             'regulation',
             'course_type',
             'elective_type',
             'lab_type',
-            'lab_pref',
             'no_of_students',
             'is_zero_credit_course',
-            'slot_prefference'
+            'teaching_status'
         ]
-        # extra_kwargs = {
-        #     'department': {'write_only': True},
-        #     'course': {'write_only': True},
-        #     'managed_by': {'write_only': True}
-        # }
         
     def validate(self, data):
-        department = data.get('department', self.instance.department if self.instance else None)
-        course = data.get('course', self.instance.course if self.instance else None)
+        for_dept_id = data.get('for_dept_id', self.instance.for_dept_id if self.instance else None)
+        course_id = data.get('course_id', self.instance.course_id if self.instance else None)
         course_semester = data.get('course_semester', self.instance.course_semester if self.instance else None)
-        managed_by = data.get('managed_by', self.instance.managed_by if self.instance else None)
+        teaching_dept_id = data.get('teaching_dept_id', self.instance.teaching_dept_id if self.instance else None)
 
         if Course.objects.filter(
-            department=department,
-            course=course,
+            for_dept_id=for_dept_id,
+            course_id=course_id,
             course_semester=course_semester,
-            managed_by=managed_by
+            teaching_dept_id=teaching_dept_id
         ).exclude(pk=self.instance.pk if self.instance else None).exists():
             raise serializers.ValidationError(
                 "A course with these details already exists."
@@ -60,38 +54,92 @@ class CourseSerializer(serializers.ModelSerializer):
         
         return data
 
+class CourseSlotPreferenceSerializer(serializers.ModelSerializer):
+    course_detail = CourseSerializer(source='course_id', read_only=True)
+    slot_detail = SlotSerializer(source='slot_id', read_only=True)
+    
+    class Meta:
+        model = CourseSlotPreference
+        fields = [
+            'id',
+            'course_id',
+            'course_detail',
+            'slot_id',
+            'slot_detail',
+            'preference_level'
+        ]
+
+class CourseRoomPreferenceSerializer(serializers.ModelSerializer):
+    course_detail = CourseSerializer(source='course_id', read_only=True)
+    room_detail = RoomSerializer(source='room_id', read_only=True)
+    
+    class Meta:
+        model = CourseRoomPreference
+        fields = [
+            'id',
+            'course_id',
+            'course_detail',
+            'room_id',
+            'room_detail',
+            'preference_level',
+            'preferred_for',
+            'tech_level_preference'
+        ]
+
+class CourseResourceAllocationSerializer(serializers.ModelSerializer):
+    course_detail = CourseSerializer(source='course_id', read_only=True)
+    original_dept_detail = DepartmentSerializer(source='original_dept_id', read_only=True)
+    teaching_dept_detail = DepartmentSerializer(source='teaching_dept_id', read_only=True)
+    
+    class Meta:
+        model = CourseResourceAllocation
+        fields = [
+            'id',
+            'course_id',
+            'course_detail',
+            'original_dept_id',
+            'original_dept_detail',
+            'teaching_dept_id',
+            'teaching_dept_detail',
+            'allocation_reason',
+            'allocation_date',
+            'status'
+        ]
+
 class CreateCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = Course
         fields = [
-            'department',
-            'course',
+            'course_id',
             'course_year',
             'course_semester',
             'lecture_hours',
             'tutorial_hours',
             'practical_hours',
             'credits',
-            'managed_by',
+            'for_dept_id',
+            'teaching_dept_id',
+            'need_assist_teacher',
             'regulation',
             'course_type',
             'elective_type',
             'lab_type',
-            'lab_pref',
             'no_of_students',
+            'is_zero_credit_course',
+            'teaching_status'
         ]
 
     def validate(self, data):
-        department = data.get('department')
-        course = data.get('course')
+        course_id = data.get('course_id')
+        for_dept_id = data.get('for_dept_id')
         course_semester = data.get('course_semester')
-        managed_by = data.get('managed_by')
+        teaching_dept_id = data.get('teaching_dept_id')
 
         if Course.objects.filter(
-            department=department,
-            course=course,
+            course_id=course_id,
+            for_dept_id=for_dept_id,
             course_semester=course_semester,
-            managed_by=managed_by
+            teaching_dept_id=teaching_dept_id
         ).exists():
             raise serializers.ValidationError(
                 "A course with these details already exists."
@@ -109,26 +157,30 @@ class UpdateCourseSerializer(serializers.ModelSerializer):
             'tutorial_hours',
             'practical_hours',
             'credits',
+            'for_dept_id',
+            'teaching_dept_id',
+            'need_assist_teacher',
             'regulation',
             'course_type',
             'elective_type',
             'lab_type',
-            'lab_pref',
             'no_of_students',
+            'is_zero_credit_course',
+            'teaching_status'
         ]
 
     def validate(self, data):
         instance = self.instance
-        department = instance.for_dept
-        course = instance.course
+        course_id = instance.course_id
+        for_dept_id = data.get('for_dept_id', instance.for_dept_id)
         course_semester = data.get('course_semester', instance.course_semester)
-        managed_by = instance.managed_by
+        teaching_dept_id = data.get('teaching_dept_id', instance.teaching_dept_id)
 
         if Course.objects.filter(
-            for_dept=department,
-            course=course,
+            course_id=course_id,
+            for_dept_id=for_dept_id,
             course_semester=course_semester,
-            managed_by=managed_by
+            teaching_dept_id=teaching_dept_id
         ).exclude(pk=instance.pk).exists():
             raise serializers.ValidationError(
                 "A course with these details already exists."

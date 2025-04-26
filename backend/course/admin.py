@@ -1,51 +1,56 @@
 from django.contrib import admin
-from .models import Course
+from .models import Course, CourseResourceAllocation, CourseSlotPreference, CourseRoomPreference
 
 class CourseAdmin(admin.ModelAdmin):
     list_display = (
         'get_course_id', 
-        'get_course_name', 
-        'course__course_dept', 
+        'get_course_name',
         'course_year', 
         'course_semester', 
         'regulation', 
         'course_type', 
         'credits',
-        'managed_by'
+        'teaching_dept_id'
     )
-    search_fields = ('course__course_id', 'course__course_name', 'course__course_dept')
+    search_fields = ('course_id__course_id', 'course_id__course_name')
     list_filter = (
-        'course__course_dept', 
+        'course_id__course_dept_id', 
         'course_year', 
         'course_semester', 
         'regulation', 
         'course_type',
         'elective_type',
-        'managed_by'
+        'teaching_dept_id'
     )
-    ordering = ('course__course_id',)
-    list_select_related = ('course', 'course__course_dept', 'managed_by')
+    ordering = ('course_id__course_id',)
     
     def get_course_id(self, obj):
-        return obj.course.course_id
+        return obj.course_id.course_id
     get_course_id.short_description = 'Course ID'
-    get_course_id.admin_order_field = 'course__course_id'
+    get_course_id.admin_order_field = 'course_id__course_id'
     
     def get_course_name(self, obj):
-        return obj.course.course_name
+        return obj.course_id.course_name
     get_course_name.short_description = 'Course Name'
-    get_course_name.admin_order_field = 'course__course_name'
-    
-    # If you want to filter courses by the logged-in user's department (for HODs)
-    # def get_queryset(self, request):
-    #     qs = super().get_queryset(request)
-    #     if request.user.is_superuser:
-    #         return qs
-    #     try:
-    #         # Assuming Department has a 'hod' field pointing to User
-    #         department = request.user.hod_department
-    #         return qs.filter(department=department)
-    #     except AttributeError:
-    #         return qs.none()
+    get_course_name.admin_order_field = 'course_id__course_name'
+
+class CourseResourceAllocationAdmin(admin.ModelAdmin):
+    list_display = ('course_id', 'original_dept_id', 'teaching_dept_id', 'allocation_date', 'status')
+    list_filter = ('status', 'allocation_date', 'original_dept_id', 'teaching_dept_id')
+    search_fields = ('course_id__course_id__course_id', 'course_id__course_id__course_name')
+    date_hierarchy = 'allocation_date'
+
+class CourseSlotPreferenceAdmin(admin.ModelAdmin):
+    list_display = ('course_id', 'slot_id', 'preference_level')
+    list_filter = ('slot_id', 'preference_level')
+    search_fields = ('course_id__course_id__course_id', 'course_id__course_id__course_name')
+
+class CourseRoomPreferenceAdmin(admin.ModelAdmin):
+    list_display = ('course_id', 'room_id', 'preference_level', 'preferred_for', 'tech_level_preference')
+    list_filter = ('room_id', 'preference_level', 'preferred_for', 'tech_level_preference')
+    search_fields = ('course_id__course_id__course_id', 'course_id__course_id__course_name', 'room_id__room_number')
 
 admin.site.register(Course, CourseAdmin)
+admin.site.register(CourseResourceAllocation, CourseResourceAllocationAdmin)
+admin.site.register(CourseSlotPreference, CourseSlotPreferenceAdmin)
+admin.site.register(CourseRoomPreference, CourseRoomPreferenceAdmin)

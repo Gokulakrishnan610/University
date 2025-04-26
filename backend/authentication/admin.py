@@ -43,8 +43,8 @@ class CustomUserAdmin(ImportExportModelAdmin):
         }),
     )
 class ForgetPasswordAdmin(ImportExportModelAdmin):
-    list_display = ('user', 'code')
-    search_fields = ('user__email', 'code')
+    list_display = ('user_id', 'code')
+    search_fields = ('user_id__email', 'code')
 
 class BlockedStudentsResource(resources.ModelResource):
     class Meta:

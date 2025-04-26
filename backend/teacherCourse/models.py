@@ -3,36 +3,36 @@ from django.core.exceptions import ValidationError
 
 # Create your models here.
 class TeacherCourse(models.Model):
-    teacher = models.ForeignKey('teacher.Teacher', on_delete=models.DO_NOTHING, blank=False)
-    course = models.ForeignKey('course.Course', on_delete=models.DO_NOTHING, blank=False)
-    student_count = models.IntegerField("Student Count", default=0, blank=False)
-    academic_year = models.IntegerField("Acd. year", default=0, blank=False)
-    semester = models.IntegerField("Semester", default=0, blank=False)
+    teacher_id = models.ForeignKey("teacher.Teacher", on_delete=models.CASCADE, null=True)
+    course_id = models.ForeignKey("course.Course", on_delete=models.CASCADE, null=True)
+    student_count = models.IntegerField("Student Count", default=0)
+    academic_year = models.IntegerField("Academic Year", default=0)
+    semester = models.IntegerField("Semester", default=0)
 
-    class Meta:
-        unique_together = ('teacher', 'course', 'semester')
-        verbose_name = 'Teacher Course Assignment'
-        verbose_name_plural = 'Teacher Course Assignments'
+    def __str__(self):
+        teacher_str = str(self.teacher_id) if self.teacher_id else "Unknown Teacher"
+        course_str = str(self.course_id) if self.course_id else "Unknown Course"
+        return f"{teacher_str} - {course_str} (Year: {self.academic_year}, Sem: {self.semester})"
 
     def clean(self):
+        if not self.teacher_id or not self.course_id:
+            return super().clean()
+            
         assigned_courses = TeacherCourse.objects.filter(
-            teacher=self.teacher
+            teacher_id=self.teacher_id
         )
 
-        total_hours_assigned = sum(course.course.credits for course in assigned_courses)
-        print(list(assigned_courses))
+        total_hours_assigned = sum(course.course_id.credits for course in assigned_courses if course.course_id)
         
-        if total_hours_assigned + self.course.credits > self.teacher.teacher_working_hours:
-            raise ValidationError("Teacher working hour is greater than assigned")
-        if self.teacher.dept != self.course.department:
+        if total_hours_assigned + self.course_id.credits > self.teacher_id.teacher_working_hours:
+            raise ValidationError("Teacher working hour limit exceeded")
+        
+        if self.teacher_id.dept_id != self.course_id.teaching_dept_id:
             raise ValidationError(
                 "Teacher and course must belong to the same department"
             )
         return super().clean()
     
-    def save(self, force_insert = ..., force_update = ..., using = ..., update_fields = ...):
+    def save(self, *args, **kwargs):
         self.clean()
-        return super().save()
-
-    def __str__(self):
-        return f"{self.teacher.teacher.get_full_name()} - {self.course.course.course_name} (Sem {self.semester})"
+        return super().save(*args, **kwargs)

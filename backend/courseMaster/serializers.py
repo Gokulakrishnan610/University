@@ -4,8 +4,8 @@ from .models import CourseMaster
 from department.serializers import DepartmentSerializer
 
 class CourseMasterSerializer(serializers.ModelSerializer):
-    course_dept = DepartmentSerializer(read_only=True)
+    course_dept_detail = DepartmentSerializer(source='course_dept_id', read_only=True)
     
     class Meta:
         model = CourseMaster
-        fields = ['course_id', 'course_name', 'course_dept']
+        fields = ['id', 'course_id', 'course_name', 'course_dept_id', 'course_dept_detail']

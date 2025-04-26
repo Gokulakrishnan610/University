@@ -2,9 +2,8 @@ from django.contrib import admin
 from .models import StudentCourse
 
 class StudentCourseAdmin(admin.ModelAdmin):
-    list_display = ('student', 'course')
-    search_fields = ('student__student__email', 'student__student__first_name', 'course__course_code', 'course__course_name')
-    list_filter = ('course__course__course_dept', 'course__course_year', 'course__course_semester')
-    ordering = ('student', 'course')
+    list_display = ('student_id', 'course_id')
+    list_filter = ('course_id__course_id', 'student_id__dept_id')
+    search_fields = ('student_id__student_id__email', 'course_id__course_id__course_id', 'course_id__course_id__course_name')
 
 admin.site.register(StudentCourse, StudentCourseAdmin)

@@ -4,30 +4,30 @@ from student.serializers import StudentSerializer
 from course.serializers import CourseSerializer
 
 class StudentCourseSerializer(serializers.ModelSerializer):
-    student_detail = StudentSerializer(source='student', read_only=True)
-    course_detail = CourseSerializer(source='course', read_only=True)
+    student_detail = StudentSerializer(source='student_id', read_only=True)
+    course_detail = CourseSerializer(source='course_id', read_only=True)
 
     class Meta:
         model = StudentCourse
         fields = [
             'id',
-            'student',
+            'student_id',
             'student_detail',
-            'course',
+            'course_id',
             'course_detail',
         ]
         extra_kwargs = {
-            'student': {'write_only': True},
-            'course': {'write_only': True}
+            'student_id': {'write_only': True},
+            'course_id': {'write_only': True}
         }
 
     def validate(self, data):
-        student = data.get('student', self.instance.student if self.instance else None)
-        course = data.get('course', self.instance.course if self.instance else None)
+        student_id = data.get('student_id', self.instance.student_id if self.instance else None)
+        course_id = data.get('course_id', self.instance.course_id if self.instance else None)
 
         if StudentCourse.objects.filter(
-            student=student,
-            course=course
+            student_id=student_id,
+            course_id=course_id
         ).exclude(pk=self.instance.pk if self.instance else None).exists():
             raise serializers.ValidationError(
                 "This student is already enrolled in this course."

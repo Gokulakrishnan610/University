@@ -5,6 +5,6 @@ from .models import CourseMaster
 
 @admin.register(CourseMaster)
 class CourseMasterAdmin(admin.ModelAdmin):
-    list_display = ('course_id', 'course_name', 'course_dept')
+    list_display = ('course_id', 'course_name', 'course_dept_id')
     search_fields = ('course_id', 'course_name')
-    list_filter = ('course_dept',)
+    list_filter = ('course_dept_id',)

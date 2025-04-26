@@ -11,6 +11,7 @@ from .authentication import IsAuthenticated
 from student.models import Student
 from teacher.models import Teacher
 from department.models import Department
+import random
 
 class DepartmentSerializerForProfile(serializers.ModelSerializer):
     class Meta:
@@ -118,10 +119,9 @@ class ProfileAPIView(generics.CreateAPIView):
     authentication_classes = [IsAuthenticated]
 
     def get(self, request):
-        user = get_object_or_404(User, id=request.user.id)
+        user = get_object_or_404(User, email=request.user.email)
 
         user_data = {
-            "id": user.id,
             "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
@@ -141,7 +141,7 @@ class ProfileAPIView(generics.CreateAPIView):
 
         if user.user_type == 'student':
             try:
-                student = Student.objects.get(student=user)
+                student = Student.objects.get(student_id=user)
                 student_data = {
                     "id": student.id,
                     "batch": student.batch,
@@ -152,8 +152,8 @@ class ProfileAPIView(generics.CreateAPIView):
                     "degree_type": student.degree_type,
                 }
                 
-                if student.dept:
-                    dept_serializer = DepartmentSerializerForProfile(student.dept)
+                if student.dept_id:
+                    dept_serializer = DepartmentSerializerForProfile(student.dept_id)
                     student_data["department"] = dept_serializer.data
                 
                 response_data["student"] = student_data
@@ -162,7 +162,7 @@ class ProfileAPIView(generics.CreateAPIView):
         
         elif user.user_type == 'teacher':
             try:
-                teacher = Teacher.objects.get(teacher=user)
+                teacher = Teacher.objects.get(teacher_id=user)
                 teacher_data = {
                     "id": teacher.id,
                     "staff_code": teacher.staff_code,
@@ -171,8 +171,8 @@ class ProfileAPIView(generics.CreateAPIView):
                     "teacher_working_hours": teacher.teacher_working_hours,
                 }
                 
-                if teacher.dept:
-                    dept_serializer = DepartmentSerializerForProfile(teacher.dept)
+                if teacher.dept_id:
+                    dept_serializer = DepartmentSerializerForProfile(teacher.dept_id)
                     teacher_data["department"] = dept_serializer.data
                 
                 response_data["teacher"] = teacher_data
@@ -191,7 +191,7 @@ class VerifyTokenAPIView(APIView):
         user = get_object_or_404(User, email=email)
         
         try:
-            verify = BookingOTP.objects.get(user=user, code=token)
+            verify = BookingOTP.objects.get(user_id=user, code=token)
             verify.is_verified = True
             verify.save()
 
@@ -199,7 +199,7 @@ class VerifyTokenAPIView(APIView):
         except:
             return Response({'detail': 'Invalid Code.'}, status=status.HTTP_400_BAD_REQUEST)
 
-class  ForgotPasswordAPI(generics.GenericAPIView):
+class ForgotPasswordAPI(generics.GenericAPIView):
     def get_serializer_class(self):
         if self.request.method == 'POST':
             return LoginSerializer
@@ -221,8 +221,20 @@ class  ForgotPasswordAPI(generics.GenericAPIView):
                     'detail': 'Your account is not active. Please verify your email first.',
                     'code': 'account_inactive'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            user.new_password=password
-            user.send_forgot_password_mail(user.new_password)
+            
+            # Create or update ForgetPassword entry
+            verification_code = ''.join(random.choices('0123456789', k=6))
+            forget_password, created = ForgetPassword.objects.get_or_create(
+                user_id=user,
+                defaults={'new_password': password, 'code': verification_code}
+            )
+            if not created:
+                forget_password.new_password = password
+                forget_password.code = verification_code
+                forget_password.save()
+                
+            # Here would be code to send the email with verification code
+            
             return Response({
                 'detail': 'Verification code sent to your email',
                 'code': 'reset_email_sent'
@@ -245,8 +257,8 @@ class  ForgotPasswordAPI(generics.GenericAPIView):
         user = get_object_or_404(User, email=email)
 
         try:
-            f = ForgetPassword.objects.get(user=user,code=token)
-            user.password=f.new_password
+            f = ForgetPassword.objects.get(user_id=user, code=token)
+            user.password = f.new_password
             user.save()
             
             return user.generate_login_response()

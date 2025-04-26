@@ -9,26 +9,22 @@ class Teacher(models.Model):
         ('DC', 'DC'),
     ]
 
-    teacher = models.ForeignKey('authentication.User', on_delete=models.DO_NOTHING, max_length=200, blank=False)
-    dept = models.ForeignKey('department.Department', on_delete=models.SET_NULL,null=True, blank=False, max_length=200)
-    staff_code = models.CharField("Staff Code", blank=True, max_length=200)
-    teacher_role = models.CharField("Teacher Role", default="Professor", blank=False, max_length=200, choices=TEACHER_ROLES)
-    teacher_specialisation = models.CharField('Specialisation', default='', blank=True, max_length=100)
+    teacher_id = models.ForeignKey('authentication.User', on_delete=models.CASCADE, related_name='teacher_profile', null=True)
+    dept_id = models.ForeignKey('department.Department', on_delete=models.SET_NULL, null=True, related_name='department_teachers')
+    staff_code = models.CharField("Staff Code", max_length=50, blank=True)
+    teacher_role = models.CharField("Teacher Role", default="Professor", max_length=100, blank=False, choices=TEACHER_ROLES)
+    teacher_specialisation = models.CharField('Specialisation', max_length=100, blank=True)
     teacher_working_hours = models.IntegerField('Working Hour', default=21, blank=False)
 
-    class Meta:
-        unique_together = ('teacher', 'dept', 'staff_code')
-        verbose_name = 'Teacher'
-        verbose_name_plural = 'Teachers'
-
     def __str__(self):
-        dept_name = self.dept.dept_name if self.dept else "No Department"
-        return f"{self.teacher.get_full_name()} - {dept_name}"
+        name = self.teacher_id.get_full_name() if self.teacher_id else "Unknown"
+        dept_name = self.dept_id.dept_name if self.dept_id else "No Department"
+        return f"{name} - {dept_name}"
 
     def clean(self):
         if self.teacher_role == 'HOD':
             existing_hod = Teacher.objects.filter(
-                dept=self.dept, 
+                dept_id=self.dept_id, 
                 teacher_role='HOD'
             ).exclude(pk=self.pk if self.pk else None)
             

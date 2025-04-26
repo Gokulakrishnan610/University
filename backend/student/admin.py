@@ -8,9 +8,9 @@ class StudentResource(resources.ModelResource):
         model = Student
         fields = (
             'id',
-            'student__email',
-            'student__first_name',
-            'student__last_name',
+            'student_id__email',
+            'student_id__first_name',
+            'student_id__last_name',
             'batch',
             'current_semester',
         )
@@ -19,9 +19,9 @@ class StudentResource(resources.ModelResource):
 class StudentAdmin(ImportExportModelAdmin):
     resource_class = StudentResource 
 
-    list_display = ('student', 'batch', 'current_semester')
-    search_fields = ('student__email', 'student__first_name', 'student__last_name', 'batch')
-    list_filter = ('batch', 'current_semester')
-    ordering = ('batch', 'student__first_name')
+    list_display = ('student_id', 'batch', 'current_semester', 'year', 'dept_id', 'roll_no', 'student_type', 'degree_type')
+    search_fields = ('student_id__email', 'student_id__first_name', 'student_id__last_name', 'roll_no')
+    list_filter = ('batch', 'current_semester', 'year', 'dept_id', 'student_type', 'degree_type')
+    ordering = ('batch', 'student_id__first_name')
 
 admin.site.register(Student, StudentAdmin)

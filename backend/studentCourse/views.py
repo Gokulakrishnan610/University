@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, serializers
 from rest_framework.response import Response
 from authentication.authentication import IsAuthenticated
 from .models import StudentCourse
@@ -16,10 +16,10 @@ class StudentCourseListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         
         try:
-            hod_dept = Department.objects.get(hod=user)
+            hod_dept = Department.objects.get(hod_id=user)
             return StudentCourse.objects.filter(
-                student__dept=hod_dept,
-                course__department=hod_dept
+                student_id__dept_id=hod_dept,
+                course_id__for_dept_id=hod_dept
             )
         except Department.DoesNotExist:
             return StudentCourse.objects.none()
@@ -27,18 +27,18 @@ class StudentCourseListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         user = self.request.user
         try:
-            hod_dept = Department.objects.get(hod=user)
-            student = serializer.validated_data['student']
-            course = serializer.validated_data['course']
+            hod_dept = Department.objects.get(hod_id=user)
+            student = serializer.validated_data['student_id']
+            course = serializer.validated_data['course_id']
             
-            if student.dept != hod_dept:
-                raise self.serializer_class.ValidationError(
+            if student.dept_id != hod_dept:
+                raise serializers.ValidationError(
                     "Only HOD can create student course enrollments"
                 )
                 
             serializer.save()
         except Department.DoesNotExist:
-            raise self.serializer_class.ValidationError(
+            raise serializers.ValidationError(
                 {"detail": "Only HOD can create student course enrollments."}
             )
 
@@ -52,10 +52,10 @@ class StudentCourseRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIVi
         user = self.request.user
         
         try:
-            hod_dept = Department.objects.get(hod=user)
+            hod_dept = Department.objects.get(hod_id=user)
             return StudentCourse.objects.filter(
-                student__dept=hod_dept,
-                course__department=hod_dept
+                student_id__dept_id=hod_dept,
+                course_id__for_dept_id=hod_dept
             )
         except Department.DoesNotExist:
             return StudentCourse.objects.none()
@@ -63,11 +63,11 @@ class StudentCourseRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIVi
     def perform_update(self, serializer):
         user = self.request.user
         try:
-            hod_dept = Department.objects.get(hod=user)
+            hod_dept = Department.objects.get(hod_id=user)
             instance = self.get_object()
             
             serializer.save()
         except Department.DoesNotExist:
-            raise self.serializer_class.ValidationError(
+            raise serializers.ValidationError(
                 {"detail": "Only HOD can update student course enrollments."}
             )
