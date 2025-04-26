@@ -17,6 +17,10 @@ class TeacherCourseListCreateView(generics.ListCreateAPIView):
     def get_queryset(self):
         user = self.request.user
         
+        # Admin users can see all assignments
+        if user.is_superuser or user.is_staff:
+            return TeacherCourse.objects.all()
+            
         try:
             teacher = Teacher.objects.get(teacher_id=user)
             
@@ -34,7 +38,16 @@ class TeacherCourseListCreateView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user    
-        print(user)
+        
+        # Admin users can create assignments for any department
+        if user.is_superuser or user.is_staff:
+            try:
+                serializer.save()
+                return
+            except ValidationError as e:
+                raise serializers.ValidationError(e.message_dict if hasattr(e, 'message_dict') else str(e))
+        
+        # For non-admin users, follow existing HOD-based permissions
         try:
             teacher = Teacher.objects.get(teacher_id=user)
             
@@ -43,7 +56,7 @@ class TeacherCourseListCreateView(generics.ListCreateAPIView):
             
             if teacher.teacher_role != 'HOD':
                 raise serializers.ValidationError(
-                    {"detail": "Only HOD can create teacher course assignments."}
+                    {"detail": "Only HOD or admin can create teacher course assignments."}
                 )
             
             # HOD can only assign teachers and courses from their own department
@@ -70,6 +83,10 @@ class TeacherCourseRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIVi
     def get_queryset(self):
         user = self.request.user
         
+        # Admin users can see all assignments
+        if user.is_superuser or user.is_staff:
+            return TeacherCourse.objects.all()
+        
         try:
             teacher = Teacher.objects.get(teacher_id=user)
             
@@ -87,13 +104,19 @@ class TeacherCourseRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIVi
 
     def perform_update(self, serializer):
         user = self.request.user
+        
+        # Admin users can update any assignment
+        if user.is_superuser or user.is_staff:
+            serializer.save()
+            return
+            
         try:
             teacher = Teacher.objects.get(teacher_id=user)
             
             # Only HOD can update assignments
             if teacher.teacher_role != 'HOD':
                 raise serializers.ValidationError(
-                    {"detail": "Only HOD can update teacher course assignments."}
+                    {"detail": "Only HOD or admin can update teacher course assignments."}
                 )
             
             instance = self.get_object()
@@ -118,13 +141,19 @@ class TeacherCourseRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIVi
             
     def perform_destroy(self, instance):
         user = self.request.user
+        
+        # Admin users can delete any assignment
+        if user.is_superuser or user.is_staff:
+            instance.delete()
+            return
+            
         try:
             teacher = Teacher.objects.get(teacher_id=user)
             
             # Only HOD can delete assignments
             if teacher.teacher_role != 'HOD':
                 raise serializers.ValidationError(
-                    {"detail": "Only HOD can delete teacher course assignments."}
+                    {"detail": "Only HOD or admin can delete teacher course assignments."}
                 )
                 
             instance.delete()
