@@ -3,7 +3,7 @@ import { useParams, useNavigate, useLocation } from 'react-router';
 import {
   useGetTeacher,
   useUpdateTeacher,
-  Teacher
+  Teacher as TeacherType
 } from '@/action/teacher';
 import {
   Card,
@@ -41,9 +41,8 @@ export default function TeacherDetails() {
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const teacherId = parseInt(id as string);
 
-  const { data: teacher, isPending: isLoading, refetch } = useGetTeacher(teacherId);
+  const { data: teacher, isPending: isLoading, refetch, isFetched } = useGetTeacher(teacherId);
   const { mutate: updateTeacher, isPending: isUpdating } = useUpdateTeacher(teacherId, () => {
-    toast.success("Teacher updated successfully");
     refetch();
     setShowEditForm(false);
   });
@@ -56,7 +55,18 @@ export default function TeacherDetails() {
     }
   }, [isEditMode, location.pathname]);
 
-  if (isLoading || !teacher) {
+  // Add error handling for invalid data
+  useEffect(() => {
+    if (isFetched && teacher && Object.keys(teacher).length === 0) {
+      toast.error("Teacher data not found", {
+        description: `We couldn't find the teacher with ID ${teacherId}`
+      });
+      const timer = setTimeout(() => navigate('/teachers'), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isFetched, teacher, teacherId, navigate]);
+
+  if (isLoading || !teacher || Object.keys(teacher).length === 0) {
     return (
       <div className="py-10 max-w-5xl mx-auto">
         <div className="mb-6">
@@ -79,7 +89,40 @@ export default function TeacherDetails() {
     );
   }
 
-  const department = teacher.dept;
+  // Check if the teacher object has the expected properties
+  const hasRequiredFields = teacher && 
+    (teacher.teacher_role !== undefined) && 
+    (teacher.teacher_working_hours !== undefined);
+  
+  if (!hasRequiredFields) {
+    // Handle malformed or incomplete data
+    return (
+      <div className="py-10 max-w-5xl mx-auto">
+        <div className="mb-6">
+          <Button variant="ghost" onClick={() => navigate('/teachers')}>
+            <ChevronLeft className="mr-2 h-4 w-4" /> Back to Teachers
+          </Button>
+        </div>
+        <Card className="shadow-md border-t-4 border-t-destructive p-6">
+          <div className="text-center space-y-4">
+            <h2 className="text-xl font-semibold text-destructive">Invalid Teacher Data</h2>
+            <p className="text-muted-foreground">
+              The teacher data received is incomplete or in an unexpected format. 
+              Please try again or contact support.
+            </p>
+            <Button onClick={() => navigate('/teachers')}>
+              Return to Teacher List
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // Access data using the updated interface structure
+  const department = teacher.dept_id;
+  const userInfo = teacher.teacher_id;
+  
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -88,12 +131,12 @@ export default function TeacherDetails() {
       .toUpperCase();
   };
 
-  const fullName = `${teacher.teacher.first_name} ${teacher.teacher.last_name}`;
+  const fullName = userInfo ? `${userInfo.first_name} ${userInfo.last_name}` : '';
 
   const handleRemoveFromDepartment = () => {
     console.log('Removing teacher from department...');
     updateTeacher({
-      dept: null
+      dept_id: null
     }, {
       onSuccess: () => {
         toast.success("Teacher removed from department", {
@@ -162,7 +205,7 @@ export default function TeacherDetails() {
                   <div className="flex items-center">
                     <Mail className="h-4 w-4 text-muted-foreground mr-2" />
                     <span className="text-muted-foreground mr-2">Email:</span>
-                    <span className="font-medium">{teacher.teacher.email}</span>
+                    <span className="font-medium">{userInfo?.email}</span>
                   </div>
                   <div className="flex items-center">
                     <Clock className="h-4 w-4 text-muted-foreground mr-2" />

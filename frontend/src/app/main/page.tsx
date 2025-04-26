@@ -9,6 +9,7 @@ import TeacherDetails from "./teachers/[id]/page";
 import TeacherCourseAssignmentPage from "./teacher-course-assignment/page";
 import TeacherCourseAssignmentDetail from "./teacher-course-assignment/[id]/page";
 
+
 export default function Dashboard() {
   // const {data, isPending} = useGetCourses()
 

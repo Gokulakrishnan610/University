@@ -10,18 +10,18 @@ class DepartmentSerializer(serializers.ModelSerializer):
             'dept_name',
             'date_established',
             'contact_info',
-            'hod',
+            'hod_id',
         ]
         extra_kwargs = {
-            'hod': {'write_only': True} 
+            'hod_id': {'write_only': True} 
         }
 
     def validate(self, data):
-        hod = data.get('hod')
+        hod_id = data.get('hod_id')
         
-        if hod and hod.user_type != 'teacher':
+        if hod_id and hod_id.user_type != 'teacher':
             raise serializers.ValidationError(
-                {"hod": "Only teachers can be assigned as HOD"}
+                {"hod_id": "Only teachers can be assigned as HOD"}
             )
             
         return data
@@ -33,6 +33,6 @@ class DepartmentSerializer(serializers.ModelSerializer):
         instance.dept_name = validated_data.get('dept_name', instance.dept_name)
         instance.date_established = validated_data.get('date_established', instance.date_established)
         instance.contact_info = validated_data.get('contact_info', instance.contact_info)
-        instance.hod = validated_data.get('hod', instance.hod)
+        instance.hod_id = validated_data.get('hod_id', instance.hod_id)
         instance.save()
         return instance

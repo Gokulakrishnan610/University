@@ -106,7 +106,7 @@ class CourseListView(generics.ListCreateAPIView):
 class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
     authentication_classes = [IsAuthenticated]
     permission_classes = [permissions.IsAuthenticated]
-    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
     lookup_field = 'id'
     
     def get_serializer_class(self):
@@ -116,21 +116,59 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
 
     def get_object(self):
         course_id = self.kwargs.get('id')
-        course = get_object_or_404(Course, id=course_id)
+        # Use select_related to fetch related departments and course master in a single query
+        # This automatically loads:
+        # - course_id (CourseMaster)
+        # - course_id__course_dept_id (Department)  
+        # - for_dept_id (Department)
+        # - teaching_dept_id (Department)
+        course = get_object_or_404(
+            Course.objects.select_related(
+                'course_id', 
+                'course_id__course_dept_id',
+                'for_dept_id', 
+                'teaching_dept_id'
+            ), 
+            id=course_id
+        )
         
         user = self.request.user
+        # Check if user is HOD of the related department
         is_hod = Department.objects.filter(
             hod_id=user,
             id=course.course_id.course_dept_id.id
         ).exists()
         
-        if not is_hod:
-            self.permission_denied(
-                self.request,
-                message="You don't have permission to access this course."
-            )
-        
+        # if not is_hod:
+        #     self.permission_denied(
+        #         self.request,
+        #         message="You don't have permission to access this course."
+        #     )
+    
         return course
+        
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            
+            return Response(
+                {
+                    'status': 'success',
+                    'data': serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            print(e)
+            return Response(
+                {
+                    'status': 'error',
+                    'detail': "Something went wrong!",
+                    "code": "internal_error"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
     def patch(self, request, *args, **kwargs):
         try:

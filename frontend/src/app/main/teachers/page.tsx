@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { useGetTeachers, useUpdateTeacher, Teacher } from '@/action/teacher';
+import { useGetTeachers, useUpdateTeacher, Teacher as TeacherType } from '@/action/teacher';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -45,9 +45,8 @@ import TeacherForm from './form';
 export default function TeacherManagement() {
   const navigate = useNavigate();
   const { data: teachersData, isPending: isLoading, refetch } = useGetTeachers();
-
   const teachers = teachersData || [];
-  const [teacherToRemove, setTeacherToRemove] = useState<Teacher | null>(null);
+  const [teacherToRemove, setTeacherToRemove] = useState<TeacherType | null>(null);
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -64,18 +63,21 @@ export default function TeacherManagement() {
 
   // Extract unique values for filters
   const uniqueRoles = useMemo<string[]>(() => {
-    return Array.from(new Set(teachers.map((t: Teacher) => t.teacher_role)));
+    return Array.from(new Set(teachers.map((t: TeacherType) => t.teacher_role)));
   }, [teachers]);
 
   const uniqueDepartments = useMemo<string[]>(() => {
-    return Array.from(new Set(teachers.map((t: Teacher) => t.dept?.dept_name || 'Not assigned').filter(Boolean)));
+    return Array.from(new Set(teachers.map((t: TeacherType) => t.dept_id?.dept_name || 'Not assigned').filter(Boolean)));
   }, [teachers]);
 
   // Filter teachers based on search query and filters
   const filteredTeachers = useMemo(() => {
-    return teachers.filter((teacher: Teacher) => {
+    return teachers.filter((teacher: TeacherType) => {
       // Apply search query
-      const teacherName = `${teacher.teacher.first_name} ${teacher.teacher.last_name}`.toLowerCase();
+      // Access user data from teacher_id structure
+      const firstName = teacher.teacher_id?.first_name || '';
+      const lastName = teacher.teacher_id?.last_name || '';
+      const teacherName = `${firstName} ${lastName}`.toLowerCase();
       const staffCode = (teacher.staff_code || '').toLowerCase();
       const searchLower = searchQuery.toLowerCase();
       
@@ -87,7 +89,8 @@ export default function TeacherManagement() {
       const matchesRole = selectedRoleFilter.length === 0 || 
           selectedRoleFilter.includes(teacher.teacher_role);
       
-      const departmentName = teacher.dept?.dept_name || 'Not assigned';
+      // Access department from dept_id structure
+      const departmentName = teacher.dept_id?.dept_name || 'Not assigned';
       const matchesDepartment = selectedDepartmentFilter.length === 0 || 
           selectedDepartmentFilter.includes(departmentName);
       
@@ -100,7 +103,7 @@ export default function TeacherManagement() {
 
     console.log('Removing teacher from department:', teacherToRemove.id);
     updateTeacher(
-      { dept: null },
+      { dept_id: null },
       {
         onSuccess: () => {
           toast.success('Teacher removed from department', {
@@ -127,6 +130,7 @@ export default function TeacherManagement() {
   };
 
   const getInitials = (firstName: string, lastName: string) => {
+    if (!firstName && !lastName) return "";
     return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
   };
 
@@ -266,7 +270,7 @@ export default function TeacherManagement() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTeachers.map((teacher: Teacher) => (
+                    {filteredTeachers.map((teacher: TeacherType) => (
                       <TableRow
                         key={teacher.id}
                         className="cursor-pointer hover:bg-muted/50 transition-colors"
@@ -275,12 +279,15 @@ export default function TeacherManagement() {
                           <div className="flex items-center space-x-3">
                             <Avatar className="h-9 w-9 border border-primary/30">
                               <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                {getInitials(teacher.teacher.first_name, teacher.teacher.last_name)}
+                                {getInitials(
+                                  (teacher.teacher_id?.first_name || ''),
+                                  (teacher.teacher_id?.last_name || '')
+                                )}
                               </AvatarFallback>
                             </Avatar>
                             <div>
                               <div className="font-medium">
-                                {teacher.teacher.first_name} {teacher.teacher.last_name}
+                                {teacher.teacher_id?.first_name} {teacher.teacher_id?.last_name}
                               </div>
                               <div className="text-xs text-muted-foreground">
                                 {teacher.staff_code || 'No Staff Code'}
@@ -294,10 +301,10 @@ export default function TeacherManagement() {
                           </Badge>
                         </TableCell>
                         <TableCell>
-                          {teacher.dept?.dept_name ? (
+                          {teacher.dept_id?.dept_name ? (
                             <div className="flex items-center gap-1.5 text-sm">
                               <Building className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span>{teacher.dept.dept_name}</span>
+                              <span>{teacher.dept_id.dept_name}</span>
                             </div>
                           ) : (
                             <span className="text-muted-foreground text-sm italic">Not assigned</span>
@@ -329,7 +336,7 @@ export default function TeacherManagement() {
                               }}>
                                 <Pencil className="mr-2 h-4 w-4" /> Edit Teacher
                               </DropdownMenuItem>
-                              {teacher.dept && (
+                              {teacher.dept_id && (
                                 <DropdownMenuItem
                                   className="text-destructive focus:text-destructive"
                                   onClick={(e) => {
@@ -362,8 +369,8 @@ export default function TeacherManagement() {
             <AlertDialogTitle>Remove from Department</AlertDialogTitle>
             <AlertDialogDescription>
               Are you sure you want to remove <span className="font-semibold">
-                {teacherToRemove?.teacher.first_name} {teacherToRemove?.teacher.last_name}
-              </span> from {teacherToRemove?.dept?.dept_name}?
+                {teacherToRemove?.teacher_id?.first_name} {teacherToRemove?.teacher_id?.last_name}
+              </span> from {(teacherToRemove?.dept_id)?.dept_name}?
               <br /><br />
               This action will only remove the teacher's department association, not delete the teacher profile.
             </AlertDialogDescription>

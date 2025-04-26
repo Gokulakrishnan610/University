@@ -4,84 +4,105 @@ import axios from "axios";
 import api from "./api";
 
 // Types
+export interface DepartmentDetails {
+  id: number;
+  dept_name: string;
+  date_established: string;
+  contact_info: string;
+}
+
+export interface CourseMaster {
+  id: number;
+  course_id: string;
+  course_name: string;
+  course_dept_detail: DepartmentDetails;
+}
+
 export interface Course {
   id: number;
-  course_name: string;
-  course_code: string;
-  course_description: string;
-  course_semester: number;
+  course_id: CourseMaster;
+  course_detail: CourseMaster;
   course_year: number;
-  course_type: 'T' | 'L' | 'LoT';
-  department: {
-    id: number;
-    dept_name: string;
+  course_semester: number;
+  is_zero_credit_course: boolean;
+  lecture_hours: number;
+  practical_hours: number;
+  tutorial_hours: number;
+  credits: number;
+  for_dept_id: number;
+  for_dept_detail: DepartmentDetails;
+  teaching_dept_id: number;
+  teaching_dept_detail: DepartmentDetails;
+  need_assist_teacher: boolean;
+  regulation: string;
+  course_type: string;
+  elective_type: string;
+  lab_type: string | null;
+  no_of_students: number;
+  teaching_status: 'active' | 'inactive' | 'pending';
+  relationship_type: {
+    code: string;
+    description: string;
   };
-  department_name: string;
-  credits: number;
-  lecture_hours: number;
-  tutorial_hours: number;
-  practical_hours: number;
-  regulation: string;
 }
 
-export interface CreateCourseRequest {
-  course_name: string;
-  course_code: string;
-  course_description: string;
-  course_semester: number;
-  course_year: number;
-  regulation: string;
-  course_type: 'T' | 'L' | 'LoT';
-  lecture_hours: number;
-  tutorial_hours: number;
-  practical_hours: number;
-  credits: number;
-  department: number;
+export interface ResourceAllocation {
+  id: number;
+  course_id: number;
+  course_detail: Course;
+  original_dept_id: number;
+  original_dept_detail: DepartmentDetails;
+  teaching_dept_id: number;
+  teaching_dept_detail: DepartmentDetails;
+  allocation_reason: string;
+  allocation_date: string;
+  status: 'pending' | 'approved' | 'rejected';
 }
 
-export type UpdateCourseRequest = Partial<CreateCourseRequest>;
+export interface DepartmentCoursesResponse {
+  owned_courses: Course[];
+  teaching_courses: Course[];
+  receiving_courses: Course[];
+}
 
-// Get all courses
-export const useGetCourses = () => {
-  return useQueryData(
-    ['courses'],
+// Get courses for current department
+export const useGetCurrentDepartmentCourses = () => {
+  return useQueryData<DepartmentCoursesResponse>(
+    ['department-courses'],
     async () => {
       try {
-        const response = await api.get('/api/course/');
-        return response.data;
+        const response = await api.get('/api/department/courses/');
+        return response.data || { owned_courses: [], teaching_courses: [], receiving_courses: [] };
       } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          throw new Error(error.response.data.message || 'Failed to fetch courses');
-        }
-        throw error;
+        console.error('Error fetching department courses:', error);
+        return { owned_courses: [], teaching_courses: [], receiving_courses: [] };
       }
     }
   );
 };
 
-// Get a single course by ID
+// Get course details
 export const useGetCourse = (id: number) => {
-  return useQueryData(
+  return useQueryData<{ status: string; data: Course }>(
     ['course', id.toString()],
     async () => {
       try {
         const response = await api.get(`/api/course/${id}/`);
         return response.data;
       } catch (error) {
-        if (axios.isAxiosError(error) && error.response) {
-          throw new Error(error.response.data.message || 'Failed to fetch course');
-        }
-        throw error;
+        console.error(`Error fetching course with ID ${id}:`, error);
+        return { status: "error", data: {} };
       }
-    }
+    },
+    !!id
   );
 };
 
-// Create a new course
+// Create course
 export const useCreateCourse = (onSuccess?: () => void) => {
   return useMutationData(
     ['createCourse'],
-    async (data: CreateCourseRequest) => {
+    async (data: any) => {
       try {
         const response = await api.post('/api/course/', data);
         return {
@@ -103,13 +124,13 @@ export const useCreateCourse = (onSuccess?: () => void) => {
   );
 };
 
-// Update an existing course
+// Update course
 export const useUpdateCourse = (id: number, onSuccess?: () => void) => {
   return useMutationData(
     ['updateCourse', id.toString()],
-    async (data: UpdateCourseRequest) => {
+    async (data: any) => {
       try {
-        const response = await api.put(`/api/course/${id}/`, data);
+        const response = await api.patch(`/api/course/${id}/`, data);
         return {
           status: response.status,
           data: response.data.message || 'Course updated successfully',
@@ -125,6 +146,62 @@ export const useUpdateCourse = (id: number, onSuccess?: () => void) => {
       }
     },
     [['courses'], ['course', id.toString()]],
+    onSuccess
+  );
+};
+
+// Request course reassignment
+export const useRequestCourseReassignment = (onSuccess?: () => void) => {
+  return useMutationData(
+    ['requestReassignment'],
+    async (data: {
+      course_id: number;
+      teaching_dept_id: number;
+      allocation_reason: string;
+    }) => {
+      try {
+        const response = await api.post('/api/course/resource-allocation/', data);
+        return {
+          status: response.status,
+          data: response.data.message || 'Reassignment request sent successfully',
+        };
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          return {
+            status: error.response.status,
+            data: error.response.data.message || 'Failed to request reassignment',
+          };
+        }
+        throw error;
+      }
+    },
+    'courses',
+    onSuccess
+  );
+};
+
+// Respond to resource allocation request
+export const useRespondToAllocationRequest = (id: number, onSuccess?: () => void) => {
+  return useMutationData(
+    ['respondAllocation', id.toString()],
+    async (data: { status: 'approved' | 'rejected' }) => {
+      try {
+        const response = await api.patch(`/api/course/resource-allocation/${id}/`, data);
+        return {
+          status: response.status,
+          data: response.data.message || 'Response submitted successfully',
+        };
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          return {
+            status: error.response.status,
+            data: error.response.data.message || 'Failed to respond to request',
+          };
+        }
+        throw error;
+      }
+    },
+    'resource-allocations',
     onSuccess
   );
 };
@@ -152,5 +229,21 @@ export const useDeleteCourse = (id: number, onSuccess?: () => void) => {
     },
     'courses',
     onSuccess
+  );
+};
+
+// Get all courses
+export const useGetCourses = () => {
+  return useQueryData<Course[]>(
+    ['courses'],
+    async () => {
+      try {
+        const response = await api.get('/api/course/');
+        return response.data || [];
+      } catch (error) {
+        console.error('Error fetching courses:', error);
+        return [];
+      }
+    }
   );
 }; 

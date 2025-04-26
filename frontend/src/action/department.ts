@@ -3,6 +3,7 @@ import { useQueryData } from "@/hooks/useQueryData";
 import axios from "axios";
 import api from "./api";
 import { useQuery } from '@tanstack/react-query';
+import { DepartmentDetails } from "./course";
 
 // Types
 export interface Department {
@@ -24,25 +25,52 @@ export type UpdateDepartmentRequest = Partial<CreateDepartmentRequest>;
 
 // Get all departments
 export const useGetDepartments = () => {
-  return useQuery({
-    queryKey: ['departments'],
-    queryFn: async () => {
-      const response = await api.get('/api/department/');
-      return response.data.data || [];
+  return useQueryData<DepartmentDetails[]>(
+    ['departments'],
+    async () => {
+      try {
+        const response = await api.get('/api/department/');
+  
+        return response.data.data || [];
+      } catch (error) {
+        console.error('Error fetching departments:', error);
+        return [];
+      }
     }
-  });
+  );
 };
 
 // Get a single department by ID
 export const useGetDepartment = (id: number) => {
-  return useQuery({
-    queryKey: ['department', id.toString()],
-    queryFn: async () => {
-      const response = await api.get(`/api/department/${id}/`);
-      return response.data.data;
+  return useQueryData<DepartmentDetails>(
+    ['department', id.toString()],
+    async () => {
+      try {
+        const response = await api.get(`/api/department/${id}/`);
+        return response.data.data;
+      } catch (error) {
+        console.error(`Error fetching department with ID ${id}:`, error);
+        return {};
+      }
     },
-    enabled: !!id,
-  });
+    !!id
+  );
+};
+
+// Get the current user's department
+export const useGetCurrentDepartment = () => {
+  return useQueryData<DepartmentDetails>(
+    ['current-department'],
+    async () => {
+      try {
+        const response = await api.get('/api/department/current/');
+        return response.data.data;
+      } catch (error) {
+        console.error('Error fetching current department:', error);
+        return {};
+      }
+    }
+  );
 };
 
 // Create a new department
