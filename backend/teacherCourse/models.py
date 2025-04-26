@@ -17,11 +17,10 @@ class TeacherCourse(models.Model):
     def clean(self):
         assigned_courses = TeacherCourse.objects.filter(
             teacher=self.teacher,
-            academic_year=self.academic_year,
-            semester=self.semester
         )
 
         total_hours_assigned = sum(course.course.credits for course in assigned_courses)
+        print(list(assigned_courses))
         
         if total_hours_assigned + self.course.credits > self.teacher.teacher_working_hours:
             raise ValidationError("Teacher working hour is greater than assigned")
