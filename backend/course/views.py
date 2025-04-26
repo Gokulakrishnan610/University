@@ -28,7 +28,6 @@ class AddNewCourse(generics.CreateAPIView):
             serializer.is_valid(raise_exception=True)
             course = serializer.save()
             
-            # Return full course details
             response_serializer = CourseSerializer(course)
             
             return Response(
@@ -63,7 +62,7 @@ class CourseListView(generics.ListCreateAPIView):
         user = self.request.user
         try:
             hod_dept = Department.objects.get(hod=user)
-            return Course.objects.filter(department=hod_dept)
+            return Course.objects.filter(course__course_dept=hod_dept)
         except Department.DoesNotExist:
             return Course.objects.none()
 

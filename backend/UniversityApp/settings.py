@@ -92,6 +92,8 @@ INSTALLED_APPS = [
     'rooms',
     'teacherCourse',
     'studentCourse',
+    'courseMaster',
+    'slot',
 ]
 
 MIDDLEWARE = [

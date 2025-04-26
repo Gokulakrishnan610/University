@@ -5,6 +5,7 @@ from authentication.authentication import IsAuthenticated
 from .models import TeacherCourse
 from .serializers import TeacherCourseSerializer
 from department.models import Department
+from django.core.exceptions import ValidationError
 
 # Create your views here.
 class TeacherCourseListCreateView(generics.ListCreateAPIView):
@@ -36,7 +37,10 @@ class TeacherCourseListCreateView(generics.ListCreateAPIView):
                     "You can only assign teachers and courses from your own department"
                 )
                 
-            serializer.save()
+            try:
+                serializer.save()
+            except ValidationError as e:
+                raise serializer.ValidationError(e.message_dict if hasattr(e, 'message_dict') else str(e))
         except Department.DoesNotExist:
             raise self.serializer_class.ValidationError(
                 {"detail": "Only HOD can create teacher course assignments."}
