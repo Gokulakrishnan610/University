@@ -94,6 +94,7 @@ INSTALLED_APPS = [
     'studentCourse',
     'courseMaster',
     'slot',
+    'dashboard',  # Added dashboard app
 ]
 
 MIDDLEWARE = [
@@ -106,6 +107,16 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
+# Django REST Framework settings
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'authentication.authentication.JWTCookieAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
 
 ROOT_URLCONF = 'UniversityApp.urls'
 

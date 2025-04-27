@@ -2,11 +2,12 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from authentication.authentication import IsAuthenticated
-from .models import Course, CourseResourceAllocation, CourseRoomPreference, TeacherCourseAssignment
-from .serializers import CourseSerializer, CreateCourseSerializer, UpdateCourseSerializer, CourseResourceAllocationSerializer, CourseRoomPreferenceSerializer
+from .models import Course, CourseResourceAllocation, CourseRoomPreference
+from teacherCourse.models import TeacherCourse
 from department.models import Department
 from django.db import models
 from rest_framework.views import APIView
+from .serializers import CourseSerializer, CreateCourseSerializer, UpdateCourseSerializer, CourseResourceAllocationSerializer, CourseRoomPreferenceSerializer
 
 class AddNewCourse(generics.CreateAPIView):
     authentication_classes = [IsAuthenticated]
@@ -743,16 +744,16 @@ class CourseAssignmentStatsView(APIView):
             if course_id:
                 # Get stats for a specific course
                 course = Course.objects.get(id=course_id)
-                assignments = TeacherCourseAssignment.objects.filter(course=course)
+                assignments = TeacherCourse.objects.filter(course_id=course)
                 stats = {
                     'course_id': course.id,
-                    'course_name': course.course_detail.course_name,
-                    'course_code': course.course_detail.course_id,
+                    'course_name': course.course_id.course_name,
+                    'course_code': course.course_id.course_id,
                     'total_teachers': assignments.count(),
                     'teachers': [
                         {
-                            'teacher_id': assignment.teacher.id,
-                            'teacher_name': f"{assignment.teacher.teacher_id.first_name} {assignment.teacher.teacher_id.last_name}",
+                            'teacher_id': assignment.teacher_id.id,
+                            'teacher_name': f"{assignment.teacher_id.teacher_id.first_name} {assignment.teacher_id.teacher_id.last_name}",
                             'semester': assignment.semester,
                             'academic_year': assignment.academic_year,
                             'student_count': assignment.student_count
@@ -765,16 +766,16 @@ class CourseAssignmentStatsView(APIView):
                 courses = Course.objects.all()
                 stats = []
                 for course in courses:
-                    assignments = TeacherCourseAssignment.objects.filter(course=course)
+                    assignments = TeacherCourse.objects.filter(course_id=course)
                     stats.append({
                         'course_id': course.id,
-                        'course_name': course.course_detail.course_name,
-                        'course_code': course.course_detail.course_id,
+                        'course_name': course.course_id.course_name,
+                        'course_code': course.course_id.course_id,
                         'total_teachers': assignments.count(),
                         'teachers': [
                             {
-                                'teacher_id': assignment.teacher.id,
-                                'teacher_name': f"{assignment.teacher.teacher_id.first_name} {assignment.teacher.teacher_id.last_name}",
+                                'teacher_id': assignment.teacher_id.id,
+                                'teacher_name': f"{assignment.teacher_id.teacher_id.first_name} {assignment.teacher_id.teacher_id.last_name}",
                                 'semester': assignment.semester,
                                 'academic_year': assignment.academic_year,
                                 'student_count': assignment.student_count

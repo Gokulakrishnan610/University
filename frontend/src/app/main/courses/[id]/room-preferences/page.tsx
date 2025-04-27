@@ -39,40 +39,6 @@ export default function CourseRoomPreferencesPage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div className="flex flex-col gap-2">
-        <div className="flex text-sm text-muted-foreground">
-          <span 
-            className="hover:underline cursor-pointer" 
-            onClick={() => navigate('/main/courses')}
-          >
-            Courses
-          </span>
-          <span className="mx-2">/</span>
-          <span 
-            className="hover:underline cursor-pointer" 
-            onClick={() => navigate(`/main/courses/${courseId}`)}
-          >
-            {course.course_id?.course_id || `Course ${courseId}`}
-          </span>
-          <span className="mx-2">/</span>
-          <span className="text-foreground">Room Preferences</span>
-        </div>
-
-        <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold tracking-tight">
-            Room Preferences for {course.course_id?.course_name || `Course ${courseId}`}
-          </h1>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate(`/main/courses/${courseId}`)}
-          >
-            <ChevronLeft className="h-4 w-4 mr-2" />
-            Back to Course
-          </Button>
-        </div>
-      </div>
-
       <RoomPreferenceList courseId={courseId} rooms={rooms || []} />
     </div>
   );

@@ -204,7 +204,7 @@ export default function CourseDetails() {
 
   // Create default values for the edit form
   const defaultValues = {
-    course_id: course.course_id?.id,
+    course_id: course.course_id,
     course_year: course.course_year,
     course_semester: course.course_semester,
     lecture_hours: course.lecture_hours,
