@@ -85,7 +85,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay */}
       {isOpen && (
         <div
           className="fixed inset-0 z-40 bg-background/80 backdrop-blur-sm md:hidden"
@@ -93,16 +92,15 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
         />
       )}
 
-      {/* Sidebar */}
       <div
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-72 h-full border-r bg-background transition-transform duration-300 md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
-        <div className="flex h-16 items-center justify-between border-b px-4">
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold">University App</span>
+        <div className="flex h-16 items-center justify-center border-b px-4">
+          <Link to="/" className="flex items-center justify-center gap-2">
+           <img src="/images/rec_logo.png" alt="Logo" width={160} height={32} />
           </Link>
           <Button variant="ghost" size="icon" onClick={onClose} className="md:hidden">
             <X className="h-5 w-5" />
