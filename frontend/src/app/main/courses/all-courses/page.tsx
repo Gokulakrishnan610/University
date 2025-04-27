@@ -28,6 +28,8 @@ import {
   Filter,
   Loader2,
   GraduationCap,
+  CalendarIcon,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useGetCurrentDepartmentCourses, Course } from '@/action/course';
 import { getRelationshipBadgeColor, getRelationshipShortName } from '@/lib/utils';
@@ -38,10 +40,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 export default function AllCoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [semesterFilter, setSemesterFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
+  const [showFilterMenu, setShowFilterMenu] = useState<boolean>(false);
+  
   const navigate = useNavigate();
   
   const { data: departmentData, isPending } = useGetCurrentDepartmentCourses();
@@ -81,13 +94,49 @@ export default function AllCoursesPage() {
     return [...owned, ...teaching, ...receiving, ...forDept];
   }, [allOwnedCourses, allTeachingCourses, allReceivingCourses, allForDeptCourses]);
   
-  // Filter courses based on search query and role filter
+  // Get unique years, semesters and relationship types for filters
+  const uniqueYears = useMemo(() => {
+    const years = new Set(coursesWithRoles.map(course => course.course_year.toString()));
+    return Array.from(years).sort();
+  }, [coursesWithRoles]);
+  
+  const uniqueSemesters = useMemo(() => {
+    const semesters = new Set(coursesWithRoles.map(course => course.course_semester.toString()));
+    return Array.from(semesters).sort();
+  }, [coursesWithRoles]);
+  
+  const uniqueRelationships = useMemo(() => {
+    const relationships = new Set(coursesWithRoles.map(course => course.relationship_type?.code || 'UNKNOWN'));
+    return Array.from(relationships);
+  }, [coursesWithRoles]);
+  
+  // Filter courses based on search query and all filters
   const filteredCourses = useMemo(() => {
     let filtered = coursesWithRoles;
     
     // Apply role filter
     if (roleFilter !== 'all') {
       filtered = filtered.filter(course => course.userRole === roleFilter);
+    }
+    
+    // Apply year filter
+    if (yearFilter !== 'all') {
+      filtered = filtered.filter(course => course.course_year.toString() === yearFilter);
+    }
+    
+    // Apply semester filter
+    if (semesterFilter !== 'all') {
+      filtered = filtered.filter(course => course.course_semester.toString() === semesterFilter);
+    }
+    
+    // Apply status filter
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(course => course.teaching_status === statusFilter);
+    }
+    
+    // Apply relationship filter
+    if (relationshipFilter !== 'all') {
+      filtered = filtered.filter(course => course.relationship_type?.code === relationshipFilter);
     }
     
     // Apply search filter
@@ -107,7 +156,7 @@ export default function AllCoursesPage() {
     }
     
     return filtered;
-  }, [coursesWithRoles, searchQuery, roleFilter]);
+  }, [coursesWithRoles, searchQuery, roleFilter, yearFilter, semesterFilter, statusFilter, relationshipFilter]);
   
   const handleNavigateToDetail = (courseId: number, e?: React.MouseEvent) => {
     if (e) {
@@ -123,7 +172,30 @@ export default function AllCoursesPage() {
   const handleClearFilters = () => {
     setSearchQuery('');
     setRoleFilter('all');
+    setYearFilter('all');
+    setSemesterFilter('all');
+    setStatusFilter('all');
+    setRelationshipFilter('all');
   };
+  
+  const isAnyFilterActive = () => {
+    return searchQuery.trim() !== '' || 
+      roleFilter !== 'all' || 
+      yearFilter !== 'all' || 
+      semesterFilter !== 'all' || 
+      statusFilter !== 'all' || 
+      relationshipFilter !== 'all';
+  };
+  
+  const activeFiltersCount = useMemo(() => {
+    let count = 0;
+    if (roleFilter !== 'all') count++;
+    if (yearFilter !== 'all') count++;
+    if (semesterFilter !== 'all') count++;
+    if (statusFilter !== 'all') count++;
+    if (relationshipFilter !== 'all') count++;
+    return count;
+  }, [roleFilter, yearFilter, semesterFilter, statusFilter, relationshipFilter]);
   
   const getRoleIcon = (role: string) => {
     switch (role) {
@@ -198,7 +270,114 @@ export default function AllCoursesPage() {
                   </SelectContent>
                 </Select>
                 
-                {(searchQuery || roleFilter !== 'all') && (
+                <Popover open={showFilterMenu} onOpenChange={setShowFilterMenu}>
+                  <PopoverTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      className="gap-1.5"
+                    >
+                      <SlidersHorizontal className="h-4 w-4" />
+                      <span>Filters</span>
+                      {activeFiltersCount > 0 && (
+                        <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
+                          {activeFiltersCount}
+                        </Badge>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[300px] p-4" align="end">
+                    <div className="space-y-4">
+                      <h4 className="font-medium">Additional Filters</h4>
+                      
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Year</label>
+                        <Select 
+                          value={yearFilter} 
+                          onValueChange={(value) => setYearFilter(value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="All Years" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Years</SelectItem>
+                            {uniqueYears.map(year => (
+                              <SelectItem key={year} value={year}>Year {year}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Semester</label>
+                        <Select 
+                          value={semesterFilter} 
+                          onValueChange={(value) => setSemesterFilter(value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="All Semesters" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Semesters</SelectItem>
+                            {uniqueSemesters.map(semester => (
+                              <SelectItem key={semester} value={semester}>Semester {semester}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Status</label>
+                        <Select 
+                          value={statusFilter} 
+                          onValueChange={(value) => setStatusFilter(value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="All Statuses" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
+                            <SelectItem value="active">Active</SelectItem>
+                            <SelectItem value="inactive">Inactive</SelectItem>
+                            <SelectItem value="pending">Pending</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <label className="text-sm font-medium">Relationship Type</label>
+                        <Select 
+                          value={relationshipFilter} 
+                          onValueChange={(value) => setRelationshipFilter(value)}
+                        >
+                          <SelectTrigger className="w-full">
+                            <SelectValue placeholder="All Relationships" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Relationships</SelectItem>
+                            {uniqueRelationships.map(type => (
+                              <SelectItem key={type} value={type}>
+                                {getRelationshipShortName(type, 'any')}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      
+                      <Button 
+                        variant="secondary" 
+                        className="w-full"
+                        onClick={() => {
+                          handleClearFilters();
+                          setShowFilterMenu(false);
+                        }}
+                      >
+                        Clear All Filters
+                      </Button>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                
+                {isAnyFilterActive() && (
                   <Button 
                     variant="ghost" 
                     size="icon"
@@ -221,7 +400,7 @@ export default function AllCoursesPage() {
             </div>
           ) : filteredCourses.length === 0 ? (
             <div className="text-center py-12 text-muted-foreground">
-              {searchQuery || roleFilter !== 'all' ? (
+              {isAnyFilterActive() ? (
                 <>
                   <p>No courses match your search criteria.</p>
                   <Button variant="link" className="mt-2" onClick={handleClearFilters}>

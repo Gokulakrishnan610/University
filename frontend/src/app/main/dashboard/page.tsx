@@ -6,27 +6,10 @@ import { Link } from 'react-router'
 import { useGetDashboardStats } from '@/action/dashboard'
 
 const Page = () => {
-  // Fetch dashboard stats with custom hook
   const { data: stats, isPending: isLoading } = useGetDashboardStats()
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Dashboard</h1>
-        <div className="flex gap-2">
-          <Button asChild variant="default">
-            <Link to="/teacher-course-assignment">
-              Assign Teachers
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/courses">
-              Course Room Preferences
-            </Link>
-          </Button>
-        </div>
-      </div>
-
+    <div className="flex flex-col gap-6 px-6">
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>

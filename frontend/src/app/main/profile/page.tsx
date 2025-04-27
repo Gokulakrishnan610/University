@@ -33,7 +33,7 @@ export default function ProfilePage() {
 
     if (isLoading) {
         return (
-            <div className="container mx-auto px-4 py-8">
+            <div className="container mx-auto px-4">
                 <Card>
                     <CardHeader>
                         <Skeleton className="h-8 w-1/3" />
@@ -58,7 +58,7 @@ export default function ProfilePage() {
 
     if (!user) {
         return (
-            <div className="container mx-auto px-4 py-8 text-center">
+            <div className="container mx-auto px-4 text-center">
                 <Card>
                     <CardContent className="pt-6">
                         <div className="py-12">
@@ -75,7 +75,7 @@ export default function ProfilePage() {
     }
 
     return (
-        <div className="container mx-auto px-4 py-8">
+        <div className="container mx-auto px-4 ">
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Profile Information */}
                 <div className="lg:col-span-2 space-y-8">

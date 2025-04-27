@@ -115,13 +115,7 @@ export default function CreateTeacherCourseAssignment() {
 
     return (
         <div className="container mx-auto px-4 space-y-8">
-            <div className="flex items-center gap-4">
-                <Button variant="ghost" onClick={() => navigate('/teacher-course-assignment')}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    Back to Assignments
-                </Button>
-            </div>
-
+            
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Teacher Workload Information */}
                 <Card>

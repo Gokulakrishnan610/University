@@ -35,7 +35,7 @@ export const useGetStudents = () => {
     ['students'],
     async () => {
       try {
-        const response = await api.get('/api/student/');
+        const response = await api.get('/api/students/');
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -53,7 +53,7 @@ export const useGetStudent = (id: number) => {
     ['student', id.toString()],
     async () => {
       try {
-        const response = await api.get(`/api/student/${id}/`);
+        const response = await api.get(`/api/students/${id}/`);
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -71,7 +71,7 @@ export const useCreateStudent = (onSuccess?: () => void) => {
     ['createStudent'],
     async (data: CreateStudentRequest) => {
       try {
-        const response = await api.post('/api/student/', data);
+        const response = await api.post('/api/students/', data);
         return {
           status: response.status,
           data: response.data.message || 'Student created successfully',
@@ -97,7 +97,7 @@ export const useUpdateStudent = (id: number, onSuccess?: () => void) => {
     ['updateStudent', id.toString()],
     async (data: UpdateStudentRequest) => {
       try {
-        const response = await api.put(`/api/student/${id}/`, data);
+        const response = await api.put(`/api/students/${id}/`, data);
         return {
           status: response.status,
           data: response.data.message || 'Student updated successfully',
@@ -123,7 +123,7 @@ export const useDeleteStudent = (id: number, onSuccess?: () => void) => {
     ['deleteStudent', id.toString()],
     async () => {
       try {
-        const response = await api.delete(`/api/student/${id}/`);
+        const response = await api.delete(`/api/students/${id}/`);
         return {
           status: response.status,
           data: response.data.message || 'Student deleted successfully',

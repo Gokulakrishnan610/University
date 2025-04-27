@@ -2,10 +2,7 @@ import { useMutationData } from "@/hooks/useMutationData";
 import { useQueryData } from "@/hooks/useQueryData";
 import axios from "axios";
 import api from "./api";
-import { toast } from "sonner";
-import { useQuery } from '@tanstack/react-query';
 
-// Types
 export interface DepartmentDetails {
   id: number;
   dept_name: string;

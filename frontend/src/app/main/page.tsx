@@ -12,6 +12,10 @@ import TeacherCourseAssignmentCreate from './teacher-course-assignment/create/pa
 import AllCoursesPage from "./courses/all-courses/page";
 import AllocationManagementPage from "./courses/allocations/page";
 import CourseRoomPreferencesPage from "./courses/[id]/room-preferences/page";
+import StudentManagement from "./students/page";
+import StudentDetails from "./students/[id]/page";
+import StudentCreate from "./students/create/page";
+import StudentEdit from "./students/[id]/edit/page";
 
 
 export default function Dashboard() {
@@ -31,6 +35,10 @@ export default function Dashboard() {
       <Route path="/teacher-course-assignment" element={<TeacherCourseAssignmentPage />} />
       <Route path="/teacher-course-assignment/create" element={<TeacherCourseAssignmentCreate />} />
       <Route path="/teacher-course-assignment/:id" element={<TeacherCourseAssignmentDetail />} />
+      <Route path="/students" element={<StudentManagement />} />
+      <Route path="/students/create" element={<StudentCreate />} />
+      <Route path="/students/:id" element={<StudentDetails />} />
+      <Route path="/students/:id/edit" element={<StudentEdit />} />
     </Routes>
   );
 } 
