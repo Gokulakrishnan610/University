@@ -224,7 +224,7 @@ class CourseRoomPreferenceSerializer(serializers.ModelSerializer):
         ]
 
 class CourseResourceAllocationSerializer(serializers.ModelSerializer):
-    course_detail = CourseSerializer(source='course_id', read_only=True)
+    course_detail = serializers.SerializerMethodField()
     original_dept_detail = DepartmentSerializer(source='original_dept_id', read_only=True)
     teaching_dept_detail = DepartmentSerializer(source='teaching_dept_id', read_only=True)
     
@@ -242,6 +242,11 @@ class CourseResourceAllocationSerializer(serializers.ModelSerializer):
             'allocation_date',
             'status'
         ]
+    
+    def get_course_detail(self, obj):
+        if obj.course_id:
+            return CourseSerializer(obj.course_id, context=self.context).data
+        return None
 
 class CreateCourseSerializer(serializers.ModelSerializer):
     class Meta:

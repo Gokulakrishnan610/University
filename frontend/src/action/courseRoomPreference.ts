@@ -35,7 +35,7 @@ export const useGetCourseRoomPreferences = (courseId: number) => {
     ['courseRoomPreferences', courseId.toString()],
     async () => {
       try {
-        const response = await api.get(`/api/courses/${courseId}/room-preferences/`);
+        const response = await api.get(`/api/course/${courseId}/room-preferences/`);
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -53,7 +53,7 @@ export const useCreateCourseRoomPreference = (courseId: number, onSuccess?: () =
     ['createCourseRoomPreference', courseId.toString()],
     async (data: CreateCourseRoomPreferenceRequest) => {
       try {
-        const response = await api.post(`/api/courses/${courseId}/room-preferences/`, data);
+        const response = await api.post(`/api/course/${courseId}/room-preferences/`, data);
         return {
           status: response.status,
           data: response.data.message || 'Room preference created successfully',
@@ -79,7 +79,7 @@ export const useUpdateCourseRoomPreference = (id: number, courseId: number, onSu
     ['updateCourseRoomPreference', id.toString()],
     async (data: UpdateCourseRoomPreferenceRequest) => {
       try {
-        const response = await api.put(`/api/courses/${courseId}/room-preferences/${id}/`, data);
+        const response = await api.put(`/api/course/${courseId}/room-preferences/${id}/`, data);
         return {
           status: response.status,
           data: response.data.message || 'Room preference updated successfully',
@@ -105,7 +105,7 @@ export const useDeleteCourseRoomPreference = (id: number, courseId: number, onSu
     ['deleteCourseRoomPreference', id.toString()],
     async () => {
       try {
-        const response = await api.delete(`/api/courses/${courseId}/room-preferences/${id}/`);
+        const response = await api.delete(`/api/course/${courseId}/room-preferences/${id}/`);
         return {
           status: response.status,
           data: response.data.message || 'Room preference deleted successfully',

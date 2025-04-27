@@ -33,6 +33,7 @@ api_urlpatterns = [
     path("department/", include('department.urls')),
     path("course-master/", include("courseMaster.urls")),
     path("slots/", include('slot.urls')),
+    path('rooms/', include('rooms.urls')),
     # Health check endpoint
     path('health/', health_check, name='health_check'),
 ]

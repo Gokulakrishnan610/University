@@ -18,16 +18,16 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { 
-  ChevronLeft, 
-  BookOpen, 
-  Clock, 
-  AlarmClock, 
-  LucideIcon, 
-  School, 
-  Building, 
-  Pencil, 
-  Users, 
+import {
+  ChevronLeft,
+  BookOpen,
+  Clock,
+  AlarmClock,
+  LucideIcon,
+  School,
+  Building,
+  Pencil,
+  Users,
   TimerReset,
   ArrowLeftRight,
   Calendar,
@@ -84,35 +84,35 @@ const getRelationshipContext = (relationshipCode: string, userRoles: string[], c
   const isOwner = userRoles.includes('owner');
   const isTeacher = userRoles.includes('teacher');
   const isLearner = userRoles.includes('learner');
-  
+
   const ownerDept = course.course_detail.course_dept_detail.dept_name;
   const teachingDept = course.teaching_dept_detail.dept_name;
   const forDept = course.for_dept_detail.dept_name;
-  
+
   switch (relationshipCode) {
     case 'SELF_OWNED_SELF_TAUGHT':
-      return isOwner 
-        ? `This is our course and we teach it.` 
+      return isOwner
+        ? `This is our course and we teach it.`
         : `This course is owned and taught by ${ownerDept}.`;
     case 'SELF_OWNED_OTHER_TAUGHT':
-      return isOwner 
-        ? `This is our course, but taught by ${teachingDept}.` 
+      return isOwner
+        ? `This is our course, but taught by ${teachingDept}.`
         : `This course is owned by ${ownerDept} and taught by ${teachingDept}.`;
     case 'OTHER_OWNED_SELF_TAUGHT':
-      return isTeacher 
-        ? `We teach this course for ${ownerDept}.` 
+      return isTeacher
+        ? `We teach this course for ${ownerDept}.`
         : `This course is owned by ${ownerDept} and taught by ${teachingDept}.`;
     case 'OTHER_OWNED_OTHER_TAUGHT':
-      return isLearner 
-        ? `Our students take this external course from ${ownerDept}, taught by ${teachingDept}.` 
+      return isLearner
+        ? `Our students take this external course from ${ownerDept}, taught by ${teachingDept}.`
         : `This course is owned by ${ownerDept} and taught by ${teachingDept} for ${forDept}.`;
     case 'SELF_OWNED_FOR_OTHER_SELF_TAUGHT':
-      return isOwner 
-        ? `We created and teach this course for ${forDept}.` 
+      return isOwner
+        ? `We created and teach this course for ${forDept}.`
         : `This course is provided and taught by ${ownerDept} for ${forDept}.`;
     case 'SELF_OWNED_FOR_OTHER_OTHER_TAUGHT':
-      return isOwner 
-        ? `We created this course for ${forDept}, taught by ${teachingDept}.` 
+      return isOwner
+        ? `We created this course for ${forDept}, taught by ${teachingDept}.`
         : `This course is provided by ${ownerDept} for ${forDept}, taught by ${teachingDept}.`;
     default:
       return 'This course has an undefined relationship between departments.';
@@ -127,47 +127,47 @@ export default function CourseDetails() {
   const [showReassignDialog, setShowReassignDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  
+
   const { data: courseResponse, isPending: isLoading, refetch } = useGetCourse(courseId);
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
   const { data: courseMastersData, isPending: loadingCourseMasters } = useGetCourseMasters();
-  
+
   const departments = departmentsData || [];
   const courseMasters = courseMastersData || [];
-  
+
   // Extract course data from the response
   const course = courseResponse?.status === "success" ? courseResponse.data : null;
-  
+
   // Update course mutation
   const { mutate: updateCourse, isPending: isUpdating } = useUpdateCourse(courseId, () => {
     refetch();
     toast.success("Course updated successfully");
     setShowEditDialog(false);
   });
-  
+
   // Delete course mutation
   const { mutate: deleteCourse, isPending: isDeleting } = useDeleteCourse(courseId, () => {
     toast.success("Course deleted successfully");
     navigate('/courses');
   });
-  
+
   // Handle form submission for course update
   const handleUpdateCourse = (values: CourseFormValues) => {
     // Remove course_id as it shouldn't be updated
     const { course_id, ...updateData } = values;
     updateCourse(updateData);
   };
-  
+
   // Handle delete confirmation function
   const handleDeleteCourse = () => {
     setShowDeleteDialog(true);
   };
-  
+
   const confirmDelete = () => {
     deleteCourse({});
     setShowDeleteDialog(false);
   };
-  
+
   if (isLoading || !course) {
     return (
       <div className="py-6 max-w-5xl mx-auto">
@@ -195,13 +195,13 @@ export default function CourseDetails() {
   const isOwnCourse = course.course_detail.course_dept_detail.id === course.teaching_dept_id;
   const isTaughtByUs = course.teaching_dept_id === course.for_dept_id;
   const relationshipCode = course.relationship_type?.code || 'UNKNOWN';
-  
+
   // Extract permissions data
   const canEdit = course.permissions?.can_edit || false;
   const canDelete = course.permissions?.can_delete || false;
   const editableFields = course.permissions?.editable_fields || [];
   const userRoles = course.user_department_roles || [];
-  
+
   // Create default values for the edit form
   const defaultValues = {
     course_id: course.course_id?.id,
@@ -222,9 +222,9 @@ export default function CourseDetails() {
     is_zero_credit_course: course.is_zero_credit_course,
     teaching_status: course.teaching_status
   };
-  
+
   return (
-    <div className="py-4 w-full mx-auto">      
+    <div className="py-4 w-full mx-auto">
       <Card className="shadow-md border-t-4 border-t-primary mb-6">
         <CardHeader className="pb-2">
           <div className="flex justify-between items-start">
@@ -264,16 +264,16 @@ export default function CourseDetails() {
             </div>
             <div className="flex gap-2">
               {canEdit && (
-                <Button 
-                  className="flex gap-1.5 items-center" 
+                <Button
+                  className="flex gap-1.5 items-center"
                   onClick={() => setShowEditDialog(true)}
                 >
                   <Pencil className="h-4 w-4" /> Edit Course
                 </Button>
               )}
               {userRoles.includes('owner') && (
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   className="flex gap-1.5 items-center"
                   onClick={() => setShowReassignDialog(true)}
                 >
@@ -281,14 +281,14 @@ export default function CourseDetails() {
                 </Button>
               )}
               {canDelete && (
-                <Button 
-                  variant="destructive" 
+                <Button
+                  variant="destructive"
                   className="flex gap-1.5 items-center"
                   onClick={handleDeleteCourse}
                   disabled={isDeleting}
                 >
-                  {isDeleting ? 
-                    <Loader2 className="h-4 w-4 animate-spin" /> : 
+                  {isDeleting ?
+                    <Loader2 className="h-4 w-4 animate-spin" /> :
                     <Trash className="h-4 w-4" />}
                   {isDeleting ? "Deleting..." : "Delete"}
                 </Button>
@@ -296,31 +296,31 @@ export default function CourseDetails() {
             </div>
           </div>
         </CardHeader>
-        
+
         <CardContent>
           <div className="mt-2 grid grid-cols-2 sm:grid-cols-4 gap-4 bg-muted/30 p-4 rounded-lg">
-            <StatItem 
-              icon={Clock} 
-              label="Credit Hours" 
+            <StatItem
+              icon={Clock}
+              label="Credit Hours"
               value={course.credits}
             />
-            <StatItem 
-              icon={AlarmClock} 
-              label="Lecture Hours" 
+            <StatItem
+              icon={AlarmClock}
+              label="Lecture Hours"
               value={course.lecture_hours}
             />
-            <StatItem 
-              icon={TimerReset} 
-              label="Tutorial Hours" 
+            <StatItem
+              icon={TimerReset}
+              label="Tutorial Hours"
               value={course.tutorial_hours}
             />
-            <StatItem 
-              icon={Users} 
-              label="Students" 
+            <StatItem
+              icon={Users}
+              label="Students"
               value={course.no_of_students}
             />
           </div>
-          
+
           <div className="mt-6">
             <Tabs defaultValue="teaching">
               <TabsList>
@@ -341,7 +341,7 @@ export default function CourseDetails() {
                   Room Preferences
                 </TabsTrigger>
               </TabsList>
-              
+
               <TabsContent value="teaching" className="mt-4 space-y-4">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <Card>
@@ -360,15 +360,15 @@ export default function CourseDetails() {
                             {course.course_detail.course_dept_detail.dept_name}
                           </p>
                         </div>
-                        
+
                         <div>
                           <h3 className="text-sm font-medium text-muted-foreground">Teaching Department</h3>
                           <p className="text-base font-medium mt-1 flex items-center gap-1.5">
                             <School className="h-4 w-4 text-orange-500" />
                             {course.teaching_dept_detail.dept_name}
                             {isOwnCourse && (
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className="ml-2 bg-blue-500/5 text-blue-500 border-blue-500/20"
                               >
                                 Self-Taught
@@ -376,7 +376,7 @@ export default function CourseDetails() {
                             )}
                           </p>
                         </div>
-                        
+
                         <div>
                           <h3 className="text-sm font-medium text-muted-foreground">For Department</h3>
                           <p className="text-base font-medium mt-1 flex items-center gap-1.5">
@@ -387,7 +387,7 @@ export default function CourseDetails() {
                       </div>
                     </CardContent>
                   </Card>
-                  
+
                   <Card>
                     <CardHeader className="py-4">
                       <CardTitle className="text-lg flex items-center gap-2">
@@ -404,57 +404,57 @@ export default function CourseDetails() {
                               Year {course.course_year}, Semester {course.course_semester}
                             </p>
                           </div>
-                          
+
                           <div>
                             <h3 className="text-sm font-medium text-muted-foreground">Course Type</h3>
                             <div className="mt-1 flex flex-wrap gap-2">
                               <Badge variant="outline">
-                                {course.course_type === 'T' ? 'Theory' : 
-                                 course.course_type === 'L' ? 'Lab' : 
-                                 course.course_type === 'LoT' ? 'Lab & Theory' : course.course_type}
+                                {course.course_type === 'T' ? 'Theory' :
+                                  course.course_type === 'L' ? 'Lab' :
+                                    course.course_type === 'LoT' ? 'Lab & Theory' : course.course_type}
                               </Badge>
-                              
+
                               <Badge variant="outline">
-                                {course.elective_type === 'NE' ? 'Non-Elective' : 
-                                 course.elective_type === 'PE' ? 'Professional Elective' : 
-                                 course.elective_type === 'OE' ? 'Open Elective' : course.elective_type}
+                                {course.elective_type === 'NE' ? 'Non-Elective' :
+                                  course.elective_type === 'PE' ? 'Professional Elective' :
+                                    course.elective_type === 'OE' ? 'Open Elective' : course.elective_type}
                               </Badge>
-                              
+
                               {course.lab_type && course.lab_type !== 'NULL' && (
                                 <Badge variant="outline">
-                                  {course.lab_type === 'TL' ? 'Technical Lab' : 
-                                   course.lab_type === 'NTL' ? 'Non-Technical Lab' : course.lab_type}
+                                  {course.lab_type === 'TL' ? 'Technical Lab' :
+                                    course.lab_type === 'NTL' ? 'Non-Technical Lab' : course.lab_type}
                                 </Badge>
                               )}
                             </div>
                           </div>
                         </div>
-                        
+
                         <div>
                           <h3 className="text-sm font-medium text-muted-foreground">Status</h3>
                           <div className="mt-1.5">
-                            <Badge 
+                            <Badge
                               variant={
-                                course.teaching_status === 'active' ? 'default' : 
-                                course.teaching_status === 'inactive' ? 'secondary' : 
-                                'outline'
+                                course.teaching_status === 'active' ? 'default' :
+                                  course.teaching_status === 'inactive' ? 'secondary' :
+                                    'outline'
                               }
                               className={
                                 course.teaching_status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' :
-                                course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
-                                'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
+                                  course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
+                                    'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
                               }
                             >
-                              {course.teaching_status === 'active' ? 'Active' : 
-                               course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
+                              {course.teaching_status === 'active' ? 'Active' :
+                                course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
                             </Badge>
-                            
+
                             {course.need_assist_teacher && (
                               <Badge className="ml-2 bg-purple-500/10 text-purple-500 border-purple-500/20">
                                 Needs Assistant Teacher
                               </Badge>
                             )}
-                            
+
                             {course.is_zero_credit_course && (
                               <Badge className="ml-2 bg-red-500/10 text-red-500 border-red-500/20">
                                 Zero Credit
@@ -467,7 +467,7 @@ export default function CourseDetails() {
                   </Card>
                 </div>
               </TabsContent>
-              
+
               <TabsContent value="details" className="mt-4">
                 <Card>
                   <CardContent className="pt-6">
@@ -482,7 +482,7 @@ export default function CourseDetails() {
                             </div>
                             <Badge variant="outline">{course.lecture_hours}</Badge>
                           </div>
-                          
+
                           <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-primary" />
@@ -490,7 +490,7 @@ export default function CourseDetails() {
                             </div>
                             <Badge variant="outline">{course.tutorial_hours}</Badge>
                           </div>
-                          
+
                           <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-primary" />
@@ -498,7 +498,7 @@ export default function CourseDetails() {
                             </div>
                             <Badge variant="outline">{course.practical_hours}</Badge>
                           </div>
-                          
+
                           <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
                             <div className="flex items-center gap-2">
                               <Clock className="h-4 w-4 text-primary" />
@@ -508,13 +508,13 @@ export default function CourseDetails() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Additional details can be added in other columns */}
                     </div>
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="relationship" className="mt-4">
                 <Card>
                   <CardHeader className="py-4">
@@ -530,7 +530,7 @@ export default function CourseDetails() {
                     <div className="space-y-6">
                       <div className="p-4 rounded-lg bg-muted/30">
                         <h3 className="text-base font-medium mb-2">Relationship Type</h3>
-                        <Badge 
+                        <Badge
                           className={`text-sm py-1 px-3 ${getRelationshipBadgeColor(relationshipCode)}`}
                         >
                           {getRelationshipDisplayName(relationshipCode, userRoles)}
@@ -539,7 +539,7 @@ export default function CourseDetails() {
                           {course.relationship_type?.description}
                         </p>
                       </div>
-                      
+
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="p-4 rounded-lg border">
                           <h3 className="text-sm font-medium text-muted-foreground mb-1">Owning Department</h3>
@@ -551,7 +551,7 @@ export default function CourseDetails() {
                             Responsible for curriculum design, course content, and maintaining academic standards
                           </p>
                         </div>
-                        
+
                         <div className="p-4 rounded-lg border">
                           <h3 className="text-sm font-medium text-muted-foreground mb-1">For Department</h3>
                           <p className="text-base font-medium flex items-center gap-1.5">
@@ -562,7 +562,7 @@ export default function CourseDetails() {
                             Department whose students will take this course as part of their academic program
                           </p>
                         </div>
-                        
+
                         <div className="p-4 rounded-lg border">
                           <h3 className="text-sm font-medium text-muted-foreground mb-1">Teaching Department</h3>
                           <p className="text-base font-medium flex items-center gap-1.5">
@@ -574,7 +574,7 @@ export default function CourseDetails() {
                           </p>
                         </div>
                       </div>
-                      
+
                       <div className="p-4 rounded-lg border">
                         <h3 className="text-base font-medium mb-3">Department Roles</h3>
                         <div className="space-y-3">
@@ -587,7 +587,7 @@ export default function CourseDetails() {
                               The department that created the course and controls its content
                             </p>
                           </div>
-                          
+
                           <div>
                             <strong className="flex items-center gap-1.5 text-green-600">
                               <Users className="h-4 w-4" />
@@ -597,7 +597,7 @@ export default function CourseDetails() {
                               The department whose students take this course
                             </p>
                           </div>
-                          
+
                           <div>
                             <strong className="flex items-center gap-1.5 text-orange-600">
                               <School className="h-4 w-4" />
@@ -609,7 +609,7 @@ export default function CourseDetails() {
                           </div>
                         </div>
                       </div>
-                      
+
                       <div className="mt-4">
                         <h3 className="text-base font-medium mb-3">Relationship Diagram</h3>
                         <div className="p-6 bg-muted/20 rounded-lg flex items-center justify-center">
@@ -618,16 +618,16 @@ export default function CourseDetails() {
                               <div className="text-sm font-medium">Owning Department</div>
                               <div className="font-bold mt-1">{course.course_detail.course_dept_detail.dept_name}</div>
                             </div>
-                            
+
                             <ArrowLeftRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
-                            
+
                             <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20 text-center">
                               <div className="text-sm font-medium">For Department</div>
                               <div className="font-bold mt-1">{course.for_dept_detail.dept_name}</div>
                             </div>
-                            
+
                             <ArrowLeftRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
-                            
+
                             <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/20 text-center">
                               <div className="text-sm font-medium">Teaching Department</div>
                               <div className="font-bold mt-1">{course.teaching_dept_detail.dept_name}</div>
@@ -639,7 +639,7 @@ export default function CourseDetails() {
                   </CardContent>
                 </Card>
               </TabsContent>
-              
+
               <TabsContent value="room-preferences" className="mt-4">
                 <Card>
                   <CardHeader className="py-4">
@@ -667,7 +667,7 @@ export default function CourseDetails() {
           </div>
         </CardContent>
       </Card>
-      
+
       {/* Edit Course Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
         <DialogContent className="sm:max-w-[600px] overflow-hidden">
@@ -681,8 +681,8 @@ export default function CourseDetails() {
                 Update course details for {course.course_detail.course_id} - {course.course_detail.course_name}
               </DialogDescription>
             </DialogHeader>
-            
-            <CourseForm 
+
+            <CourseForm
               departments={departments}
               courseMasters={courseMasters}
               defaultValues={defaultValues}
@@ -696,21 +696,21 @@ export default function CourseDetails() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
-      
+
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Are you sure you want to delete this course?</AlertDialogTitle>
             <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the course 
+              This action cannot be undone. This will permanently delete the course
               <span className="font-semibold"> {course?.course_detail.course_id} - {course?.course_detail.course_name}</span>.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={confirmDelete} 
+            <AlertDialogAction
+              onClick={confirmDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={isDeleting}
             >
@@ -725,9 +725,9 @@ export default function CourseDetails() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      
+
       {showReassignDialog && (
-        <ReassignDialog 
+        <ReassignDialog
           course={course}
           departments={departments}
           open={showReassignDialog}
@@ -735,7 +735,7 @@ export default function CourseDetails() {
           onSuccess={() => refetch()}
         />
       )}
-      
+
     </div>
   );
 } 

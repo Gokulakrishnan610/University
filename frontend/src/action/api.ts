@@ -9,12 +9,12 @@ export const api = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  withCredentials: true, 
+  withCredentials: true,
 });
 
 api.interceptors.request.use((config) => {
   config.withCredentials = true;
-  
+
   return config;
 });
 
@@ -23,7 +23,7 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
- 
+
     if (error.response && error.response.status === 401) {
 
     }

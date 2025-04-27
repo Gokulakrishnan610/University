@@ -3,6 +3,7 @@ import { useQueryData } from "@/hooks/useQueryData";
 import axios from "axios";
 import api from "./api";
 import { toast } from "sonner";
+import { useQuery } from '@tanstack/react-query';
 
 // Types
 export interface DepartmentDetails {
@@ -21,7 +22,7 @@ export interface CourseMaster {
 
 export interface Course {
   id: number;
-  course_id: CourseMaster;
+  course_id: number;
   course_detail: CourseMaster;
   course_year: number;
   course_semester: number;
@@ -90,6 +91,20 @@ export interface DepartmentCoursesResponse {
   };
 }
 
+export interface CourseAssignmentStats {
+  course_id: number;
+  course_name: string;
+  course_code: string;
+  total_teachers: number;
+  teachers: {
+    teacher_id: number;
+    teacher_name: string;
+    semester: number;
+    academic_year: number;
+    student_count: number;
+  }[];
+}
+
 // Get courses for current department
 export const useGetCurrentDepartmentCourses = () => {
   return useQueryData<DepartmentCoursesResponse>(
@@ -97,17 +112,17 @@ export const useGetCurrentDepartmentCourses = () => {
     async () => {
       try {
         const response = await api.get('/api/department/courses/');
-        return response.data || { 
-          owned_courses: { role: '', description: '', data: [] }, 
-          teaching_courses: { role: '', description: '', data: [] }, 
+        return response.data || {
+          owned_courses: { role: '', description: '', data: [] },
+          teaching_courses: { role: '', description: '', data: [] },
           receiving_courses: { role: '', description: '', data: [] },
           for_dept_courses: { role: '', description: '', data: [] }
         };
       } catch (error) {
         console.error('Error fetching department courses:', error);
-        return { 
-          owned_courses: { role: '', description: '', data: [] }, 
-          teaching_courses: { role: '', description: '', data: [] }, 
+        return {
+          owned_courses: { role: '', description: '', data: [] },
+          teaching_courses: { role: '', description: '', data: [] },
           receiving_courses: { role: '', description: '', data: [] },
           for_dept_courses: { role: '', description: '', data: [] }
         };
@@ -332,11 +347,11 @@ export const useCheckPendingAllocations = () => {
           user_department_id: 0,
           user_department_name: ''
         };
-        
+
         // Check for pending allocations
         const pendingIncoming = data.incoming_allocations.filter((a: ResourceAllocation) => a.status === 'pending');
         const pendingCount = pendingIncoming.length;
-        
+
         return {
           hasPendingRequests: pendingCount > 0,
           pendingCount
@@ -351,4 +366,17 @@ export const useCheckPendingAllocations = () => {
     },
     true // Enable the query
   );
-}; 
+};
+
+export function useGetCourseAssignmentStats(courseId?: number) {
+  const queryKey = courseId ? ['course-assignment-stats', courseId] : ['course-assignment-stats'];
+  const url = courseId ? `/api/course/stats/${courseId}/` : '/api/course/stats/';
+
+  return useQueryData<CourseAssignmentStats | CourseAssignmentStats[]>(
+    queryKey,
+    async () => {
+      const response = await api.get(url);
+      return response.data;
+    }
+  );
+} 

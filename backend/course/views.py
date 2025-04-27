@@ -2,10 +2,11 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from authentication.authentication import IsAuthenticated
-from .models import Course, CourseResourceAllocation, CourseRoomPreference
+from .models import Course, CourseResourceAllocation, CourseRoomPreference, TeacherCourseAssignment
 from .serializers import CourseSerializer, CreateCourseSerializer, UpdateCourseSerializer, CourseResourceAllocationSerializer, CourseRoomPreferenceSerializer
 from department.models import Department
 from django.db import models
+from rest_framework.views import APIView
 
 class AddNewCourse(generics.CreateAPIView):
     authentication_classes = [IsAuthenticated]
@@ -732,3 +733,57 @@ class CourseRoomPreferenceDetailView(generics.RetrieveUpdateDestroyAPIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+class CourseAssignmentStatsView(APIView):
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, course_id=None):
+        try:
+            if course_id:
+                # Get stats for a specific course
+                course = Course.objects.get(id=course_id)
+                assignments = TeacherCourseAssignment.objects.filter(course=course)
+                stats = {
+                    'course_id': course.id,
+                    'course_name': course.course_detail.course_name,
+                    'course_code': course.course_detail.course_id,
+                    'total_teachers': assignments.count(),
+                    'teachers': [
+                        {
+                            'teacher_id': assignment.teacher.id,
+                            'teacher_name': f"{assignment.teacher.teacher_id.first_name} {assignment.teacher.teacher_id.last_name}",
+                            'semester': assignment.semester,
+                            'academic_year': assignment.academic_year,
+                            'student_count': assignment.student_count
+                        }
+                        for assignment in assignments
+                    ]
+                }
+            else:
+                # Get stats for all courses
+                courses = Course.objects.all()
+                stats = []
+                for course in courses:
+                    assignments = TeacherCourseAssignment.objects.filter(course=course)
+                    stats.append({
+                        'course_id': course.id,
+                        'course_name': course.course_detail.course_name,
+                        'course_code': course.course_detail.course_id,
+                        'total_teachers': assignments.count(),
+                        'teachers': [
+                            {
+                                'teacher_id': assignment.teacher.id,
+                                'teacher_name': f"{assignment.teacher.teacher_id.first_name} {assignment.teacher.teacher_id.last_name}",
+                                'semester': assignment.semester,
+                                'academic_year': assignment.academic_year,
+                                'student_count': assignment.student_count
+                            }
+                            for assignment in assignments
+                        ]
+                    })
+            return Response(stats)
+        except Course.DoesNotExist:
+            return Response({'error': 'Course not found'}, status=404)
+        except Exception as e:
+            return Response({'error': str(e)}, status=500)

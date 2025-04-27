@@ -1,39 +1,29 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import {  useNavigate } from 'react-router';
-import { useGetTeachers, Teacher } from '@/action/teacher';
-import { useGetCourses, Course } from '@/action/course';
-import { useGetTeacherCourseAssignments, useCreateTeacherCourseAssignment, useDeleteTeacherCourseAssignment, TeacherCourseAssignment as TCAssignment } from '@/action/teacherCourse';
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router';
+import { useGetTeacherCourseAssignments, useDeleteTeacherCourseAssignment, TeacherCourseAssignment as TCAssignment } from '@/action/teacherCourse';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Plus, Trash2, Eye, Search, X, Filter, Download } from 'lucide-react';
+import { Loader2, Trash2, Eye, Search, X, Filter, Download, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-
-
 
 export function TeacherCourseAssignment() {
     const navigate = useNavigate();
-    const [selectedTeacher, setSelectedTeacher] = useState<string>('');
-    const [selectedCourse, setSelectedCourse] = useState<string>('');
-    const [semester, setSemester] = useState<string>('');
-    const [academicYear, setAcademicYear] = useState<string>('');
-    const [studentCount, setStudentCount] = useState<string>('0');
     const [assignmentToDelete, setAssignmentToDelete] = useState<TCAssignment | null>(null);
 
     // Search and filter states
@@ -43,27 +33,11 @@ export function TeacherCourseAssignment() {
     const [selectedAcademicYearFilter, setSelectedAcademicYearFilter] = useState<string[]>([]);
     const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string[]>([]);
 
-    
-    
-    // Fetch data with loading states
-    const { data: teachers = [], isPending: teachersLoading } = useGetTeachers();
-    const { data: courses = [], isPending: coursesLoading } = useGetCourses();
-    
-
-    const { 
-        data: assignments = [], 
-        isPending: assignmentsLoading, 
-        refetch: refetchAssignments 
+    const {
+        data: assignments = [],
+        isPending: assignmentsLoading,
+        refetch: refetchAssignments
     } = useGetTeacherCourseAssignments();
-
-    console.log(assignments)
-
-    // Create assignment mutation
-    const createAssignment = useCreateTeacherCourseAssignment(() => {
-        toast.success('Teacher course assignment created successfully');
-        refetchAssignments();
-        resetForm();
-    });
 
     // Delete assignment mutation
     const deleteAssignment = useDeleteTeacherCourseAssignment(() => {
@@ -71,23 +45,13 @@ export function TeacherCourseAssignment() {
         refetchAssignments();
     });
 
-    // Reset form after successful submission
-    const resetForm = () => {
-        setSelectedTeacher('');
-        setSelectedCourse('');
-        setSemester('');
-        setAcademicYear('');
-        setStudentCount('0');
-    };
-
-
     // Get unique teacher names for filter
     const uniqueTeachers = useMemo(() => {
         return Array.from(
             new Set(
                 assignments.filter(a => a.teacher_detail?.teacher_id)
-                  .map(a => `${a.teacher_detail?.teacher_id?.first_name || ''} ${a.teacher_detail?.teacher_id?.last_name || ''}`.trim())
-                  .filter(name => name !== '')
+                    .map(a => `${a.teacher_detail?.teacher_id?.first_name || ''} ${a.teacher_detail?.teacher_id?.last_name || ''}`.trim())
+                    .filter(name => name !== '')
             )
         );
     }, [assignments]);
@@ -96,73 +60,39 @@ export function TeacherCourseAssignment() {
     const filteredAssignments = useMemo(() => {
         return assignments.filter(assignment => {
             // Apply search query
-            const teacherName = assignment.teacher_detail?.teacher_id ? 
+            const teacherName = assignment.teacher_detail?.teacher_id ?
                 `${assignment.teacher_detail.teacher_id.first_name || ''} ${assignment.teacher_detail.teacher_id.last_name || ''}`.toLowerCase() : '';
             const courseName = assignment.course_detail?.course_detail?.course_name?.toLowerCase() || '';
             const courseCode = assignment.course_detail?.course_detail?.course_id?.toLowerCase() || '';
             const searchLower = searchQuery.toLowerCase();
-            
-            const matchesSearch = searchQuery === '' || 
-                teacherName.includes(searchLower) || 
-                courseName.includes(searchLower) || 
+
+            const matchesSearch = searchQuery === '' ||
+                teacherName.includes(searchLower) ||
+                courseName.includes(searchLower) ||
                 courseCode.includes(searchLower);
-            
+
             // Apply filters
-            const matchesSemester = selectedSemesterFilter.length === 0 || 
+            const matchesSemester = selectedSemesterFilter.length === 0 ||
                 selectedSemesterFilter.includes(assignment.semester?.toString() || '');
-            
-            const matchesAcademicYear = selectedAcademicYearFilter.length === 0 || 
+
+            const matchesAcademicYear = selectedAcademicYearFilter.length === 0 ||
                 selectedAcademicYearFilter.includes(assignment.academic_year?.toString() || '');
-            
-            const matchesDepartment = selectedDepartmentFilter.length === 0 || 
+
+            const matchesDepartment = selectedDepartmentFilter.length === 0 ||
                 selectedDepartmentFilter.includes(assignment.course_detail?.teaching_dept_detail?.dept_name || '');
-            
-            const matchesTeacher = selectedTeacherFilter.length === 0 || 
+
+            const matchesTeacher = selectedTeacherFilter.length === 0 ||
                 (assignment.teacher_detail?.teacher_id && selectedTeacherFilter.includes(
                     `${assignment.teacher_detail.teacher_id.first_name || ''} ${assignment.teacher_detail.teacher_id.last_name || ''}`.trim()
                 ));
-            
+
             return matchesSearch && matchesSemester && matchesAcademicYear && matchesDepartment && matchesTeacher;
         });
     }, [assignments, searchQuery, selectedSemesterFilter, selectedAcademicYearFilter, selectedDepartmentFilter, selectedTeacherFilter]);
 
-    // Filter available courses based on selected teacher's department
-    const availableCourses = useMemo(() => {
-        if (!selectedTeacher || !teachers || !courses) return [];
-        
-        const selectedTeacherData = teachers.find((t: Teacher) => t.id.toString() === selectedTeacher);
-        if (!selectedTeacherData || !selectedTeacherData.dept_id) return [];
-
-        return courses.filter(course => 
-            course.teaching_dept_id === selectedTeacherData.dept_id.id
-        );
-    }, [selectedTeacher, teachers, courses]);
-
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedTeacher || !selectedCourse || !semester || !academicYear) {
-            toast.error('Please fill all required fields');
-            return;
-        }
-
-        createAssignment.mutate({
-            teacher_id: parseInt(selectedTeacher),
-            course_id: parseInt(selectedCourse),
-            semester: parseInt(semester),
-            academic_year: parseInt(academicYear),
-            student_count: parseInt(studentCount)
-        }, {
-            onError: (error: any) => {
-                toast.error('Failed to create assignment', {
-                    description: error.response?.data?.non_field_errors?.[0] || 'An error occurred'
-                });
-            }
-        });
-    };
-
     const handleDelete = () => {
         if (!assignmentToDelete) return;
-        
+
         deleteAssignment.mutate(assignmentToDelete.id, {
             onSuccess: () => {
                 toast.success('Assignment deleted successfully');
@@ -193,7 +123,7 @@ export function TeacherCourseAssignment() {
     // Function to export assignments as CSV
     const exportToCSV = () => {
         const headers = ['Teacher', 'Course', 'Course Code', 'Department', 'Semester', 'Academic Year', 'Student Count'];
-        
+
         const csvRows = [
             headers.join(','),
             ...filteredAssignments.map(a => [
@@ -206,11 +136,11 @@ export function TeacherCourseAssignment() {
                 a.student_count || 0
             ].join(','))
         ];
-        
+
         const csvString = csvRows.join('\n');
         const blob = new Blob([csvString], { type: 'text/csv' });
         const url = URL.createObjectURL(blob);
-        
+
         const link = document.createElement('a');
         link.setAttribute('href', url);
         link.setAttribute('download', `teacher-course-assignments-${new Date().toISOString().split('T')[0]}.csv`);
@@ -221,358 +151,251 @@ export function TeacherCourseAssignment() {
 
     return (
         <div className="container mx-auto px-4 space-y-8">
-
-            {/* Form to create assignment */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Teacher Course Assignment</CardTitle>
-                    <CardDescription>Assign teachers to courses for specific semesters and academic years</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div className="space-y-2">
-                                <Label htmlFor="teacher">Teacher</Label>
-                                <Select 
-                                    value={selectedTeacher} 
-                                    onValueChange={setSelectedTeacher}
-                                    disabled={teachersLoading || createAssignment.isPending}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder={teachersLoading ? "Loading teachers..." : "Select a teacher"} />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {teachers.map((teacher: Teacher) => (
-                                            <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                                                <div className="flex flex-col">
-                                                    <span>{teacher.teacher_id?.first_name} {teacher.teacher_id?.last_name}</span>
-                                                    <span className="text-xs text-muted-foreground">
-                                                        {teacher.staff_code} • {teacher.teacher_role} • {teacher.dept_id?.dept_name || 'No Department'}
-                                                    </span>
-                                                </div>
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="course">Course</Label>
-                                <Select 
-                                    value={selectedCourse} 
-                                    onValueChange={setSelectedCourse}
-                                    disabled={coursesLoading || createAssignment.isPending || !selectedTeacher}
-                                >
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder={
-                                            !selectedTeacher 
-                                                ? "Select a teacher first" 
-                                                : coursesLoading 
-                                                    ? "Loading courses..." 
-                                                    : availableCourses.length === 0 
-                                                        ? "No courses available for selected teacher's department"
-                                                        : "Select a course"
-                                        } />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {availableCourses.length === 0 && selectedTeacher ? (
-                                            <SelectItem value="none" disabled>
-                                                <div className="text-muted-foreground">
-                                                    No courses available for this teacher's department
-                                                </div>
-                                            </SelectItem>
-                                        ) : (
-                                            availableCourses.map((course: Course) => (
-                                                <SelectItem key={course.id} value={course.id.toString()}>
-                                                    <div className="flex flex-col">
-                                                        <span>{course.course_detail.course_name}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {course.course_detail.course_id} • {course.credits} credits • {course.teaching_dept_detail.dept_name}
-                                                        </span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            L:{course.lecture_hours} T:{course.tutorial_hours} P:{course.practical_hours}
-                                                        </span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))
-                                        )}
-                                    </SelectContent>
-                                </Select>
-                                {selectedTeacher && availableCourses.length === 0 && (
-                                    <p className="text-sm text-muted-foreground mt-2">
-                                        Only courses from the teacher's department can be assigned
-                                    </p>
-                                )}
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="semester">Semester</Label>
-                                <Select value={semester} onValueChange={setSemester} disabled={createAssignment.isPending}>
-                                    <SelectTrigger className="w-full">
-                                        <SelectValue placeholder="Select semester" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                                            <SelectItem key={sem} value={sem.toString()}>
-                                                Semester {sem}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="academicYear">Academic Year</Label>
-                                <Input
-                                    type="number"
-                                    id="academicYear"
-                                    value={academicYear}
-                                    onChange={(e) => setAcademicYear(e.target.value)}
-                                    placeholder="Enter academic year"
-                                    disabled={createAssignment.isPending}
-                                    min={2000}
-                                    max={2099}
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <Label htmlFor="studentCount">Student Count</Label>
-                                <Input
-                                    type="number"
-                                    id="studentCount"
-                                    value={studentCount}
-                                    onChange={(e) => setStudentCount(e.target.value)}
-                                    placeholder="Number of students"
-                                    disabled={createAssignment.isPending}
-                                    min={0}
-                                />
-                            </div>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <CardTitle>Teacher Course Assignments</CardTitle>
+                            <CardDescription>View and manage teacher course assignments</CardDescription>
                         </div>
-
-                        <Button 
-                            type="submit" 
-                            className="mt-4"
-                            disabled={createAssignment.isPending}
-                        >
-                            {createAssignment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        <Button onClick={() => navigate('/teacher-course-assignment/create')}>
                             <Plus className="mr-2 h-4 w-4" />
                             Create Assignment
-                        </Button>
-                    </form>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader className="pb-3">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                        <div>
-                            <CardTitle>
-                                Current Assignments
-                            </CardTitle>
-                            <CardDescription>
-                                List of teacher course assignments
-                            </CardDescription>
-                        </div>
-                        <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={exportToCSV}
-                            disabled={filteredAssignments.length === 0}
-                        >
-                            <Download className="mr-2 h-4 w-4" />
-                            Export as CSV
                         </Button>
                     </div>
                 </CardHeader>
                 <CardContent>
-                    <div className="space-y-4">
-                        <div className="flex flex-col sm:flex-row gap-3 justify-between">
-                            <div className="relative w-full sm:w-auto">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    {/* Search and Filters */}
+                    <div className="flex flex-col gap-4 mb-6">
+                        <div className="flex items-center gap-2">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <Input
-                                    type="search"
                                     placeholder="Search assignments..."
-                                    className="pl-8 w-full sm:w-[300px]"
                                     value={searchQuery}
                                     onChange={(e) => setSearchQuery(e.target.value)}
-                                />  
+                                    className="pl-8"
+                                />
                             </div>
-                            <div className="flex flex-wrap gap-2">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="outline" size="sm" className="h-9">
-                                            <Filter className="mr-2 h-4 w-4" />
-                                            Teacher
-                                            {selectedTeacherFilter.length > 0 && (
-                                                <Badge variant="secondary" className="ml-1 px-1 rounded-full">
-                                                    {selectedTeacherFilter.length}
-                                                </Badge>
-                                            )}
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-56">
-                                        {uniqueTeachers.map((teacherName: string) => (
-                                            <DropdownMenuItem key={teacherName} className="flex items-center gap-2">
+                            <Button variant="outline" onClick={exportToCSV}>
+                                <Download className="mr-2 h-4 w-4" />
+                                Export
+                            </Button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline">
+                                        <Filter className="mr-2 h-4 w-4" />
+                                        Teachers
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56">
+                                    {uniqueTeachers.map(teacher => (
+                                        <DropdownMenuItem key={teacher}>
+                                            <Checkbox
+                                                id={teacher}
+                                                checked={selectedTeacherFilter.includes(teacher)}
+                                                onCheckedChange={(checked) => {
+                                                    if (checked) {
+                                                        setSelectedTeacherFilter([...selectedTeacherFilter, teacher]);
+                                                    } else {
+                                                        setSelectedTeacherFilter(selectedTeacherFilter.filter(t => t !== teacher));
+                                                    }
+                                                }}
+                                                className="mr-2"
+                                            />
+                                            <Label htmlFor={teacher}>{teacher}</Label>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline">
+                                        <Filter className="mr-2 h-4 w-4" />
+                                        Semester
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56">
+                                    {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
+                                        <DropdownMenuItem key={sem}>
+                                            <Checkbox
+                                                id={`sem-${sem}`}
+                                                checked={selectedSemesterFilter.includes(sem.toString())}
+                                                onCheckedChange={(checked) => {
+                                                    if (checked) {
+                                                        setSelectedSemesterFilter([...selectedSemesterFilter, sem.toString()]);
+                                                    } else {
+                                                        setSelectedSemesterFilter(selectedSemesterFilter.filter(s => s !== sem.toString()));
+                                                    }
+                                                }}
+                                                className="mr-2"
+                                            />
+                                            <Label htmlFor={`sem-${sem}`}>Semester {sem}</Label>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline">
+                                        <Filter className="mr-2 h-4 w-4" />
+                                        Academic Year
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56">
+                                    {Array.from(new Set(assignments.map(a => a.academic_year))).map(year => (
+                                        <DropdownMenuItem key={year}>
+                                            <Checkbox
+                                                id={`year-${year}`}
+                                                checked={selectedAcademicYearFilter.includes(year.toString())}
+                                                onCheckedChange={(checked) => {
+                                                    if (checked) {
+                                                        setSelectedAcademicYearFilter([...selectedAcademicYearFilter, year.toString()]);
+                                                    } else {
+                                                        setSelectedAcademicYearFilter(selectedAcademicYearFilter.filter(y => y !== year.toString()));
+                                                    }
+                                                }}
+                                                className="mr-2"
+                                            />
+                                            <Label htmlFor={`year-${year}`}>{year}</Label>
+                                        </DropdownMenuItem>
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline">
+                                        <Filter className="mr-2 h-4 w-4" />
+                                        Department
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56">
+                                    {Array.from(new Set(assignments.map(a => a.course_detail?.teaching_dept_detail?.dept_name))).map(dept => (
+                                        dept && (
+                                            <DropdownMenuItem key={dept}>
                                                 <Checkbox
-                                                    id={`teacher-${teacherName}`}
-                                                    checked={selectedTeacherFilter.includes(teacherName)}
-                                                    onCheckedChange={(checked: boolean) => {
+                                                    id={`dept-${dept}`}
+                                                    checked={selectedDepartmentFilter.includes(dept)}
+                                                    onCheckedChange={(checked) => {
                                                         if (checked) {
-                                                            setSelectedTeacherFilter(prev => [...prev, teacherName]);
+                                                            setSelectedDepartmentFilter([...selectedDepartmentFilter, dept]);
                                                         } else {
-                                                            setSelectedTeacherFilter(prev => prev.filter(t => t !== teacherName));
+                                                            setSelectedDepartmentFilter(selectedDepartmentFilter.filter(d => d !== dept));
                                                         }
                                                     }}
+                                                    className="mr-2"
                                                 />
-                                                <label htmlFor={`teacher-${teacherName}`} className="flex-1 cursor-pointer">
-                                                    {teacherName}
-                                                </label>
+                                                <Label htmlFor={`dept-${dept}`}>{dept}</Label>
                                             </DropdownMenuItem>
-                                        ))}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
+                                        )
+                                    ))}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
 
-                                {/* Other filters */}
-                                {(searchQuery || selectedTeacherFilter.length > 0 || 
-                                  selectedSemesterFilter.length > 0 || selectedAcademicYearFilter.length > 0 || 
-                                  selectedDepartmentFilter.length > 0) && (
-                                    <Button 
-                                        variant="ghost" 
-                                        size="sm" 
-                                        className="h-9"
-                                        onClick={clearFilters}
-                                    >
+                            {(searchQuery || selectedTeacherFilter.length > 0 || selectedSemesterFilter.length > 0 ||
+                                selectedAcademicYearFilter.length > 0 || selectedDepartmentFilter.length > 0) && (
+                                    <Button variant="ghost" onClick={clearFilters} className="ml-auto">
                                         <X className="mr-2 h-4 w-4" />
                                         Clear Filters
                                     </Button>
                                 )}
-                            </div>
                         </div>
-
-                        {assignmentsLoading ? (
-                            <div className="flex justify-center items-center p-8">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                            </div>
-                        ) : (
-                            <>
-                                {filteredAssignments.length === 0 ? (
-                                    <div className="text-center py-12 border rounded-md">
-                                        <p className="text-muted-foreground">
-                                            {assignments.length === 0 
-                                                ? "No assignments found. Create your first assignment above." 
-                                                : "No assignments match your search criteria."}
-                                        </p>
-                                    </div>
-                                ) : (
-                                    <div className="rounded-md border overflow-hidden">
-                                        <Table>
-                                            <TableHeader>
-                                                <TableRow>
-                                                    <TableHead>Teacher</TableHead>
-                                                    <TableHead>Course</TableHead>
-                                                    <TableHead>Department</TableHead>
-                                                    <TableHead>Semester</TableHead>
-                                                    <TableHead>Academic Year</TableHead>
-                                                    <TableHead>Student Count</TableHead>
-                                                    <TableHead className="text-right">Actions</TableHead>
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {filteredAssignments.map((assignment: TCAssignment) => (
-                                                    <TableRow key={assignment.id} className="cursor-pointer hover:bg-muted/50">
-                                                        <TableCell className="font-medium">
-                                                            <Button variant="link" className="p-0 h-auto" onClick={() => viewDetails(assignment.id)}>
-                                                                {assignment.teacher_detail?.teacher_id?.first_name || ''} {assignment.teacher_detail?.teacher_id?.last_name || ''}
-                                                            </Button>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Button variant="link" className="p-0 h-auto" onClick={() => viewDetails(assignment.id)}>
-                                                                {assignment.course_detail?.course_detail?.course_name || ''}
-                                                            </Button>
-                                                            <div className="text-xs text-muted-foreground mt-1">
-                                                                {assignment.course_detail?.course_detail?.course_id || ''}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell>
-                                                            <Badge variant="outline" className="font-normal">
-                                                                {assignment.course_detail?.teaching_dept_detail?.dept_name || ''}
-                                                            </Badge>
-                                                        </TableCell>
-                                                        <TableCell>{assignment.semester || ''}</TableCell>
-                                                        <TableCell>{assignment.academic_year || ''}</TableCell>
-                                                        <TableCell>{assignment.student_count || 0}</TableCell>
-                                                        <TableCell className="text-right">
-                                                            <div className="flex justify-end gap-2">
-                                                                <Button
-                                                                    variant="outline"
-                                                                    size="icon"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        viewDetails(assignment.id);
-                                                                    }}
-                                                                >
-                                                                    <Eye className="h-4 w-4" />
-                                                                    <span className="sr-only">View details</span>
-                                                                </Button>
-                                                                <Button
-                                                                    variant="destructive"
-                                                                    size="icon"
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        setAssignmentToDelete(assignment);
-                                                                    }}
-                                                                    disabled={deleteAssignment.isPending}
-                                                                >
-                                                                    {deleteAssignment.isPending && deleteAssignment.variables === assignment.id ? (
-                                                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                                                    ) : (
-                                                                        <Trash2 className="h-4 w-4" />
-                                                                    )}
-                                                                    <span className="sr-only">Delete</span>
-                                                                </Button>
-                                                            </div>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </div>
-                                )}
-                                <div className="text-sm text-muted-foreground mt-2">
-                                    Showing {filteredAssignments.length} of {assignments.length} assignments
-                                </div>
-                            </>
-                        )}
                     </div>
+
+                    {/* Assignments Table */}
+                    {assignmentsLoading ? (
+                        <div className="flex items-center justify-center h-64">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                    ) : filteredAssignments.length === 0 ? (
+                        <div className="text-center py-8">
+                            <p className="text-muted-foreground">No assignments found</p>
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Teacher</TableHead>
+                                    <TableHead>Course</TableHead>
+                                    <TableHead>Department</TableHead>
+                                    <TableHead>Semester</TableHead>
+                                    <TableHead>Academic Year</TableHead>
+                                    <TableHead>Student Count</TableHead>
+                                    <TableHead className="text-right">Actions</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredAssignments.map((assignment) => (
+                                    <TableRow key={assignment.id}>
+                                        <TableCell>
+                                            <div className="font-medium">
+                                                {assignment.teacher_detail?.teacher_id?.first_name} {assignment.teacher_detail?.teacher_id?.last_name}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                {assignment.teacher_detail?.staff_code}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="font-medium">
+                                                {assignment.course_detail?.course_detail?.course_name}
+                                            </div>
+                                            <div className="text-sm text-muted-foreground">
+                                                {assignment.course_detail?.course_detail?.course_id}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline">
+                                                {assignment.course_detail?.teaching_dept_detail?.dept_name}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>Semester {assignment.semester}</TableCell>
+                                        <TableCell>{assignment.academic_year}</TableCell>
+                                        <TableCell>{assignment.student_count || 0}</TableCell>
+                                        <TableCell className="text-right">
+                                            <div className="flex justify-end gap-2">
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => viewDetails(assignment.id)}
+                                                >
+                                                    <Eye className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                    variant="ghost"
+                                                    size="sm"
+                                                    onClick={() => setAssignmentToDelete(assignment)}
+                                                >
+                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                </Button>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
                 </CardContent>
             </Card>
 
-            <AlertDialog open={!!assignmentToDelete} onOpenChange={(open) => !open && setAssignmentToDelete(null)}>
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={!!assignmentToDelete} onOpenChange={() => setAssignmentToDelete(null)}>
                 <AlertDialogContent>
                     <AlertDialogHeader>
                         <AlertDialogTitle>Delete Assignment</AlertDialogTitle>
                         <AlertDialogDescription>
-                            Are you sure you want to delete the assignment for <span className="font-semibold">
-                                {assignmentToDelete?.teacher_detail?.teacher_id?.first_name || ''} {assignmentToDelete?.teacher_detail?.teacher_id?.last_name || ''}
-                            </span> to teach <span className="font-semibold">
-                                {assignmentToDelete?.course_detail?.course_detail?.course_name || ''}
-                            </span>?
-                            <br /><br />
-                            This action cannot be undone.
+                            Are you sure you want to delete this assignment? This action cannot be undone.
                         </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                         <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                            onClick={handleDelete}
-                            className="bg-destructive hover:bg-destructive/90"
-                        >
-                            {deleteAssignment.isPending ? (
-                                <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Deleting...
-                                </>
-                            ) : "Delete"}
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive text-destructive-foreground">
+                            Delete
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

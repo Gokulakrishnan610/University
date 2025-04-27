@@ -5,7 +5,8 @@ from .views import (
     CourseResourceAllocationListCreateView, 
     CourseResourceAllocationDetailView,
     CourseRoomPreferenceListCreateView,
-    CourseRoomPreferenceDetailView
+    CourseRoomPreferenceDetailView,
+    CourseAssignmentStatsView
 )
 
 urlpatterns = [
@@ -15,4 +16,6 @@ urlpatterns = [
     path('resource-allocation/<int:id>/', CourseResourceAllocationDetailView.as_view(), name='resource-allocation-detail'),
     path('<int:course_id>/room-preferences/', CourseRoomPreferenceListCreateView.as_view(), name='course-room-preference-list'),
     path('<int:course_id>/room-preferences/<int:id>/', CourseRoomPreferenceDetailView.as_view(), name='course-room-preference-detail'),
+    path('stats/', CourseAssignmentStatsView.as_view(), name='course-assignment-stats'),
+    path('stats/<int:course_id>/', CourseAssignmentStatsView.as_view(), name='course-assignment-stats-detail'),
 ]
