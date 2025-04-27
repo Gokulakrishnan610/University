@@ -10,10 +10,10 @@ import TeacherCourseAssignmentPage from "./teacher-course-assignment/page";
 import TeacherCourseAssignmentDetail from "./teacher-course-assignment/[id]/page";
 import AllCoursesPage from "./courses/all-courses/page";
 import AllocationManagementPage from "./courses/allocations/page";
+import CourseRoomPreferencesPage from "./courses/[id]/room-preferences/page";
 
 
 export default function Dashboard() {
-  // const {data, isPending} = useGetCourses()
 
   return (
     <Routes>
@@ -24,6 +24,7 @@ export default function Dashboard() {
       <Route path="/courses/all-courses" element={<AllCoursesPage/>}/>
       <Route path="/courses/allocations" element={<AllocationManagementPage/>}/>
       <Route path="/courses/:id" element={<CourseDetails />} />
+      <Route path="/courses/:id/room-preferences" element={<CourseRoomPreferencesPage />} />
       <Route path="/teachers" element={<TeacherManagement />} />
       <Route path="/teachers/:id" element={<TeacherDetails />} />
       <Route path="/teacher-course-assignment" element={<TeacherCourseAssignmentPage />} />

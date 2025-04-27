@@ -2,8 +2,8 @@ from django.shortcuts import get_object_or_404
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from authentication.authentication import IsAuthenticated
-from .models import Course, CourseResourceAllocation
-from .serializers import CourseSerializer, CreateCourseSerializer, UpdateCourseSerializer, CourseResourceAllocationSerializer
+from .models import Course, CourseResourceAllocation, CourseRoomPreference
+from .serializers import CourseSerializer, CreateCourseSerializer, UpdateCourseSerializer, CourseResourceAllocationSerializer, CourseRoomPreferenceSerializer
 from department.models import Department
 from django.db import models
 
@@ -604,6 +604,131 @@ class CourseResourceAllocationDetailView(generics.RetrieveUpdateDestroyAPIView):
                     'status': 'error',
                     'detail': "Something went wrong!",
                     'code': 'internal_error'
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class CourseRoomPreferenceListCreateView(generics.ListCreateAPIView):
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CourseRoomPreferenceSerializer
+
+    def get_queryset(self):
+        course_id = self.kwargs.get('course_id')
+        return CourseRoomPreference.objects.filter(course_id=course_id)
+    
+    def list(self, request, *args, **kwargs):
+        try:
+            queryset = self.get_queryset()
+            serializer = self.get_serializer(queryset, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return Response(
+                {
+                    'detail': "Something went wrong!",
+                    "code": "internal_error"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def perform_create(self, serializer):
+        course_id = self.kwargs.get('course_id')
+        course = get_object_or_404(Course, id=course_id)
+        serializer.save(course_id=course)
+    
+    def create(self, request, *args, **kwargs):
+        try:
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            self.perform_create(serializer)
+            return Response(
+                {
+                    'detail': "Room preference added successfully.",
+                    'data': serializer.data
+                },
+                status=status.HTTP_201_CREATED
+            )
+        except Exception as e:
+            print(e)
+            return Response(
+                {
+                    'detail': "Something went wrong!",
+                    "code": "internal_error"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class CourseRoomPreferenceDetailView(generics.RetrieveUpdateDestroyAPIView):
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CourseRoomPreferenceSerializer
+    
+    def get_object(self):
+        preference_id = self.kwargs.get('id')
+        course_id = self.kwargs.get('course_id')
+        preference = get_object_or_404(
+            CourseRoomPreference,
+            id=preference_id,
+            course_id=course_id
+        )
+        return preference
+    
+    def retrieve(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            print(e)
+            return Response(
+                {
+                    'detail': "Something went wrong!",
+                    "code": "internal_error"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def update(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            serializer = self.get_serializer(instance, data=request.data, partial=True)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            
+            return Response(
+                {
+                    'detail': "Room preference updated successfully.",
+                    'data': serializer.data
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            print(e)
+            return Response(
+                {
+                    'detail': "Something went wrong!",
+                    "code": "internal_error"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+    
+    def destroy(self, request, *args, **kwargs):
+        try:
+            instance = self.get_object()
+            instance.delete()
+            return Response(
+                {
+                    'detail': "Room preference deleted successfully."
+                },
+                status=status.HTTP_200_OK
+            )
+        except Exception as e:
+            print(e)
+            return Response(
+                {
+                    'detail': "Something went wrong!",
+                    "code": "internal_error"
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

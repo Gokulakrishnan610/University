@@ -5,6 +5,7 @@ import {
   useUpdateTeacher,
   Teacher as TeacherType
 } from '@/action/teacher';
+import { useGetTeacherCourseAssignments } from '@/action/teacherCourse';
 import {
   Card,
   CardContent,
@@ -27,8 +28,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, Pencil, Mail, Building, Clock, BookOpen, User, UserMinus } from 'lucide-react';
+import { ChevronLeft, Pencil, Mail, Building, Clock, BookOpen, User, UserMinus, Calendar, GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import TeacherForm from '../form';
 
 export default function TeacherDetails() {
@@ -46,6 +55,20 @@ export default function TeacherDetails() {
     refetch();
     setShowEditForm(false);
   });
+
+  // Fetch assigned courses for this teacher
+  const { data: allAssignments = [], isPending: isAssignmentsLoading } = useGetTeacherCourseAssignments();
+  
+  // Filter only this teacher's assignments
+  const teacherAssignments = allAssignments.filter(
+    assignment => assignment.teacher_detail?.id === teacherId
+  );
+  
+  // Calculate total teaching hours
+  const totalTeachingHours = teacherAssignments.reduce((total, assignment) => {
+    const credits = assignment.course_detail?.credits || 0;
+    return total + credits;
+  }, 0);
 
   // Clean up URL if edit parameter exists
   useEffect(() => {
@@ -194,7 +217,7 @@ export default function TeacherDetails() {
         </CardHeader>
 
         <CardContent className="pt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
             <div className="space-y-6">
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold flex items-center">
@@ -257,6 +280,96 @@ export default function TeacherDetails() {
                 )}
               </div>
             </div>
+          </div>
+
+          {/* Teaching Assignments Section */}
+          <div className="mt-8">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-semibold flex items-center">
+                <GraduationCap className="h-5 w-5 mr-2 text-primary" />
+                Teaching Assignments
+              </h3>
+              <div className="flex items-center space-x-1">
+                <Badge variant="outline" className="bg-primary/5">
+                  <Clock className="h-3.5 w-3.5 mr-1.5" />
+                  <span>Teaching: {totalTeachingHours} hrs</span>
+                </Badge>
+                <Badge variant="outline" className="bg-amber-500/5 text-amber-500">
+                  <Clock className="h-3.5 w-3.5 mr-1.5" />
+                  <span>Available: {(teacher.teacher_working_hours - totalTeachingHours)} hrs</span>
+                </Badge>
+              </div>
+            </div>
+
+            {isAssignmentsLoading ? (
+              <div className="space-y-2 mt-2">
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+                <Skeleton className="h-10 w-full" />
+              </div>
+            ) : teacherAssignments.length === 0 ? (
+              <div className="bg-muted/30 p-6 rounded-lg text-center">
+                <p className="text-muted-foreground">No courses assigned to this teacher</p>
+                <Button 
+                  variant="outline" 
+                  className="mt-4"
+                  onClick={() => navigate('/teacher-course-assignment')}
+                >
+                  <Calendar className="mr-2 h-4 w-4" />
+                  Manage Course Assignments
+                </Button>
+              </div>
+            ) : (
+              <div className="border rounded-lg overflow-hidden">
+                <Table>
+                  <TableHeader className="bg-muted/30">
+                    <TableRow>
+                      <TableHead>Course</TableHead>
+                      <TableHead>Semester</TableHead>
+                      <TableHead>Academic Year</TableHead>
+                      <TableHead>Credits/Hours</TableHead>
+                      <TableHead>Students</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {teacherAssignments.map((assignment) => (
+                      <TableRow key={assignment.id} className="hover:bg-muted/40">
+                        <TableCell>
+                          <div>
+                            <div className="font-medium">{assignment.course_detail?.course_detail?.course_name || 'Unknown Course'}</div>
+                            <div className="text-xs text-muted-foreground">{assignment.course_detail?.course_detail?.course_id || 'No Code'}</div>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="font-normal">
+                            Semester {assignment.semester}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>{assignment.academic_year}</TableCell>
+                        <TableCell>
+                          <div className="flex space-x-2">
+                            <Badge variant="secondary" className="font-normal">
+                              {assignment.course_detail?.credits || 0} hrs
+                            </Badge>
+                          </div>
+                        </TableCell>
+                        <TableCell>{assignment.student_count || 0}</TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => navigate(`/teacher-course-assignment/${assignment.id}`)}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

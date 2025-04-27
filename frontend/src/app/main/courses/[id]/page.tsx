@@ -32,7 +32,8 @@ import {
   ArrowLeftRight,
   Calendar,
   Loader2,
-  Trash
+  Trash,
+  LayoutGrid
 } from 'lucide-react';
 import { useGetDepartments } from '@/action/department';
 import { useGetCourseMasters } from '@/action/courseMaster';
@@ -335,6 +336,10 @@ export default function CourseDetails() {
                   <ArrowLeftRight className="h-4 w-4" />
                   Department Roles
                 </TabsTrigger>
+                <TabsTrigger value="room-preferences" className="flex items-center gap-1.5">
+                  <LayoutGrid className="h-4 w-4" />
+                  Room Preferences
+                </TabsTrigger>
               </TabsList>
               
               <TabsContent value="teaching" className="mt-4 space-y-4">
@@ -630,6 +635,30 @@ export default function CourseDetails() {
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              <TabsContent value="room-preferences" className="mt-4">
+                <Card>
+                  <CardHeader className="py-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <LayoutGrid className="h-5 w-5 text-primary" />
+                      Room Preferences
+                    </CardTitle>
+                    <CardDescription>
+                      Manage room preferences for this course
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-6">
+                    <div className="text-center py-6">
+                      <Button onClick={() => navigate(`/courses/${courseId}/room-preferences`)}>
+                        Manage Room Preferences
+                      </Button>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Click to view and manage room preferences for this course
+                      </p>
                     </div>
                   </CardContent>
                 </Card>
