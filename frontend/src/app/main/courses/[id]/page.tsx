@@ -280,6 +280,15 @@ export default function CourseDetails() {
                   <ArrowLeftRight className="h-4 w-4" /> Reassign Teaching
                 </Button>
               )}
+              {userRoles.includes('teacher') && !userRoles.includes('owner') && (
+                <Button
+                  variant="outline"
+                  className="flex gap-1.5 items-center"
+                  onClick={() => setShowReassignDialog(true)}
+                >
+                  <ArrowLeftRight className="h-4 w-4" /> Request Reassignment
+                </Button>
+              )}
               {canDelete && (
                 <Button
                   variant="destructive"

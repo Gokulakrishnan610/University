@@ -67,7 +67,7 @@ class CourseListView(generics.ListCreateAPIView):
         user = self.request.user
         try:
             hod_dept = Department.objects.get(hod_id=user)
-            return Course.objects.filter(course_id__course_dept_id=hod_dept)
+            return Course.objects.filter(teaching_dept_id=hod_dept)
         except Department.DoesNotExist:
             return Course.objects.none()
     
@@ -381,11 +381,14 @@ class CourseResourceAllocationListCreateView(generics.ListCreateAPIView):
                     status=status.HTTP_404_NOT_FOUND
                 )
             
-            # Verify the requester is from the course's owning department
-            if course.course_id.course_dept_id.id != user_dept.id:
+            # Verify the requester is either from the course's owning department or the current teaching department
+            is_owner = course.course_id.course_dept_id.id == user_dept.id
+            is_teaching = course.teaching_dept_id and course.teaching_dept_id.id == user_dept.id
+            
+            if not (is_owner or is_teaching):
                 return Response(
                     {
-                        'detail': "Only the course owner department can request allocation.",
+                        'detail': "Only the course owner department or current teaching department can request allocation.",
                         "code": "permission_denied"
                     },
                     status=status.HTTP_403_FORBIDDEN

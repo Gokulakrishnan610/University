@@ -312,7 +312,6 @@ export const useDeleteCourse = (id: number, onSuccess?: () => void) => {
   );
 };
 
-// Get all courses
 export const useGetCourses = () => {
   return useQueryData<Course[]>(
     ['courses'],
@@ -328,7 +327,6 @@ export const useGetCourses = () => {
   );
 };
 
-// Check for pending allocation requests
 export const useCheckPendingAllocations = () => {
   return useQueryData<{
     hasPendingRequests: boolean;

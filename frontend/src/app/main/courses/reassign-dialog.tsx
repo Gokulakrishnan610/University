@@ -64,6 +64,10 @@ export default function ReassignDialog({
 }: ReassignDialogProps) {
   const [error, setError] = useState<string | null>(null);
   
+  // Determine if user is from the teaching department but not the owner
+  const userRoles = course.user_department_roles || [];
+  const isTeacherNotOwner = userRoles.includes('teacher') && !userRoles.includes('owner');
+  
   const { mutate: requestReassignment, isPending } = useRequestCourseReassignment((response) => {
     if (!response.error) {
       onClose();
@@ -123,10 +127,12 @@ export default function ReassignDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <ArrowLeftRight className="h-5 w-5 text-primary" />
-            Reassign Course Teaching
+            {isTeacherNotOwner ? "Request Teaching Reassignment" : "Reassign Course Teaching"}
           </DialogTitle>
           <DialogDescription>
-            Request another department to teach this course for you.
+            {isTeacherNotOwner 
+              ? "Request that this course be reassigned to another department." 
+              : "Request another department to teach this course for you."}
           </DialogDescription>
         </DialogHeader>
 
@@ -185,7 +191,9 @@ export default function ReassignDialog({
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Choose the department you want to teach this course
+                      {isTeacherNotOwner
+                        ? "Choose the department you want to take over teaching this course"
+                        : "Choose the department you want to teach this course"}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -200,7 +208,9 @@ export default function ReassignDialog({
                     <FormLabel>Reason for Reassignment</FormLabel>
                     <FormControl>
                       <Textarea
-                        placeholder="Please explain why you want to reassign this course..."
+                        placeholder={isTeacherNotOwner
+                          ? "Please explain why this course should be reassigned..."
+                          : "Please explain why you want to reassign this course..."}
                         className="resize-none"
                         {...field}
                       />
