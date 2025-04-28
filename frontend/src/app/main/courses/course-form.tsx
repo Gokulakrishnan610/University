@@ -290,7 +290,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Lecture Hours</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} disabled={true} />
+                  <Input type="number" {...field}  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -304,7 +304,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Tutorial Hours</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} disabled={true} />
+                  <Input type="number" {...field}  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -318,7 +318,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Practical Hours</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} disabled={true} />
+                  <Input type="number" {...field}  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -334,7 +334,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Credits</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} disabled={true} />
+                  <Input type="number" {...field}  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -363,7 +363,7 @@ export default function CourseForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Regulation</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={true}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select regulation" />
@@ -410,7 +410,7 @@ export default function CourseForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Course Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={true}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
@@ -511,7 +511,7 @@ export default function CourseForm({
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
-                    disabled={true}
+                    
                   />
                 </FormControl>
               </FormItem>

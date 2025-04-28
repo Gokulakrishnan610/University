@@ -218,7 +218,7 @@ UNFOLD = {
     "SHOW_HISTORY": True, # show/hide "History" button, default: True
     "SHOW_VIEW_ON_SITE": True, # show/hide "View on site" button, default: True
     "SHOW_BACK_BUTTON": False, # show/hide "Back" button on changeform in header, default: False
-    "THEME": "dark", # Force theme: "dark" or "light". Will disable theme switcher
+    "THEME": "light", # Force theme: "dark" or "light". Will disable theme switcher
     "BORDER_RADIUS": "6px",
     "COLORS": {
         "base": {

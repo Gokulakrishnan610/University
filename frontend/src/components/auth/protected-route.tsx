@@ -68,7 +68,7 @@ export function PublicOnlyRoute({ children }: { children: ReactNode }) {
 
   // If user is authenticated, redirect to dashboard
   if (user) {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to="/" replace />;
   }
 
   // If not authenticated, render the public route
