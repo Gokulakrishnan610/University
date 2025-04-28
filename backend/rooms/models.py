@@ -16,7 +16,7 @@ class Room(models.Model):
     ]
 
     room_number = models.CharField("Room Number", max_length=20)
-    block = models.CharField("Block", max_length=10)
+    block = models.CharField("Block", max_length=100)
     description = models.TextField("Description", blank=True)
     maintained_by_id = models.ForeignKey("department.Department", on_delete=models.SET_NULL, null=True, related_name="maintained_rooms")
     is_lab = models.BooleanField("Is Lab", default=False)

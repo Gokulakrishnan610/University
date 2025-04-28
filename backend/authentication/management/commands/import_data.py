@@ -108,7 +108,7 @@ class Command(BaseCommand):
                         'teacher_role': row['role'] if row['role'] in dict(Teacher.TEACHER_ROLES) else 'Professor'
                     }
                 )
-                print(f"Teacher {'created' if created else 'exists'}: {teacher_user.email}")
+                #print(f"Teacher {'created' if created else 'exists'}: {teacher_user.email}")
 
     def import_courses(self):
         with open('data/courses.csv', newline='', encoding='utf-8-sig') as csvfile:

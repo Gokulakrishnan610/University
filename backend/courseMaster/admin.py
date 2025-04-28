@@ -1,11 +1,65 @@
+# from django.contrib import admin
+# from .models import CourseMaster
+# from unfold.admin import ModelAdmin
+
+
+
+# @admin.register(CourseMaster)
+# class CourseMasterAdmin(ModelAdmin):
+#     list_display = ('course_id', 'course_name', 'course_dept_id')
+#     search_fields = ('course_id', 'course_name')
+#     list_filter = ('course_dept_id',)
+
+
+
+
 from django.contrib import admin
 from .models import CourseMaster
+from department.models import Department
 from unfold.admin import ModelAdmin
+from import_export import resources
+from import_export.admin import ImportExportModelAdmin
 
-# Register your models here.
+# Resource class for import/export
+class CourseMasterResource(resources.ModelResource):
+    class Meta:
+        model = CourseMaster
+        fields = (
+            'id',
+            'course_id',
+            'course_name',
+            'course_dept_id',
+            'credits',  # Corrected from course_credits
+            'is_zero_credit_course',
+            'lecture_hours',
+            'practical_hours',
+            'tutorial_hours',
+            'regulation',
+            'course_type',
+        )
+        export_order = fields
 
+# Admin class
 @admin.register(CourseMaster)
-class CourseMasterAdmin(ModelAdmin):
-    list_display = ('course_id', 'course_name', 'course_dept_id')
-    search_fields = ('course_id', 'course_name')
-    list_filter = ('course_dept_id',)
+class CourseMasterAdmin(ImportExportModelAdmin, ModelAdmin):
+    resource_class = CourseMasterResource
+
+    list_display = (
+        'course_id',
+        'course_name',
+        'course_dept_id',
+        'credits',       # Corrected from course_credits
+        'course_type',
+    )
+
+    search_fields = (
+        'course_id',
+        'course_name',
+    )
+
+    list_filter = (
+        'course_dept_id',
+        'course_type',
+    )
+
+    ordering = ('course_id',)
