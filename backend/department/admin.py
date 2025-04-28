@@ -2,6 +2,7 @@ from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 from .models import Department
+from unfold.admin import ModelAdmin
 
 class DepartmentResource(resources.ModelResource):
     class Meta:
@@ -14,7 +15,7 @@ class DepartmentResource(resources.ModelResource):
         )
         export_order = fields
 
-class DepartmentAdmin(ImportExportModelAdmin):
+class DepartmentAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = DepartmentResource
 
     list_display = ('dept_name', 'date_established', 'contact_info')
