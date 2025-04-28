@@ -10,7 +10,7 @@ class RoomResource(resources.ModelResource):
         fields = (
             'id',
             'room_number',
-            'block',
+            # 'block',
             'maintained_by_id',
             'is_lab',
             'room_type',
@@ -18,12 +18,14 @@ class RoomResource(resources.ModelResource):
             'room_max_cap',
             'has_projector',
             'has_ac',
+            'tech_level',
+            'description',
         )
         export_order = fields
 
 class RoomAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = RoomResource
-    list_display = ('room_number', 'block', 'maintained_by_id', 'is_lab', 'room_type', 'room_min_cap', 'room_max_cap', 'has_projector', 'has_ac')
+    list_display = ('description','room_number', 'block', 'maintained_by_id', 'is_lab', 'room_type', 'room_min_cap', 'room_max_cap', 'has_projector', 'has_ac','tech_level')
     search_fields = ('room_number', 'block', 'description')
     list_filter = ('block', 'is_lab', 'room_type', 'has_projector', 'has_ac', 'maintained_by_id')
     ordering = ('block', 'room_number')
