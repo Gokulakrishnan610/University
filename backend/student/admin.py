@@ -2,6 +2,7 @@ from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 from .models import Student
+from unfold.admin import ModelAdmin
 
 class StudentResource(resources.ModelResource):
     class Meta:
@@ -16,7 +17,7 @@ class StudentResource(resources.ModelResource):
         )
         export_order = fields  
 
-class StudentAdmin(ImportExportModelAdmin):
+class StudentAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = StudentResource 
 
     list_display = ('student_id', 'batch', 'current_semester', 'year', 'dept_id', 'roll_no', 'student_type', 'degree_type')

@@ -2,6 +2,7 @@ from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 from .models import Room
+from unfold.admin import ModelAdmin
 
 class RoomResource(resources.ModelResource):
     class Meta:
@@ -20,7 +21,7 @@ class RoomResource(resources.ModelResource):
         )
         export_order = fields
 
-class RoomAdmin(ImportExportModelAdmin):
+class RoomAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = RoomResource
     list_display = ('room_number', 'block', 'maintained_by_id', 'is_lab', 'room_type', 'room_min_cap', 'room_max_cap', 'has_projector', 'has_ac')
     search_fields = ('room_number', 'block', 'description')

@@ -1,7 +1,8 @@
 from django.contrib import admin
 from .models import Course, CourseResourceAllocation, CourseSlotPreference, CourseRoomPreference
+from unfold.admin import ModelAdmin
 
-class CourseAdmin(admin.ModelAdmin):
+class CourseAdmin(ModelAdmin):
     list_display = (
         'get_course_id', 
         'get_course_name',
@@ -34,18 +35,18 @@ class CourseAdmin(admin.ModelAdmin):
     get_course_name.short_description = 'Course Name'
     get_course_name.admin_order_field = 'course_id__course_name'
 
-class CourseResourceAllocationAdmin(admin.ModelAdmin):
+class CourseResourceAllocationAdmin(ModelAdmin):
     list_display = ('course_id', 'original_dept_id', 'teaching_dept_id', 'allocation_date', 'status')
     list_filter = ('status', 'allocation_date', 'original_dept_id', 'teaching_dept_id')
     search_fields = ('course_id__course_id__course_id', 'course_id__course_id__course_name')
     date_hierarchy = 'allocation_date'
 
-class CourseSlotPreferenceAdmin(admin.ModelAdmin):
+class CourseSlotPreferenceAdmin(ModelAdmin):
     list_display = ('course_id', 'slot_id', 'preference_level')
     list_filter = ('slot_id', 'preference_level')
     search_fields = ('course_id__course_id__course_id', 'course_id__course_id__course_name')
 
-class CourseRoomPreferenceAdmin(admin.ModelAdmin):
+class CourseRoomPreferenceAdmin(ModelAdmin):
     list_display = ('course_id', 'room_id', 'preference_level', 'preferred_for', 'tech_level_preference')
     list_filter = ('room_id', 'preference_level', 'preferred_for', 'tech_level_preference')
     search_fields = ('course_id__course_id__course_id', 'course_id__course_id__course_name', 'room_id__room_number')

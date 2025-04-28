@@ -1,4 +1,5 @@
 from django.contrib import admin
+from unfold.admin import ModelAdmin
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 from .models import Teacher
@@ -18,7 +19,7 @@ class TeacherResource(resources.ModelResource):
         )
         export_order = fields
 
-class TeacherAdmin(ImportExportModelAdmin):
+class TeacherAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = TeacherResource
 
     list_display = ('teacher_id', 'dept_id', 'staff_code', 'teacher_specialisation', 'teacher_working_hours')
