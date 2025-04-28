@@ -43,7 +43,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/teachers",
     },
     {
-      title: "Teacher Course",
+      title: "Teacher Allocation",
       icon: <GraduationCap className="h-5 w-5" />,
       href: "/teacher-course-assignment",
     },

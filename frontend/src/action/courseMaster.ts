@@ -11,6 +11,13 @@ export interface CourseMaster {
   course_name: string;
   course_dept_id: number;
   course_dept_detail: DepartmentDetails;
+  lecture_hours: number;
+  tutorial_hours: number;
+  practical_hours: number;
+  credits: number;
+  course_type: string;
+  is_zero_credit_course: boolean;
+  regulation: string;
 }
 
 export interface CreateCourseMasterRequest {

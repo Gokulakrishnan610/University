@@ -84,7 +84,7 @@ export default function CourseForm({
       for_dept_id: 0,
       teaching_dept_id: 0,
       need_assist_teacher: false,
-      regulation: "R-2021",
+      regulation: "R2019",
       course_type: "T",
       elective_type: "NE",
       lab_type: "NULL",
@@ -95,7 +95,6 @@ export default function CourseForm({
     }
   });
 
-  // Reset form when defaultValues changes
   useEffect(() => {
     if (defaultValues) {
       form.reset({
@@ -105,21 +104,48 @@ export default function CourseForm({
     }
   }, [defaultValues, form]);
 
-  // Override onSubmit handler to handle edit mode
+  const isFieldEditable = (fieldName: string): boolean => {
+    if (!isEdit) return true; // If not editing, all fields are editable
+    if (editableFields.length === 0) return true; 
+    return editableFields.includes(fieldName);
+  };
+
+  // Add effect to handle course master selection
+  useEffect(() => {
+    const subscription = form.watch((value, { name }) => {
+      if (name === 'course_id' && value.course_id) {
+        const selectedCourse:any = courseMasters.find(course => course.id === value.course_id);
+        if (selectedCourse) {
+          // Set values for pre-populated fields
+          form.setValue('lecture_hours', selectedCourse.lecture_hours);
+          form.setValue('tutorial_hours', selectedCourse.tutorial_hours);
+          form.setValue('practical_hours', selectedCourse.practical_hours);
+          form.setValue('credits', selectedCourse.credits);
+          form.setValue('course_type', selectedCourse.course_type);
+          form.setValue('is_zero_credit_course', selectedCourse.is_zero_credit_course);
+          form.setValue('regulation', selectedCourse.regulation);
+          
+          // Disable pre-populated fields
+          form.setValue('lecture_hours', selectedCourse.lecture_hours, { shouldValidate: true, shouldDirty: true });
+          form.setValue('tutorial_hours', selectedCourse.tutorial_hours, { shouldValidate: true, shouldDirty: true });
+          form.setValue('practical_hours', selectedCourse.practical_hours, { shouldValidate: true, shouldDirty: true });
+          form.setValue('credits', selectedCourse.credits, { shouldValidate: true, shouldDirty: true });
+          form.setValue('course_type', selectedCourse.course_type, { shouldValidate: true, shouldDirty: true });
+          form.setValue('is_zero_credit_course', selectedCourse.is_zero_credit_course, { shouldValidate: true, shouldDirty: true });
+          form.setValue('regulation', selectedCourse.regulation, { shouldValidate: true, shouldDirty: true });
+        }
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [form, courseMasters]);
+
   const handleSubmit = (values: CourseFormValues) => {
-    // If in edit mode, use existing course_id from defaultValues
     if (isEdit && defaultValues?.course_id) {
       values.course_id = defaultValues.course_id;
     }
     
     onSubmit(values);
-  };
-
-  // Function to check if a field is editable
-  const isFieldEditable = (fieldName: string): boolean => {
-    if (!isEdit) return true; // If not editing, all fields are editable
-    if (editableFields.length === 0) return true; // If no restrictions, all fields are editable
-    return editableFields.includes(fieldName);
   };
 
   return (
@@ -264,7 +290,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Lecture Hours</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input type="number" {...field} disabled={true} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -278,7 +304,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Tutorial Hours</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input type="number" {...field} disabled={true} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -292,7 +318,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Practical Hours</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input type="number" {...field} disabled={true} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -308,7 +334,7 @@ export default function CourseForm({
               <FormItem>
                 <FormLabel>Credits</FormLabel>
                 <FormControl>
-                  <Input type="number" {...field} />
+                  <Input type="number" {...field} disabled={true} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -337,9 +363,17 @@ export default function CourseForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Regulation</FormLabel>
-                <FormControl>
-                  <Input {...field} />
-                </FormControl>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={true}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select regulation" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="R2019">R2019</SelectItem>
+                    <SelectItem value="R2023">R2023</SelectItem>
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
@@ -376,7 +410,7 @@ export default function CourseForm({
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Course Type</FormLabel>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select onValueChange={field.onChange} defaultValue={field.value} disabled={true}>
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select type" />
@@ -477,6 +511,7 @@ export default function CourseForm({
                   <Switch
                     checked={field.value}
                     onCheckedChange={field.onChange}
+                    disabled={true}
                   />
                 </FormControl>
               </FormItem>

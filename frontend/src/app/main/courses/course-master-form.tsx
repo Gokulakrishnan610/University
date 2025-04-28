@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { DepartmentDetails } from '@/action/course';
@@ -27,7 +28,14 @@ import { DepartmentDetails } from '@/action/course';
 const courseMasterFormSchema = z.object({
   course_id: z.string().min(1, "Course ID is required"),
   course_name: z.string().min(1, "Course Name is required"),
-  course_dept_id: z.coerce.number().positive("Please select a department").optional(),
+  course_dept_id: z.coerce.number().positive("Please select a department"),
+  lecture_hours: z.coerce.number().min(0, "Lecture hours cannot be negative"),
+  tutorial_hours: z.coerce.number().min(0, "Tutorial hours cannot be negative"),
+  practical_hours: z.coerce.number().min(0, "Practical hours cannot be negative"),
+  credits: z.coerce.number().min(0, "Credits cannot be negative"),
+  regulation: z.string().min(1, "Regulation is required"),
+  course_type: z.enum(["T", "L", "LoT"]),
+  is_zero_credit_course: z.boolean().default(false),
 });
 
 export type CourseMasterFormValues = z.infer<typeof courseMasterFormSchema>;
@@ -55,6 +63,13 @@ export default function CourseMasterForm({
       course_id: '',
       course_name: '',
       course_dept_id: 0,
+      lecture_hours: 3,
+      tutorial_hours: 0,
+      practical_hours: 0,
+      credits: 3,
+      regulation: "R2019",
+      course_type: "T",
+      is_zero_credit_course: false,
       ...defaultValues
     }
   });
@@ -134,6 +149,134 @@ export default function CourseMasterForm({
                   The department that owns this course and controls its curriculum
                 </FormDescription>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <FormField
+            control={form.control}
+            name="lecture_hours"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Lecture Hours</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="tutorial_hours"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tutorial Hours</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          
+          <FormField
+            control={form.control}
+            name="practical_hours"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Practical Hours</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="credits"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Credits</FormLabel>
+                <FormControl>
+                  <Input type="number" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="regulation"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Regulation</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select regulation" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="R2019">R2019</SelectItem>
+                    <SelectItem value="R2023">R2023</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="course_type"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Course Type</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="T">Theory</SelectItem>
+                    <SelectItem value="L">Lab</SelectItem>
+                    <SelectItem value="LoT">Lab & Theory</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="is_zero_credit_course"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                <div className="space-y-0.5">
+                  <FormLabel>Zero Credit Course</FormLabel>
+                  <FormDescription>
+                    Indicate if this is a zero credit course
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
               </FormItem>
             )}
           />

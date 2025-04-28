@@ -8,4 +8,17 @@ class CourseMasterSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = CourseMaster
-        fields = ['id', 'course_id', 'course_name', 'course_dept_id', 'course_dept_detail']
+        fields = [
+            'id', 
+            'course_id', 
+            'course_name', 
+            'course_dept_id', 
+            'course_dept_detail',
+            'is_zero_credit_course',
+            'lecture_hours',
+            'practical_hours',
+            'tutorial_hours',
+            'credits',
+            'regulation',
+            'course_type'
+        ]

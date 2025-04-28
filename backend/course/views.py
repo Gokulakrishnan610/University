@@ -371,7 +371,7 @@ class CourseResourceAllocationListCreateView(generics.ListCreateAPIView):
             # Get the course
             course_id = request.data.get('course_id')
             try:
-                course = Course.objects.get(id=course_id)
+                course = Course.objects.select_related('course_id', 'course_id__course_dept_id', 'teaching_dept_id', 'for_dept_id').get(id=course_id)
             except Course.DoesNotExist:
                 return Response(
                     {
@@ -382,7 +382,7 @@ class CourseResourceAllocationListCreateView(generics.ListCreateAPIView):
                 )
             
             # Verify the requester is either from the course's owning department or the current teaching department
-            is_owner = course.course_id.course_dept_id.id == user_dept.id
+            is_owner = course.course_id.course_dept_id and course.course_id.course_dept_id.id == user_dept.id
             is_teaching = course.teaching_dept_id and course.teaching_dept_id.id == user_dept.id
             
             if not (is_owner or is_teaching):

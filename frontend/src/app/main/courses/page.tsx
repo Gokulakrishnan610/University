@@ -72,6 +72,7 @@ export default function CourseManagementPage() {
   const { data: departmentData, isPending, refetch } = useGetCurrentDepartmentCourses();
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
   const { data: courseMastersData, isPending: loadingCourseMasters, refetch: refetchCourseMasters } = useGetCourseMasters();
+  // console.log(courseMastersData)
   const { data: currentDepartment, isPending: loadingCurrentDept } = useGetCurrentDepartment();
   
   const departments = departmentsData || [];
