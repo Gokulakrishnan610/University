@@ -5,8 +5,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
-import { ArrowLeft, Loader2, Mail, Phone, Building, Clock, User, BookOpen, Calendar, Hash, Users, Home, ChevronRight, Briefcase, GraduationCap } from 'lucide-react';
+import { ArrowLeft, Loader2, Mail, Phone, Building, Clock, User, BookOpen, Calendar, Hash, Home, ChevronRight, Briefcase, GraduationCap } from 'lucide-react';
 import { toast } from 'sonner';
+
 
 export default function TeacherCourseAssignmentDetailsPage() {
   const { id } = useParams<{ id: string }>();
@@ -86,36 +87,6 @@ export default function TeacherCourseAssignmentDetailsPage() {
                 </div>
                 <p className="font-medium text-lg">
                   {assignment.course_detail?.course_detail?.course_id || 'N/A'}
-                </p>
-              </div>
-
-              <div className="space-y-2 p-4 bg-muted/20 rounded-md">
-                <div className="text-sm text-muted-foreground flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Academic Year
-                </div>
-                <p className="font-medium">
-                  {assignment.academic_year}
-                </p>
-              </div>
-
-              <div className="space-y-2 p-4 bg-muted/20 rounded-md">
-                <div className="text-sm text-muted-foreground flex items-center">
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Semester
-                </div>
-                <p className="font-medium">
-                  {assignment.semester}
-                </p>
-              </div>
-
-              <div className="space-y-2 p-4 bg-muted/20 rounded-md">
-                <div className="text-sm text-muted-foreground flex items-center">
-                  <Users className="h-4 w-4 mr-2" />
-                  Student Count
-                </div>
-                <p className="font-medium">
-                  {assignment.student_count || 'Not specified'}
                 </p>
               </div>
 

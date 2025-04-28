@@ -10,7 +10,7 @@ export interface Student {
   batch: number;
   current_semester: number;
   year: number;
-  dept: number | null;
+  dept_detail: any;
   roll_no: string | null;
   student_type: string;
   degree_type: string;

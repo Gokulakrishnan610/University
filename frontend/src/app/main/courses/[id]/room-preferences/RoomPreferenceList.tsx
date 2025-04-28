@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Room } from "@/action/room";
 import {
   useGetCourseRoomPreferences,
@@ -21,7 +21,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Pencil, Trash2, Plus } from "lucide-react";
+import { Pencil, Trash2, Plus, AlertCircle } from "lucide-react";
 import { RoomPreferenceForm } from "./RoomPreferenceForm";
 import { toast } from "sonner";
 import {
@@ -34,6 +34,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { useGetCourse } from "@/action/course";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 interface RoomPreferenceListProps {
   courseId: number;
@@ -44,10 +46,39 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
   const [isAddFormOpen, setIsAddFormOpen] = useState(false);
   const [editingPreference, setEditingPreference] = useState<CourseRoomPreference | null>(null);
   const [deletingPreference, setDeletingPreference] = useState<CourseRoomPreference | null>(null);
+  const [hasPermission, setHasPermission] = useState<boolean | null>(null);
+  const [permissionMessage, setPermissionMessage] = useState<string>("");
 
   const { data: preferences, isPending, refetch } = useGetCourseRoomPreferences(courseId);
+  const { data: courseResponse } = useGetCourse(courseId);
+  const course = courseResponse?.status === "success" ? courseResponse.data : null;
 
-  const { mutate: deletePreference } = useDeleteCourseRoomPreference(
+  // Check if user has permission to modify room preferences
+  useEffect(() => {
+    if (course) {
+      // Check if user's department is in the course permissions
+      const canEdit = course.permissions?.can_edit || false;
+      const userRoles = course.user_department_roles || [];
+      
+      // User has permission if:
+      // 1. They can edit the course AND
+      // 2. They are either the course owner OR the teaching department
+      const isOwnerOrTeacher = userRoles.includes('owner') || userRoles.includes('teacher');
+      const isForDept = userRoles.includes('for_dept') && !isOwnerOrTeacher;
+      
+      setHasPermission(canEdit && isOwnerOrTeacher);
+      
+      if (isForDept) {
+        setPermissionMessage("For departments cannot modify room preferences. Only course owner or teaching department can make changes.");
+      } else if (!canEdit) {
+        setPermissionMessage("You don't have permission to modify room preferences for this course.");
+      } else if (!isOwnerOrTeacher) {
+        setPermissionMessage("Only the course owner department or teaching department can modify room preferences.");
+      }
+    }
+  }, [course]);
+
+  const { mutate: deletePreference, isPending: isDeleting } = useDeleteCourseRoomPreference(
     deletingPreference?.id || 0,
     courseId,
     () => {
@@ -56,6 +87,13 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
       });
       setDeletingPreference(null);
       refetch();
+    },
+    (error: any) => {
+      // Display error as toast notification
+      toast.error("Failed to delete room preference", {
+        description: error?.data?.detail || "An error occurred while deleting the room preference",
+      });
+      setDeletingPreference(null);
     }
   );
 
@@ -93,6 +131,14 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
 
   return (
     <div className="space-y-6">
+      {hasPermission === false && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Permission Denied</AlertTitle>
+          <AlertDescription>{permissionMessage}</AlertDescription>
+        </Alert>
+      )}
+      
       <Card>
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
@@ -101,10 +147,12 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
               Manage room preferences for this course
             </CardDescription>
           </div>
-          <Button onClick={() => setIsAddFormOpen(true)} className="h-9">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Preference
-          </Button>
+          {hasPermission && (
+            <Button onClick={() => setIsAddFormOpen(true)} className="h-9">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Preference
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           {isPending ? (
@@ -113,7 +161,7 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
             </div>
           ) : !preferences || preferences.length === 0 ? (
             <div className="py-6 text-center text-muted-foreground">
-              No room preferences set. Add one to get started.
+              No room preferences set. {hasPermission ? "Add one to get started." : ""}
             </div>
           ) : (
             <Table>
@@ -123,12 +171,12 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
                   <TableHead>Preference Level</TableHead>
                   <TableHead>Preferred For</TableHead>
                   <TableHead>Tech Level</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {hasPermission && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {preferences.map((pref: CourseRoomPreference) => {
-                  const room = roomMap[pref.room_id];
+                  const room = pref.room_id ? roomMap[pref.room_id] : null;
                   return (
                     <TableRow key={pref.id}>
                       <TableCell>
@@ -140,30 +188,34 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
                             </div>
                           </>
                         ) : (
-                          `Room ID: ${pref.room_id}`
+                          <span className="text-muted-foreground text-sm">
+                            {pref.preferred_for === 'NTL' ? `Room ID: ${pref.room_id}` : 'N/A'}
+                          </span>
                         )}
                       </TableCell>
                       <TableCell>{pref.preference_level}</TableCell>
                       <TableCell>{getRoomTypeName(pref.preferred_for)}</TableCell>
                       <TableCell>{pref.tech_level_preference}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setEditingPreference(pref)}
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => setDeletingPreference(pref)}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {hasPermission && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setEditingPreference(pref)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeletingPreference(pref)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      )}
                     </TableRow>
                   );
                 })}
@@ -173,7 +225,7 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
         </CardContent>
       </Card>
 
-      {isAddFormOpen && (
+      {isAddFormOpen && hasPermission && (
         <RoomPreferenceForm
           courseId={courseId}
           rooms={rooms}
@@ -182,7 +234,7 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
         />
       )}
 
-      {editingPreference && (
+      {editingPreference && hasPermission && (
         <RoomPreferenceForm
           courseId={courseId}
           rooms={rooms}

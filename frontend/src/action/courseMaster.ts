@@ -67,9 +67,10 @@ export const useCreateCourseMaster = (onSuccess?: () => void) => {
         };
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
+          console.error('Course master creation error:', error.response.data);
           return {
             status: error.response.status,
-            data: error.response.data.message || 'Failed to create course master',
+            data: error.response.data.message || error.response.data.detail || 'Failed to create course master',
           };
         }
         throw error;

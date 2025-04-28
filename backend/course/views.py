@@ -7,7 +7,9 @@ from teacherCourse.models import TeacherCourse
 from department.models import Department
 from django.db import models
 from rest_framework.views import APIView
+from django.core.exceptions import PermissionDenied
 from .serializers import CourseSerializer, CreateCourseSerializer, UpdateCourseSerializer, CourseResourceAllocationSerializer, CourseRoomPreferenceSerializer
+from rest_framework import serializers
 
 class AddNewCourse(generics.CreateAPIView):
     authentication_classes = [IsAuthenticated]
@@ -637,13 +639,66 @@ class CourseRoomPreferenceListCreateView(generics.ListCreateAPIView):
     def perform_create(self, serializer):
         course_id = self.kwargs.get('course_id')
         course = get_object_or_404(Course, id=course_id)
+        
+        # Check permissions before saving (will raise PermissionDenied if not allowed)
+        self.check_course_permission(course)
+        
+        # If we reach here, permission is granted
         serializer.save(course_id=course)
+    
+    def check_course_permission(self, course):
+        """
+        Check if the current user has permission to modify room preferences for the course.
+        Returns True if permission is granted, False otherwise.
+        """
+        try:
+            # Find user's department (using Department model for HOD)
+            user_dept = None
+            
+            # Check if user is HOD of any department
+            try:
+                hod_dept = Department.objects.get(hod_id=self.request.user)
+                user_dept = hod_dept
+            except Department.DoesNotExist:
+                # Check if user is a teacher
+                if hasattr(self.request.user, 'teacher_profile') and hasattr(self.request.user.teacher_profile, 'dept_id'):
+                    user_dept = self.request.user.teacher_profile.dept_id
+            
+            if not user_dept:
+                raise PermissionDenied("Unable to determine your department. You must be a HOD or teacher with department association.")
+            
+            # Check permissions based on department
+            is_owner = False
+            is_teacher = False
+            
+            if course.course_id and course.course_id.course_dept_id:
+                is_owner = user_dept.id == course.course_id.course_dept_id.id
+                
+            if course.teaching_dept_id:
+                is_teacher = user_dept.id == course.teaching_dept_id.id
+            
+            is_for_dept = course.for_dept_id and user_dept.id == course.for_dept_id.id
+            
+            if is_owner or is_teacher:
+                return True
+            elif is_for_dept:
+                raise PermissionDenied("For departments cannot modify room preferences. Only course owner or teaching department can make changes.")
+            else:
+                raise PermissionDenied("You don't have permission to modify room preferences for this course.")
+            
+        except PermissionDenied:
+            # Re-raise permission denied exceptions
+            raise
+        except Exception as e:
+            print(f"Permission check error: {e}")
+            raise PermissionDenied("Unable to determine permissions for this action.")
     
     def create(self, request, *args, **kwargs):
         try:
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
+            
             return Response(
                 {
                     'detail': "Room preference added successfully.",
@@ -651,12 +706,49 @@ class CourseRoomPreferenceListCreateView(generics.ListCreateAPIView):
                 },
                 status=status.HTTP_201_CREATED
             )
+        except PermissionDenied as pd:
+            return Response(
+                {
+                    'detail': str(pd),
+                    'code': 'permission_denied'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        except serializers.ValidationError as ve:
+            # Extract error message properly
+            if hasattr(ve, 'detail'):
+                if isinstance(ve.detail, dict) and 'detail' in ve.detail:
+                    # Case when we raised our custom format
+                    return Response(
+                        {
+                            'detail': ve.detail['detail'],
+                            'code': ve.detail.get('code', 'validation_error')
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                else:
+                    # Standard validation error
+                    return Response(
+                        {
+                            'detail': str(ve.detail),
+                            'code': 'validation_error'
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            else:
+                return Response(
+                    {
+                        'detail': str(ve),
+                        'code': 'validation_error'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except Exception as e:
             print(e)
             return Response(
                 {
-                    'detail': "Something went wrong!",
-                    "code": "internal_error"
+                    'detail': str(e) if hasattr(e, '__str__') else "Something went wrong!",
+                    'code': "internal_error"
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -674,19 +766,79 @@ class CourseRoomPreferenceDetailView(generics.RetrieveUpdateDestroyAPIView):
             id=preference_id,
             course_id=course_id
         )
+        
+        # Check if user's department is the course owner or teaching department
+        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
+            self.check_course_permission(preference.course_id)
+        
         return preference
+    
+    def check_course_permission(self, course):
+        """
+        Check if the current user has permission to modify room preferences for the course.
+        Returns True if permission is granted, False otherwise.
+        """
+        try:
+            # Find user's department (using Department model for HOD)
+            user_dept = None
+            
+            # Check if user is HOD of any department
+            try:
+                hod_dept = Department.objects.get(hod_id=self.request.user)
+                user_dept = hod_dept
+            except Department.DoesNotExist:
+                # Check if user is a teacher
+                if hasattr(self.request.user, 'teacher_profile') and hasattr(self.request.user.teacher_profile, 'dept_id'):
+                    user_dept = self.request.user.teacher_profile.dept_id
+            
+            if not user_dept:
+                raise PermissionDenied("Unable to determine your department. You must be a HOD or teacher with department association.")
+            
+            # Check permissions based on department
+            is_owner = False
+            is_teacher = False
+            
+            if course.course_id and course.course_id.course_dept_id:
+                is_owner = user_dept.id == course.course_id.course_dept_id.id
+                
+            if course.teaching_dept_id:
+                is_teacher = user_dept.id == course.teaching_dept_id.id
+            
+            is_for_dept = course.for_dept_id and user_dept.id == course.for_dept_id.id
+            
+            if is_owner or is_teacher:
+                return True
+            elif is_for_dept:
+                raise PermissionDenied("For departments cannot modify room preferences. Only course owner or teaching department can make changes.")
+            else:
+                raise PermissionDenied("You don't have permission to modify room preferences for this course.")
+            
+        except PermissionDenied:
+            # Re-raise permission denied exceptions
+            raise
+        except Exception as e:
+            print(f"Permission check error: {e}")
+            raise PermissionDenied("Unable to determine permissions for this action.")
     
     def retrieve(self, request, *args, **kwargs):
         try:
             instance = self.get_object()
             serializer = self.get_serializer(instance)
             return Response(serializer.data, status=status.HTTP_200_OK)
+        except PermissionDenied as pd:
+            return Response(
+                {
+                    'detail': str(pd),
+                    'code': 'permission_denied'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
         except Exception as e:
             print(e)
             return Response(
                 {
                     'detail': "Something went wrong!",
-                    "code": "internal_error"
+                    'code': "internal_error"
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -705,12 +857,49 @@ class CourseRoomPreferenceDetailView(generics.RetrieveUpdateDestroyAPIView):
                 },
                 status=status.HTTP_200_OK
             )
+        except PermissionDenied as pd:
+            return Response(
+                {
+                    'detail': str(pd),
+                    'code': 'permission_denied'
+                },
+                status=status.HTTP_403_FORBIDDEN
+            )
+        except serializers.ValidationError as ve:
+            # Extract error message properly
+            if hasattr(ve, 'detail'):
+                if isinstance(ve.detail, dict) and 'detail' in ve.detail:
+                    # Case when we raised our custom format
+                    return Response(
+                        {
+                            'detail': ve.detail['detail'],
+                            'code': ve.detail.get('code', 'validation_error')
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+                else:
+                    # Standard validation error
+                    return Response(
+                        {
+                            'detail': str(ve.detail),
+                            'code': 'validation_error'
+                        },
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            else:
+                return Response(
+                    {
+                        'detail': str(ve),
+                        'code': 'validation_error'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
         except Exception as e:
             print(e)
             return Response(
                 {
-                    'detail': "Something went wrong!",
-                    "code": "internal_error"
+                    'detail': str(e) if hasattr(e, '__str__') else "Something went wrong!",
+                    'code': "internal_error"
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
@@ -723,14 +912,22 @@ class CourseRoomPreferenceDetailView(generics.RetrieveUpdateDestroyAPIView):
                 {
                     'detail': "Room preference deleted successfully."
                 },
-                status=status.HTTP_200_OK
+                status=status.HTTP_204_NO_CONTENT
+            )
+        except PermissionDenied as pd:
+            return Response(
+                {
+                    'detail': str(pd),
+                    'code': 'permission_denied'
+                },
+                status=status.HTTP_403_FORBIDDEN
             )
         except Exception as e:
             print(e)
             return Response(
                 {
                     'detail': "Something went wrong!",
-                    "code": "internal_error"
+                    'code': "internal_error"
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

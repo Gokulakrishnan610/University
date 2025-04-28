@@ -57,7 +57,6 @@ export const useGetDepartment = (id: number) => {
   );
 };
 
-// Get the current user's department
 export const useGetCurrentDepartment = () => {
   return useQueryData<DepartmentDetails>(
     ['current-department'],
@@ -73,7 +72,6 @@ export const useGetCurrentDepartment = () => {
   );
 };
 
-// Create a new department
 export const useCreateDepartment = (onSuccess?: () => void) => {
   return useMutationData(
     ['createDepartment'],
@@ -99,7 +97,6 @@ export const useCreateDepartment = (onSuccess?: () => void) => {
   );
 };
 
-// Update an existing department
 export const useUpdateDepartment = (id: number, onSuccess?: () => void) => {
   return useMutationData(
     ['updateDepartment', id.toString()],
@@ -125,7 +122,6 @@ export const useUpdateDepartment = (id: number, onSuccess?: () => void) => {
   );
 };
 
-// Delete a department
 export const useDeleteDepartment = (id: number, onSuccess?: () => void) => {
   return useMutationData(
     ['deleteDepartment', id.toString()],

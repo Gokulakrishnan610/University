@@ -220,8 +220,52 @@ class CourseRoomPreferenceSerializer(serializers.ModelSerializer):
             'room_detail',
             'preference_level',
             'preferred_for',
-            'tech_level_preference'
+            'tech_level_preference',
+            'lab_type',
+            'lab_description'
         ]
+        
+    def validate(self, data):
+        preferred_for = data.get('preferred_for')
+        
+        # If technical lab is selected, lab_type should be provided
+        if preferred_for == 'TL' and not data.get('lab_type'):
+            raise serializers.ValidationError({
+                'detail': 'Lab type is required for technical labs',
+                'code': 'invalid_lab_type'
+            })
+            
+        # Update tech_level_preference based on lab_type for technical labs
+        if preferred_for == 'TL' and data.get('lab_type'):
+            lab_type_to_tech_level = {
+                'low-end': 'Basic',
+                'mid-end': 'Advanced',
+                'high-end': 'High-tech'
+            }
+            data['tech_level_preference'] = lab_type_to_tech_level.get(data['lab_type'], 'Basic')
+            
+            # Set default lab description if not provided
+            if not data.get('lab_description'):
+                lab_descriptions = {
+                    'low-end': 'For programming subjects, basic coding, and web development',
+                    'mid-end': 'For OS, database, and computation-intensive subjects',
+                    'high-end': 'For ML, NLP, graphics, design, and resource-intensive subjects'
+                }
+                data['lab_description'] = lab_descriptions.get(data['lab_type'], '')
+        
+        # Only require room_id for Non-Technical Lab
+        if preferred_for == 'NTL' and not data.get('room_id'):
+            raise serializers.ValidationError({
+                'detail': 'Room selection is required for non-technical labs',
+                'code': 'missing_room'
+            })
+        
+        # For GENERAL and TL, room_id is optional (we'll use the course's associated rooms)
+        if preferred_for in ['GENERAL', 'TL'] and not data.get('room_id'):
+            # Set a default placeholder value to pass model validation
+            data['room_id'] = None
+        
+        return data
 
 class CourseResourceAllocationSerializer(serializers.ModelSerializer):
     course_detail = serializers.SerializerMethodField()

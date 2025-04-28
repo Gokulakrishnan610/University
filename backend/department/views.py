@@ -12,6 +12,30 @@ from authentication.models import User
 from teacher.models import Teacher
 from student.models import Student
 
+# Helper function to determine department from user
+def get_user_department(user):
+    department_id = None
+    department = None
+    
+    if user.user_type == 'teacher':
+        try:
+            teacher = Teacher.objects.get(teacher_id=user)
+            if teacher.dept_id:
+                department_id = teacher.dept_id.id
+                department = teacher.dept_id
+        except Teacher.DoesNotExist:
+            pass
+    elif user.user_type == 'student':
+        try:
+            student = Student.objects.get(student_id=user)
+            if student.dept_id:
+                department_id = student.dept_id.id
+                department = student.dept_id
+        except Student.DoesNotExist:
+            pass
+            
+    return department_id, department
+
 class DepartmentListCreateView(ListCreateAPIView):
     """
     API View to list all departments or create a new department.
@@ -97,6 +121,36 @@ class DepartmentDetailView(RetrieveUpdateDestroyAPIView):
             "message": "Department deleted successfully."
         }, status=status.HTTP_200_OK)
 
+class CurrentDepartmentView(APIView):
+    """
+    API View to get the current user's department.
+    """
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTCookieAuthentication]
+    
+    def get(self, request, *args, **kwargs):
+        """
+        Get the current user's department.
+        """
+        user = request.user
+        
+        # Get the department ID and object
+        department_id, department = get_user_department(user)
+        
+        if not department:
+            return Response({
+                "status": "error",
+                "message": "User has no associated department."
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        # Serialize the department data
+        serializer = DepartmentSerializer(department)
+        
+        return Response({
+            "status": "success",
+            "data": serializer.data
+        }, status=status.HTTP_200_OK)
+
 class DepartmentCoursesView(APIView):
     """
     API View to get courses for the current user's department.
@@ -112,22 +166,7 @@ class DepartmentCoursesView(APIView):
         user = request.user
         
         # Determine the user's department
-        department_id = None
-        
-        if user.user_type == 'teacher':
-            try:
-                teacher = Teacher.objects.get(teacher_id=user)
-                if teacher.dept_id:
-                    department_id = teacher.dept_id.id
-            except Teacher.DoesNotExist:
-                pass
-        elif user.user_type == 'student':
-            try:
-                student = Student.objects.get(student_id=user)
-                if student.dept_id:
-                    department_id = student.dept_id.id
-            except Student.DoesNotExist:
-                pass
+        department_id, _ = get_user_department(user)
         
         if not department_id:
             return Response({

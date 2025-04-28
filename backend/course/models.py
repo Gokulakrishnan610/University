@@ -81,12 +81,19 @@ class CourseRoomPreference(models.Model):
         ('Advanced', 'Advanced'),
         ('High-tech', 'High-tech')
     ]
+    LAB_TYPE = [
+        ('low-end', 'Low-End - For programming and basic coding'),
+        ('mid-end', 'Mid-End - For OS and computation-intensive subjects'),
+        ('high-end', 'High-End - For ML, NLP, and resource-intensive subjects')
+    ]
     
     course_id = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='room_preferences')
-    room_id = models.ForeignKey("rooms.Room", on_delete=models.CASCADE)
+    room_id = models.ForeignKey("rooms.Room", on_delete=models.CASCADE, null=True, blank=True)
     preference_level = models.IntegerField("Preference Level", default=0)
     preferred_for = models.CharField("Preferred For", max_length=50, choices=ROOM_TYPE, default='GENERAL')
     tech_level_preference = models.CharField("Tech Level Preference", max_length=50, choices=TECH_LEVEL, default='None')
+    lab_type = models.CharField("Lab Type", max_length=50, choices=LAB_TYPE, null=True, blank=True)
+    lab_description = models.TextField("Lab Description", null=True, blank=True)
     
     def __str__(self):
         return f"{self.course_id} - Room: {self.room_id} (Level: {self.preference_level})"

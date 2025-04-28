@@ -58,6 +58,10 @@ const StudentDetails = () => {
                     <p className="text-sm font-medium text-muted-foreground">Roll Number</p>
                     <p className="text-lg font-medium">{student?.roll_no || 'Not assigned'}</p>
                   </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Dept Detail</p>
+                    <p className="text-lg font-medium">{student?.dept_detail.dept_name || 'Not assigned'}</p>
+                  </div>
                   <Separator />
                 </div>
               </CardContent>

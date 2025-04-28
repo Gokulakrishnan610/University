@@ -1,10 +1,7 @@
-import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { useGetCourse } from "@/action/course";
 import { useGetRooms } from "@/action/room";
-import { RoomPreferenceList } from "@/app/main/courses/[id]/room-preferences/RoomPreferenceList";
-import { Button } from "@/components/ui/button";
-import { ChevronLeft } from "lucide-react";
+import { RoomPreferenceList } from "@/app/main/courses/[id]/room-preferences/RoomPreferenceList";;
 
 export default function CourseRoomPreferencesPage() {
   const { id } = useParams<{ id: string }>();

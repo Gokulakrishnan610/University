@@ -213,13 +213,7 @@ export default function AllCoursesPage() {
   };
   
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <Button variant="outline" onClick={() => navigate('/courses')}>
-          <ChevronLeft className="mr-2 h-4 w-4" /> Back to Course Management
-        </Button>
-      </div>
-      
+    <div className="space-y-6">      
       <Card className="shadow-md border-t-4 border-t-primary">
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">

@@ -22,6 +22,7 @@ import {
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
+
 export function TeacherCourseAssignment() {
     const navigate = useNavigate();
     const [assignmentToDelete, setAssignmentToDelete] = useState<TCAssignment | null>(null);
@@ -29,8 +30,6 @@ export function TeacherCourseAssignment() {
     // Search and filter states
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [selectedTeacherFilter, setSelectedTeacherFilter] = useState<string[]>([]);
-    const [selectedSemesterFilter, setSelectedSemesterFilter] = useState<string[]>([]);
-    const [selectedAcademicYearFilter, setSelectedAcademicYearFilter] = useState<string[]>([]);
     const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string[]>([]);
 
     const {
@@ -71,13 +70,6 @@ export function TeacherCourseAssignment() {
                 courseName.includes(searchLower) ||
                 courseCode.includes(searchLower);
 
-            // Apply filters
-            const matchesSemester = selectedSemesterFilter.length === 0 ||
-                selectedSemesterFilter.includes(assignment.semester?.toString() || '');
-
-            const matchesAcademicYear = selectedAcademicYearFilter.length === 0 ||
-                selectedAcademicYearFilter.includes(assignment.academic_year?.toString() || '');
-
             const matchesDepartment = selectedDepartmentFilter.length === 0 ||
                 selectedDepartmentFilter.includes(assignment.course_detail?.teaching_dept_detail?.dept_name || '');
 
@@ -86,9 +78,9 @@ export function TeacherCourseAssignment() {
                     `${assignment.teacher_detail.teacher_id.first_name || ''} ${assignment.teacher_detail.teacher_id.last_name || ''}`.trim()
                 ));
 
-            return matchesSearch && matchesSemester && matchesAcademicYear && matchesDepartment && matchesTeacher;
+            return matchesSearch && matchesDepartment && matchesTeacher;
         });
-    }, [assignments, searchQuery, selectedSemesterFilter, selectedAcademicYearFilter, selectedDepartmentFilter, selectedTeacherFilter]);
+    }, [assignments, searchQuery, selectedDepartmentFilter, selectedTeacherFilter]);
 
     const handleDelete = () => {
         if (!assignmentToDelete) return;
@@ -114,15 +106,13 @@ export function TeacherCourseAssignment() {
 
     const clearFilters = () => {
         setSearchQuery('');
-        setSelectedSemesterFilter([]);
-        setSelectedAcademicYearFilter([]);
-        setSelectedDepartmentFilter([]);
         setSelectedTeacherFilter([]);
+        setSelectedDepartmentFilter([]);
     };
 
     // Function to export assignments as CSV
     const exportToCSV = () => {
-        const headers = ['Teacher', 'Course', 'Course Code', 'Department', 'Semester', 'Academic Year', 'Student Count'];
+        const headers = ['Teacher', 'Course', 'Course Code', 'Department'];
 
         const csvRows = [
             headers.join(','),
@@ -130,10 +120,7 @@ export function TeacherCourseAssignment() {
                 `"${a.teacher_detail.teacher_id.first_name} ${a.teacher_detail.teacher_id.last_name}"`,
                 `"${a.course_detail.course_detail.course_name}"`,
                 `"${a.course_detail.course_detail.course_id}"`,
-                `"${a.course_detail.teaching_dept_detail.dept_name}"`,
-                a.semester,
-                a.academic_year,
-                a.student_count || 0
+                `"${a.course_detail.teaching_dept_detail.dept_name}"`
             ].join(','))
         ];
 
@@ -216,62 +203,6 @@ export function TeacherCourseAssignment() {
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline">
                                         <Filter className="mr-2 h-4 w-4" />
-                                        Semester
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-56">
-                                    {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
-                                        <DropdownMenuItem key={sem}>
-                                            <Checkbox
-                                                id={`sem-${sem}`}
-                                                checked={selectedSemesterFilter.includes(sem.toString())}
-                                                onCheckedChange={(checked) => {
-                                                    if (checked) {
-                                                        setSelectedSemesterFilter([...selectedSemesterFilter, sem.toString()]);
-                                                    } else {
-                                                        setSelectedSemesterFilter(selectedSemesterFilter.filter(s => s !== sem.toString()));
-                                                    }
-                                                }}
-                                                className="mr-2"
-                                            />
-                                            <Label htmlFor={`sem-${sem}`}>Semester {sem}</Label>
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline">
-                                        <Filter className="mr-2 h-4 w-4" />
-                                        Academic Year
-                                    </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent className="w-56">
-                                    {Array.from(new Set(assignments.map(a => a.academic_year))).map(year => (
-                                        <DropdownMenuItem key={year}>
-                                            <Checkbox
-                                                id={`year-${year}`}
-                                                checked={selectedAcademicYearFilter.includes(year.toString())}
-                                                onCheckedChange={(checked) => {
-                                                    if (checked) {
-                                                        setSelectedAcademicYearFilter([...selectedAcademicYearFilter, year.toString()]);
-                                                    } else {
-                                                        setSelectedAcademicYearFilter(selectedAcademicYearFilter.filter(y => y !== year.toString()));
-                                                    }
-                                                }}
-                                                className="mr-2"
-                                            />
-                                            <Label htmlFor={`year-${year}`}>{year}</Label>
-                                        </DropdownMenuItem>
-                                    ))}
-                                </DropdownMenuContent>
-                            </DropdownMenu>
-
-                            <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                    <Button variant="outline">
-                                        <Filter className="mr-2 h-4 w-4" />
                                         Department
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -298,13 +229,12 @@ export function TeacherCourseAssignment() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            {(searchQuery || selectedTeacherFilter.length > 0 || selectedSemesterFilter.length > 0 ||
-                                selectedAcademicYearFilter.length > 0 || selectedDepartmentFilter.length > 0) && (
-                                    <Button variant="ghost" onClick={clearFilters} className="ml-auto">
-                                        <X className="mr-2 h-4 w-4" />
-                                        Clear Filters
-                                    </Button>
-                                )}
+                            {(searchQuery || selectedTeacherFilter.length > 0 || selectedDepartmentFilter.length > 0) && (
+                                <Button variant="ghost" onClick={clearFilters} className="ml-auto">
+                                    <X className="mr-2 h-4 w-4" />
+                                    Clear Filters
+                                </Button>
+                            )}
                         </div>
                     </div>
 
@@ -324,9 +254,6 @@ export function TeacherCourseAssignment() {
                                     <TableHead>Teacher</TableHead>
                                     <TableHead>Course</TableHead>
                                     <TableHead>Department</TableHead>
-                                    <TableHead>Semester</TableHead>
-                                    <TableHead>Academic Year</TableHead>
-                                    <TableHead>Student Count</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
@@ -354,9 +281,6 @@ export function TeacherCourseAssignment() {
                                                 {assignment.course_detail?.teaching_dept_detail?.dept_name}
                                             </Badge>
                                         </TableCell>
-                                        <TableCell>Semester {assignment.semester}</TableCell>
-                                        <TableCell>{assignment.academic_year}</TableCell>
-                                        <TableCell>{assignment.student_count || 0}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <Button

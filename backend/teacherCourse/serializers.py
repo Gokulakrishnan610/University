@@ -40,14 +40,13 @@ class TeacherCourseSerializer(serializers.ModelSerializer):
                 "Teacher must be assigned to a department before being assigned to a course."
             )
 
-        # Check for existing assignments
+        # Check for existing assignments regardless of semester
         if TeacherCourse.objects.filter(
             teacher_id=teacher_id,
-            course_id=course_id,
-            semester=semester
+            course_id=course_id
         ).exclude(pk=self.instance.pk if self.instance else None).exists():
             raise serializers.ValidationError(
-                "This teacher is already assigned to this course for the selected semester."
+                "This teacher is already assigned to this course. A teacher cannot be assigned to the same course multiple times."
             )
 
         # Check if teacher and course departments match

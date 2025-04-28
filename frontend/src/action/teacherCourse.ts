@@ -1,7 +1,18 @@
 import { useQuery, useMutation } from '@tanstack/react-query';
 import api from './api';
+import { z } from 'zod';
 
-export interface TeacherCourseAssignment {
+// Define a Zod schema for validation
+const TeacherCourseAssignmentSchema = z.object({
+    id: z.number(),
+    teacher_id: z.number().optional(),
+    course_id: z.number().optional(),
+    semester: z.number().optional(),
+    academic_year: z.number().optional(), 
+    student_count: z.number().optional()
+});
+
+export type TeacherCourseAssignment = {
     id: number;
     teacher_detail: {
         id: number;
@@ -61,9 +72,9 @@ export interface TeacherCourseAssignment {
         regulation: string;
         course_type: string;
     };
-    semester: number;
-    academic_year: number;
-    student_count: number;
+    semester?: number;
+    academic_year?: number;
+    student_count?: number;
 }
 
 // Get all teacher-course assignments
@@ -93,11 +104,20 @@ export const useCreateTeacherCourseAssignment = (onSuccess?: () => void) => {
         mutationFn: async (data: {
             teacher_id: number;
             course_id: number;
-            semester: number;
-            academic_year: number;
-            student_count: number;
+            semester?: number;
+            academic_year?: number;
+            student_count?: number;
         }) => {
-            const response = await api.post('/api/teacher-courses/', data);
+            // Use default values if not provided
+            const payload = {
+                teacher_id: data.teacher_id,
+                course_id: data.course_id,
+                semester: data.semester || 1,
+                academic_year: data.academic_year || new Date().getFullYear(),
+                student_count: data.student_count || 0
+            };
+            
+            const response = await api.post('/api/teacher-courses/', payload);
             return response.data;
         },
         onSuccess: () => {

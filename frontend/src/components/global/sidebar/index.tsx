@@ -94,7 +94,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
 
       <div
         className={cn(
-          "fixed inset-y-0 left-0 z-50 w-72 h-full border-r bg-background transition-transform duration-300 md:translate-x-0",
+          "fixed inset-y-0 left-0 z-50 w-60 h-full border-r bg-background transition-transform duration-300 md:translate-x-0",
           isOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >

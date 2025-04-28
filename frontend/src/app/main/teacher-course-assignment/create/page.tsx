@@ -4,7 +4,6 @@ import { useGetTeachers, Teacher } from '@/action/teacher';
 import { useGetCourses, Course } from '@/action/course';
 import { useGetTeacherCourseAssignments, useCreateTeacherCourseAssignment } from '@/action/teacherCourse';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -21,19 +20,37 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm } from 'react-hook-form';
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+
+// Define the Zod schema for teacher course assignment
+const teacherCourseFormSchema = z.object({
+    teacher_id: z.string().min(1, "Teacher is required"),
+    course_id: z.string().min(1, "Course is required"),
+});
+
+type TeacherCourseFormValues = z.infer<typeof teacherCourseFormSchema>;
 
 export default function CreateTeacherCourseAssignment() {
     const navigate = useNavigate();
     const [selectedTeacher, setSelectedTeacher] = useState<string>('');
     const [selectedCourse, setSelectedCourse] = useState<string>('');
-    const [semester, setSemester] = useState<string>('');
-    const [academicYear, setAcademicYear] = useState<string>('');
-    const [studentCount, setStudentCount] = useState<string>('0');
 
     // Fetch data with loading states
     const { data: teachers = [], isPending: teachersLoading } = useGetTeachers();
     const { data: courses = [], isPending: coursesLoading } = useGetCourses();
     const { data: assignments = [], isPending: assignmentsLoading } = useGetTeacherCourseAssignments();
+
+    // Setup form with Zod validation
+    const form = useForm<TeacherCourseFormValues>({
+        resolver: zodResolver(teacherCourseFormSchema),
+        defaultValues: {
+            teacher_id: "",
+            course_id: "",
+        },
+    });
 
     // Create assignment mutation
     const createAssignment = useCreateTeacherCourseAssignment(() => {
@@ -83,14 +100,8 @@ export default function CreateTeacherCourseAssignment() {
         selectedCourse ? parseInt(selectedCourse) : undefined
     );
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!selectedTeacher || !selectedCourse || !semester || !academicYear) {
-            toast.error('Please fill all required fields');
-            return;
-        }
-
-        const selectedCourseData = courses.find(c => c.id.toString() === selectedCourse);
+    const onSubmit = (data: TeacherCourseFormValues) => {
+        const selectedCourseData = courses.find(c => c.id.toString() === data.course_id);
         if (!selectedCourseData) return;
 
         if (teacherWorkload && (teacherWorkload.availableHours < selectedCourseData.credits)) {
@@ -98,19 +109,47 @@ export default function CreateTeacherCourseAssignment() {
             return;
         }
 
+        // Check if this teacher is already assigned to this course
+        const existingAssignment = assignments.find(a => 
+            a.teacher_detail?.id?.toString() === data.teacher_id && 
+            a.course_detail?.id?.toString() === data.course_id
+        );
+
+        if (existingAssignment) {
+            toast.error('This teacher is already assigned to this course', {
+                description: 'A teacher cannot be assigned to the same course multiple times'
+            });
+            return;
+        }
+
         createAssignment.mutate({
-            teacher_id: parseInt(selectedTeacher),
-            course_id: parseInt(selectedCourse),
-            semester: parseInt(semester),
-            academic_year: parseInt(academicYear),
-            student_count: parseInt(studentCount)
+            teacher_id: parseInt(data.teacher_id),
+            course_id: parseInt(data.course_id),
+            semester: 1, // Default value
+            academic_year: new Date().getFullYear(), // Default current year
+            student_count: 0 // Default value
         }, {
             onError: (error: any) => {
+                const errorMessage = error.response?.data?.non_field_errors?.[0] || 
+                                    error.response?.data?.detail || 
+                                    'An error occurred';
+                
                 toast.error('Failed to create assignment', {
-                    description: error.response?.data?.non_field_errors?.[0] || 'An error occurred'
+                    description: errorMessage
                 });
             }
         });
+    };
+
+    // Update the selected teacher and course when form values change
+    const handleTeacherChange = (value: string) => {
+        setSelectedTeacher(value);
+        form.setValue("teacher_id", value);
+    };
+
+    const handleCourseChange = (value: string) => {
+        setSelectedCourse(value);
+        form.setValue("course_id", value);
     };
 
     return (
@@ -128,7 +167,7 @@ export default function CreateTeacherCourseAssignment() {
                             <Label>Select Teacher</Label>
                             <Select
                                 value={selectedTeacher}
-                                onValueChange={setSelectedTeacher}
+                                onValueChange={handleTeacherChange}
                                 disabled={teachersLoading}
                             >
                                 <SelectTrigger className="w-full">
@@ -172,9 +211,6 @@ export default function CreateTeacherCourseAssignment() {
                                                 <div key={assignment.id} className="flex justify-between items-center p-2 bg-muted/30 rounded-md">
                                                     <div>
                                                         <p className="font-medium">{assignment.course_detail?.course_detail?.course_name}</p>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            Semester {assignment.semester} • {assignment.academic_year}
-                                                        </p>
                                                     </div>
                                                     <Badge variant="secondary">
                                                         {assignment.course_detail?.credits} hrs
@@ -197,90 +233,58 @@ export default function CreateTeacherCourseAssignment() {
                             <CardDescription>Assign the selected teacher to a course</CardDescription>
                         </CardHeader>
                         <CardContent>
-                            <form onSubmit={handleSubmit} className="space-y-4">
-                                <div className="space-y-2">
-                                    <Label htmlFor="course">Course</Label>
-                                    <Select
-                                        value={selectedCourse}
-                                        onValueChange={setSelectedCourse}
-                                        disabled={!selectedTeacher || coursesLoading}
-                                    >
-                                        <SelectTrigger className="w-full">
-                                            <SelectValue placeholder={coursesLoading ? "Loading courses..." : "Select a course"} />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {availableCourses.map((course: Course) => (
-                                                <SelectItem key={course.id} value={course.id.toString()}>
-                                                    <div className="flex flex-col">
-                                                        <span>{course.course_detail?.course_name}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            {course.course_detail?.course_id} • {course.credits} credits
-                                                        </span>
-                                                    </div>
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="space-y-2">
-                                        <Label htmlFor="semester">Semester</Label>
-                                        <Select
-                                            value={semester}
-                                            onValueChange={setSemester}
-                                        >
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Select semester" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {[1, 2, 3, 4, 5, 6, 7, 8].map(sem => (
-                                                    <SelectItem key={sem} value={sem.toString()}>
-                                                        Semester {sem}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-
-                                    <div className="space-y-2">
-                                        <Label htmlFor="academicYear">Academic Year</Label>
-                                        <Input
-                                            type="number"
-                                            id="academicYear"
-                                            value={academicYear}
-                                            onChange={(e) => setAcademicYear(e.target.value)}
-                                            placeholder="e.g., 2024"
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <Label htmlFor="studentCount">Student Count</Label>
-                                    <Input
-                                        type="number"
-                                        id="studentCount"
-                                        value={studentCount}
-                                        onChange={(e) => setStudentCount(e.target.value)}
-                                        placeholder="Number of students"
+                            <Form {...form}>
+                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="course_id"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Course</FormLabel>
+                                                <FormControl>
+                                                    <Select
+                                                        value={selectedCourse}
+                                                        onValueChange={handleCourseChange}
+                                                        disabled={!selectedTeacher || coursesLoading}
+                                                    >
+                                                        <SelectTrigger className="w-full">
+                                                            <SelectValue placeholder={coursesLoading ? "Loading courses..." : "Select a course"} />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            {availableCourses.map((course: Course) => (
+                                                                <SelectItem key={course.id} value={course.id.toString()}>
+                                                                    <div className="flex flex-col">
+                                                                        <span>{course.course_detail?.course_name}</span>
+                                                                        <span className="text-xs text-muted-foreground">
+                                                                            {course.course_detail?.course_id} • {course.credits} credits
+                                                                        </span>
+                                                                    </div>
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
                                     />
-                                </div>
 
-                                <Button
-                                    type="submit"
-                                    className="w-full"
-                                    disabled={createAssignment.isPending}
-                                >
-                                    {createAssignment.isPending ? (
-                                        <>
-                                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            Creating Assignment...
-                                        </>
-                                    ) : (
-                                        'Create Assignment'
-                                    )}
-                                </Button>
-                            </form>
+                                    <Button
+                                        type="submit"
+                                        className="w-full"
+                                        disabled={createAssignment.isPending}
+                                    >
+                                        {createAssignment.isPending ? (
+                                            <>
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                                Creating Assignment...
+                                            </>
+                                        ) : (
+                                            'Create Assignment'
+                                        )}
+                                    </Button>
+                                </form>
+                            </Form>
                         </CardContent>
                     </Card>
 
@@ -319,18 +323,12 @@ export default function CreateTeacherCourseAssignment() {
                                                     <TableHeader>
                                                         <TableRow>
                                                             <TableHead>Teacher</TableHead>
-                                                            <TableHead>Semester</TableHead>
-                                                            <TableHead>Year</TableHead>
-                                                            <TableHead>Students</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
                                                         {courseStats.teachers.map((teacher) => (
                                                             <TableRow key={teacher.teacher_id}>
                                                                 <TableCell>{teacher.teacher_name}</TableCell>
-                                                                <TableCell>Semester {teacher.semester}</TableCell>
-                                                                <TableCell>{teacher.academic_year}</TableCell>
-                                                                <TableCell>{teacher.student_count}</TableCell>
                                                             </TableRow>
                                                         ))}
                                                     </TableBody>

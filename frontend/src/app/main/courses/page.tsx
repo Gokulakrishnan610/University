@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
@@ -41,8 +41,8 @@ import {
   useCreateCourse,
   Course 
 } from '@/action/course';
-import { useGetDepartments } from '@/action/department';
-import { useGetCourseMasters } from '@/action/courseMaster'
+import { useGetDepartments, useGetCurrentDepartment } from '@/action/department';
+import { useGetCourseMasters, useCreateCourseMaster } from '@/action/courseMaster'
 import {
   Dialog,
   DialogContent,
@@ -54,19 +54,35 @@ import {
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import CourseForm, { CourseFormValues } from './course-form';
+import CourseMasterForm, { CourseMasterFormValues } from './course-master-form';
 import { getRelationshipBadgeColor, getRelationshipShortName } from '@/lib/utils';
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/radio-group";
 
 export default function CourseManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddDialog, setShowAddDialog] = useState(false);
+  const [showAddCourseMasterDialog, setShowAddCourseMasterDialog] = useState(false);
+  const [courseCreationOption, setCourseCreationOption] = useState<'select' | 'create'>('select');
+  const [defaultDeptId, setDefaultDeptId] = useState<number | undefined>(undefined);
   const navigate = useNavigate();
   
   const { data: departmentData, isPending, refetch } = useGetCurrentDepartmentCourses();
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
-  const { data: courseMastersData, isPending: loadingCourseMasters } = useGetCourseMasters();
+  const { data: courseMastersData, isPending: loadingCourseMasters, refetch: refetchCourseMasters } = useGetCourseMasters();
+  const { data: currentDepartment, isPending: loadingCurrentDept } = useGetCurrentDepartment();
   
   const departments = departmentsData || [];
   const courseMasters = courseMastersData || [];
+  
+  // Set default department ID when current department is loaded
+  useEffect(() => {
+    if (currentDepartment && currentDepartment.id) {
+      setDefaultDeptId(currentDepartment.id);
+    }
+  }, [currentDepartment]);
   
   const allOwnedCourses = departmentData?.owned_courses?.data || [];
   const allTeachingCourses = departmentData?.teaching_courses?.data || [];
@@ -115,8 +131,43 @@ export default function CourseManagementPage() {
     setShowAddDialog(false);
   });
   
+  // For creating new course master
+  const { mutate: createCourseMaster, isPending: isCreatingCourseMaster } = useCreateCourseMaster(() => {
+    refetchCourseMasters();
+    toast.success("Course master created successfully");
+    setShowAddCourseMasterDialog(false);
+    // Open the add course dialog with select option after creating a course master
+    setShowAddDialog(true);
+    setCourseCreationOption('select');
+  });
+  
   const handleCreateCourse = (values: CourseFormValues) => {
     createCourse(values);
+  };
+  
+  const handleCreateCourseMaster = (values: CourseMasterFormValues) => {
+    createCourseMaster({
+      course_id: values.course_id,
+      course_name: values.course_name,
+      course_dept_id: values.course_dept_id
+    });
+  };
+  
+  const handleOpenCourseDialog = () => {
+    setCourseCreationOption('select');
+    setShowAddDialog(true);
+  };
+  
+  const handleOpenCreateCourseMasterDialog = () => {
+    setShowAddCourseMasterDialog(true);
+  };
+  
+  const handleCourseCreationOptionChange = (option: 'select' | 'create') => {
+    setCourseCreationOption(option);
+    if (option === 'create') {
+      setShowAddDialog(false);
+      setShowAddCourseMasterDialog(true);
+    }
   };
   
   const handleNavigateToDetail = (courseId: number, e?: React.MouseEvent) => {
@@ -249,29 +300,27 @@ export default function CourseManagementPage() {
                 </TabsTrigger>
               </TabsList>
               
-              <div className="flex items-center gap-2 w-full sm:w-auto">
-                <div className="relative flex-1 sm:flex-initial">
-                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <div className="flex items-center justify-between mb-4 gap-2">
+                <div className="relative w-full max-w-sm">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground " />
                   <Input
                     type="search"
                     placeholder="Search courses..."
-                    className="pl-8 w-full sm:w-[250px]"
+                    className="w-full pl-8 pr-12"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                   />
                   {searchQuery && (
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="absolute right-1 top-1 h-7 w-7" 
+                    <Button
+                      variant="ghost"
                       onClick={handleClearSearch}
+                      className="absolute right-0 top-0 h-9 px-2"
                     >
-                      <span className="sr-only">Clear search</span>
-                      ×
+                      Clear
                     </Button>
                   )}
                 </div>
-                <Button className="flex gap-2 items-center whitespace-nowrap" onClick={() => setShowAddDialog(true)}>
+                <Button className="flex gap-2 items-center whitespace-nowrap" onClick={handleOpenCourseDialog}>
                   <PlusCircle className="h-4 w-4" />
                   <span>Add Course</span>
                 </Button>
@@ -772,29 +821,70 @@ export default function CourseManagementPage() {
         </CardContent>
       </Card>
       
-      {/* Add Course Dialog */}
+      {/* Course Selection Dialog */}
       <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="sm:max-w-[600px] overflow-hidden">       
-          <ScrollArea className='h-[600px]'>
- 
+        <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <PlusCircle className="h-5 w-5 text-primary" />
-              Add New Course
-            </DialogTitle>
+            <DialogTitle className="text-xl">Add Course</DialogTitle>
             <DialogDescription>
-              Create a new course offering for your department
+              Create a new course instance for your curriculum
             </DialogDescription>
           </DialogHeader>
           
-          <CourseForm 
-            departments={departments}
-            courseMasters={courseMasters}
-            isLoading={isCreating || loadingDepartments || loadingCourseMasters}
-            onSubmit={handleCreateCourse}
-            onCancel={() => setShowAddDialog(false)}
-            submitLabel="Create Course"
-          />
+          <ScrollArea className="max-h-[70vh]">
+          <div className="mb-2">
+            <h3 className="text-sm font-medium mb-3">Select an option:</h3>
+            <RadioGroup 
+              defaultValue={courseCreationOption} 
+              value={courseCreationOption} 
+              onValueChange={(value) => handleCourseCreationOptionChange(value as 'select' | 'create')}
+              className="flex flex-col space-y-2"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="select" id="select-option" />
+                <label htmlFor="select-option" className="text-sm cursor-pointer">
+                  Select from existing course catalog
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="create" id="create-option" />
+                <label htmlFor="create-option" className="text-sm cursor-pointer">
+                  Create a new course in the catalog
+                </label>
+              </div>
+            </RadioGroup>
+          </div>
+            <CourseForm
+              departments={departments}
+              courseMasters={courseMasters}
+              isLoading={isCreating}
+              onSubmit={handleCreateCourse}
+              onCancel={() => setShowAddDialog(false)}
+              submitLabel="Create Course"
+            />
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Course Master Creation Dialog */}
+      <Dialog open={showAddCourseMasterDialog} onOpenChange={setShowAddCourseMasterDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle className="text-xl">Add New Course to Catalog</DialogTitle>
+            <DialogDescription>
+              Create a new course in the course catalog
+            </DialogDescription>
+          </DialogHeader>
+          
+          <ScrollArea className="max-h-[70vh]">
+            <CourseMasterForm
+              departments={departments}
+              defaultValues={defaultDeptId ? { course_dept_id: defaultDeptId } : undefined}
+              isLoading={isCreatingCourseMaster}
+              onSubmit={handleCreateCourseMaster}
+              onCancel={() => setShowAddCourseMasterDialog(false)}
+              submitLabel="Create Course Master"
+            />
           </ScrollArea>
         </DialogContent>
       </Dialog>

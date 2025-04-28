@@ -22,9 +22,8 @@ const StudentManagement = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   // Fetch students data
-  const { data: students, isPending: isLoading, refetch } = useGetStudents();
-
-  // Delete student mutation
+  const { data: students, isPending: isLoading, refetch }= useGetStudents();
+  
   const { mutate: deleteStudent } = useDeleteStudent(0, () => {
     refetch();
   });
@@ -94,7 +93,7 @@ const StudentManagement = () => {
                     onClick={() => navigate(`/students/${student.id}`)}
                   >
                     <TableCell>{student.roll_no || 'N/A'}</TableCell>
-                    <TableCell>{student.dept || 'N/A'}</TableCell>
+                    <TableCell>{student.dept_detail.dept_name || 'N/A'}</TableCell>
                     <TableCell>{student.batch}</TableCell>
                     <TableCell>{student.current_semester}</TableCell>
                     <TableCell>
