@@ -14,5 +14,11 @@ urlpatterns = [
     path('pop/', views.TeacherListView.as_view(queryset=views.Teacher.objects.filter(teacher_role='POP')), name='pop-teacher-list'),
     path('industry-professionals/', views.TeacherListView.as_view(queryset=views.Teacher.objects.filter(is_industry_professional=True)), name='industry-professional-list'),
     
+    # New endpoints for resignation management and placeholder teachers
+    path('placeholder/create/', views.CreatePlaceholderTeacher.as_view(), name='create-placeholder-teacher'),
+    path('resigning/', views.TeacherListView.as_view(queryset=views.Teacher.objects.filter(resignation_status='resigning')), name='resigning-teachers'),
+    path('resigned/', views.TeacherListView.as_view(queryset=views.Teacher.objects.filter(resignation_status='resigned')), name='resigned-teachers'),
+    path('placeholders/', views.TeacherListView.as_view(queryset=views.Teacher.objects.filter(is_placeholder=True)), name='placeholder-teachers'),
+    
     path('', include(router.urls)),
 ]

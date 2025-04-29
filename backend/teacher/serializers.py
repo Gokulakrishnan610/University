@@ -31,7 +31,11 @@ class TeacherSerializer(serializers.ModelSerializer):
             'teacher_working_hours',
             'is_industry_professional',
             'availability_type',
-            'availability_slots'
+            'availability_slots',
+            'resignation_status',
+            'resignation_date',
+            'is_placeholder',
+            'placeholder_description'
         ]
         read_only_fields = ['id', 'is_industry_professional']
 
@@ -50,7 +54,11 @@ class UpdateTeacherSerializer(serializers.ModelSerializer):
             'teacher_role',
             'teacher_specialisation',
             'teacher_working_hours',
-            'availability_type'
+            'availability_type',
+            'resignation_status',
+            'resignation_date',
+            'is_placeholder',
+            'placeholder_description'
         ]
         
     def update(self, instance, validated_data):
@@ -69,7 +77,11 @@ class CreateTeacherSerializer(serializers.ModelSerializer):
             'teacher_role',
             'teacher_specialisation',
             'teacher_working_hours',
-            'availability_type'
+            'availability_type',
+            'resignation_status',
+            'resignation_date',
+            'is_placeholder',
+            'placeholder_description'
         ]
     
     def validate(self, data):

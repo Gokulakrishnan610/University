@@ -76,7 +76,9 @@ export default function CreateTeacherCourseAssignment() {
     const teacherOptions: ComboboxOption[] = useMemo(() => {
         return teachers.map((teacher: Teacher) => ({
             value: teacher.id.toString(),
-            label: `${teacher.teacher_id?.first_name} ${teacher.teacher_id?.last_name} (${teacher.staff_code} - ${teacher.dept_id?.dept_name || 'No Department'})${teacher.is_industry_professional ? ' 🏢' : ''}`
+            label: teacher.is_placeholder 
+                ? `[Placeholder] ${teacher.placeholder_description || 'Unnamed'} (${teacher.staff_code || 'No Code'} - ${teacher.dept_id?.dept_name || 'No Department'})`
+                : `${teacher.teacher_id?.first_name} ${teacher.teacher_id?.last_name} (${teacher.staff_code} - ${teacher.dept_id?.dept_name || 'No Department'})${teacher.is_industry_professional ? ' 🏢' : ''}`
         }));
     }, [teachers]);
 

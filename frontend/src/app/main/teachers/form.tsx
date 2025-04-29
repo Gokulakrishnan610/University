@@ -51,6 +51,12 @@ const AVAILABILITY_TYPES = [
   { value: 'limited', label: 'Limited (Specific Days/Times)' },
 ];
 
+const RESIGNATION_STATUS = [
+  { value: 'active', label: 'Active' },
+  { value: 'resigning', label: 'Resigning/Notice Period' },
+  { value: 'resigned', label: 'Resigned' },
+];
+
 const formSchema = z.object({
   staff_code: z.string().optional(),
   teacher_role: z.string({ required_error: 'Role is required' }),
@@ -58,6 +64,8 @@ const formSchema = z.object({
   teacher_working_hours: z.number({ required_error: 'Working hours is required' }).min(1),
   dept: z.number().nullable().optional(),
   availability_type: z.enum(['regular', 'limited']).default('regular'),
+  resignation_status: z.enum(['active', 'resigning', 'resigned']).default('active'),
+  resignation_date: z.string().nullable().optional(),
 });
 
 interface TeacherFormProps {
@@ -101,7 +109,6 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
     updateTeacher(submissionData);
   };
 
-  // Get the department name for display, using type assertion to handle property access safely
   const getDepartmentName = () => {
     const dept = (teacher as any).dept || (teacher as any).dept_id;
     return dept?.dept_name || 'No department assigned';
@@ -124,6 +131,8 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
       // @ts-ignore - Access department ID safely
       dept: departmentData?.id || null,
       availability_type: teacher.availability_type || 'regular',
+      resignation_status: teacher.resignation_status || 'active',
+      resignation_date: teacher.resignation_date || null,
     },
   });
 
@@ -323,33 +332,100 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Availability Type</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                      disabled={teacherRole === 'POP' || teacherRole === 'Industry Professional'}
-                    >
-                      <FormControl>
+                    <FormControl>
+                      <Select
+                        value={field.value}
+                        onValueChange={field.onChange}
+                        disabled={teacherRole === 'POP' || teacherRole === 'Industry Professional'}
+                      >
                         <SelectTrigger className="focus-visible:ring-primary">
                           <SelectValue placeholder="Select availability type" />
                         </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {AVAILABILITY_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                        <SelectContent>
+                          {AVAILABILITY_TYPES.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </FormControl>
                     <FormDescription>
                       {teacherRole === 'POP' || teacherRole === 'Industry Professional' 
                         ? 'Industry professionals and POPs must have limited availability' 
-                        : 'Choose regular for standard working hours or limited for specific time slots'}
+                        : 'Select whether the teacher is available all week or on specific days only'}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
+              
+              <div className="pt-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <h3 className="text-md font-medium">Resignation Status</h3>
+                </div>
+                
+                <FormField
+                  control={form.control}
+                  name="resignation_status"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Status</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={(value) => {
+                            field.onChange(value);
+                            if (value === 'active') {
+                              form.setValue('resignation_date', null);
+                            }
+                          }}
+                        >
+                          <SelectTrigger className="focus-visible:ring-primary">
+                            <SelectValue placeholder="Select status" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {RESIGNATION_STATUS.map((type) => (
+                              <SelectItem key={type.value} value={type.value}>
+                                {type.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormDescription>
+                        Current employment status of the teacher
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                {form.watch('resignation_status') !== 'active' && (
+                  <FormField
+                    control={form.control}
+                    name="resignation_date"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Resignation Date</FormLabel>
+                        <FormControl>
+                          <Input
+                            type="date"
+                            {...field}
+                            value={field.value || ''}
+                            className="focus-visible:ring-primary"
+                          />
+                        </FormControl>
+                        <FormDescription>
+                          When the teacher will leave/left the position
+                        </FormDescription>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+              </div>
             </div>
 
             <DialogFooter>

@@ -16,6 +16,12 @@ class Teacher(models.Model):
         ('limited', 'Limited (Specific Days/Times)'),
     ]
 
+    RESIGNATION_STATUS = [
+        ('active', 'Active'),
+        ('resigning', 'Resigning/Notice Period'),
+        ('resigned', 'Resigned'),
+    ]
+
     teacher_id = models.ForeignKey('authentication.User', on_delete=models.CASCADE, related_name='teacher_profile', null=True)
     dept_id = models.ForeignKey('department.Department', on_delete=models.SET_NULL, null=True, related_name='department_teachers')
     staff_code = models.CharField("Staff Code", max_length=50, blank=True)
@@ -25,6 +31,12 @@ class Teacher(models.Model):
     
     availability_type = models.CharField("Availability Type", max_length=20, choices=AVAILABILITY_TYPE, default='regular')
     is_industry_professional = models.BooleanField("Industry Professional", default=False)
+    
+    # Resignation and placeholder status
+    resignation_status = models.CharField("Resignation Status", max_length=20, choices=RESIGNATION_STATUS, default='active')
+    resignation_date = models.DateField("Resignation Date", null=True, blank=True)
+    is_placeholder = models.BooleanField("Is Placeholder", default=False, help_text="Placeholder for future recruitment")
+    placeholder_description = models.TextField("Placeholder Description", blank=True, help_text="Requirements for the position")
     
     def __str__(self):
         name = self.teacher_id.get_full_name() if self.teacher_id else "Unknown"

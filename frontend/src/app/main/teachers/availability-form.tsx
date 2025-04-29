@@ -36,6 +36,7 @@ import {
   TeacherAvailability,
   Teacher as TeacherType 
 } from '@/action/teacher';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const DAYS_OF_WEEK = [
   { value: "0", label: "Monday" },
@@ -137,7 +138,7 @@ export default function AvailabilityForm({
         </DialogHeader>
 
         <Separator />
-
+  
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <FormField

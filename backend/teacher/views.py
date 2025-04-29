@@ -53,6 +53,66 @@ class AddNewTeacher(generics.CreateAPIView):
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
+class CreatePlaceholderTeacher(generics.CreateAPIView):
+    """
+    Create a placeholder teacher entry for future recruitment planning
+    """
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = CreateTeacherSerializer
+    
+    def post(self, request):
+        try:
+            # Check if user is HOD
+            is_hod = Teacher.objects.filter(
+                teacher_id=request.user,
+                teacher_role='HOD'
+            ).exists()
+            
+            if not is_hod:
+                return Response(
+                    {
+                        'detail': "Only HOD can create placeholder teacher entries.",
+                        "code": "permission_denied"
+                    },
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Set placeholder flag to true
+            request.data['is_placeholder'] = True
+            
+            # Get HOD's department
+            hod_dept = Teacher.objects.get(
+                teacher_id=request.user,
+                teacher_role='HOD'
+            ).dept_id
+            
+            # If no department_id provided, use HOD's department
+            if 'dept_id' not in request.data or not request.data['dept_id']:
+                request.data['dept_id'] = hod_dept.id if hod_dept else None
+            
+            serializer = self.get_serializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            serializer.save()
+            
+            return Response(
+                {
+                    'detail': "Placeholder teacher position created successfully.",
+                    'data': serializer.data
+                },
+                status=status.HTTP_201_CREATED
+            )
+            
+        except Exception as e:
+            print(e)
+            return Response(
+                {
+                    'detail': "Something went wrong!",
+                    "code": "internal_error"
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
 class TeacherListView(generics.ListAPIView):
     authentication_classes = [IsAuthenticated]
     permission_classes = [permissions.IsAuthenticated]
@@ -83,6 +143,17 @@ class TeacherListView(generics.ListAPIView):
         role = request.query_params.get('teacher_role')
         if role:
             queryset = queryset.filter(teacher_role=role)
+            
+        # Filter by resignation status if requested
+        resignation_status = request.query_params.get('resignation_status')
+        if resignation_status:
+            queryset = queryset.filter(resignation_status=resignation_status)
+            
+        # Filter placeholder teachers if requested
+        is_placeholder = request.query_params.get('is_placeholder')
+        if is_placeholder:
+            is_placeholder_bool = is_placeholder.lower() == 'true'
+            queryset = queryset.filter(is_placeholder=is_placeholder_bool)
             
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)

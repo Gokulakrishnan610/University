@@ -1,6 +1,14 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router';
-import { useGetTeachers, useUpdateTeacher, Teacher as TeacherType } from '@/action/teacher';
+import { 
+  useGetTeachers, 
+  useUpdateTeacher, 
+  useCreatePlaceholderTeacher,
+  useGetResigningTeachers,
+  useGetResignedTeachers,
+  useGetPlaceholderTeachers,
+  Teacher as TeacherType 
+} from '@/action/teacher';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -16,6 +24,7 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -37,19 +46,21 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { 
   PlusCircle, MoreHorizontal, Pencil, Eye, Users, Building, UserMinus, 
-  Search, X, Filter, Briefcase, Calendar
+  Search, X, Filter, Briefcase, Calendar, UserX, Clock, UserPlus
 } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import TeacherForm from './form';
+import TeacherPlaceholderForm from './placeholder-form';
 
 export default function TeacherManagement() {
   const navigate = useNavigate();
   const { data: teachersData, isPending: isLoading, refetch } = useGetTeachers();
   const teachers = teachersData || [];
   const [teacherToRemove, setTeacherToRemove] = useState<TeacherType | null>(null);
+  const [showPlaceholderForm, setShowPlaceholderForm] = useState<boolean>(false);
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -57,6 +68,9 @@ export default function TeacherManagement() {
   const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string[]>([]);
   const [showIndustryOnly, setShowIndustryOnly] = useState<boolean>(false);
   const [showLimitedAvailabilityOnly, setShowLimitedAvailabilityOnly] = useState<boolean>(false);
+  const [showResigningOnly, setShowResigningOnly] = useState<boolean>(false);
+  const [showResignedOnly, setShowResignedOnly] = useState<boolean>(false);
+  const [showPlaceholdersOnly, setShowPlaceholdersOnly] = useState<boolean>(false);
 
   const { mutate: updateTeacher } = useUpdateTeacher(
     teacherToRemove?.id || 0,
@@ -65,6 +79,12 @@ export default function TeacherManagement() {
       setTeacherToRemove(null);
     }
   );
+  
+  const { mutate: createPlaceholder } = useCreatePlaceholderTeacher(() => {
+    refetch();
+    setShowPlaceholderForm(false);
+    toast.success("Placeholder teacher created successfully");
+  });
 
   // Extract unique values for filters
   const uniqueRoles = useMemo<string[]>(() => {
@@ -108,10 +128,27 @@ export default function TeacherManagement() {
       // Limited availability filter
       const matchesAvailability = !showLimitedAvailabilityOnly || 
           teacher.availability_type === 'limited';
+          
+      // Resignation status filters
+      const matchesResigning = !showResigningOnly ||
+          teacher.resignation_status === 'resigning';
+          
+      const matchesResigned = !showResignedOnly ||
+          teacher.resignation_status === 'resigned';
+          
+      // Placeholder filter
+      const matchesPlaceholder = !showPlaceholdersOnly ||
+          teacher.is_placeholder === true;
       
-      return matchesSearch && matchesRole && matchesDepartment && matchesIndustry && matchesAvailability;
+      return matchesSearch && matchesRole && matchesDepartment && 
+        matchesIndustry && matchesAvailability && 
+        matchesResigning && matchesResigned && matchesPlaceholder;
     });
-  }, [teachers, searchQuery, selectedRoleFilter, selectedDepartmentFilter, showIndustryOnly, showLimitedAvailabilityOnly]);
+  }, [
+    teachers, searchQuery, selectedRoleFilter, selectedDepartmentFilter, 
+    showIndustryOnly, showLimitedAvailabilityOnly,
+    showResigningOnly, showResignedOnly, showPlaceholdersOnly
+  ]);
 
   const handleRemoveFromDepartment = () => {
     if (!teacherToRemove) return;
@@ -144,6 +181,9 @@ export default function TeacherManagement() {
     setSelectedDepartmentFilter([]);
     setShowIndustryOnly(false);
     setShowLimitedAvailabilityOnly(false);
+    setShowResigningOnly(false);
+    setShowResignedOnly(false);
+    setShowPlaceholdersOnly(false);
   };
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -163,6 +203,12 @@ export default function TeacherManagement() {
             <CardDescription className="mt-1.5">
               Manage teachers in your department
             </CardDescription>
+          </div>
+          <div className="flex gap-2">
+            <Button onClick={() => setShowPlaceholderForm(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              New Placeholder Teacher
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
@@ -283,8 +329,41 @@ export default function TeacherManagement() {
                     {showLimitedAvailabilityOnly && <Badge variant="outline" className="ml-1 px-1 rounded-full">1</Badge>}
                   </Button>
 
+                  <Button 
+                    variant={showResigningOnly ? "secondary" : "outline"} 
+                    size="sm" 
+                    className="h-9"
+                    onClick={() => setShowResigningOnly(!showResigningOnly)}
+                  >
+                    <Clock className="mr-2 h-4 w-4" />
+                    Resigning
+                    {showResigningOnly && <Badge variant="outline" className="ml-1 px-1 rounded-full">1</Badge>}
+                  </Button>
+
+                  <Button 
+                    variant={showResignedOnly ? "secondary" : "outline"} 
+                    size="sm" 
+                    className="h-9"
+                    onClick={() => setShowResignedOnly(!showResignedOnly)}
+                  >
+                    <UserX className="mr-2 h-4 w-4" />
+                    Resigned
+                    {showResignedOnly && <Badge variant="outline" className="ml-1 px-1 rounded-full">1</Badge>}
+                  </Button>
+
+                  <Button 
+                    variant={showPlaceholdersOnly ? "secondary" : "outline"} 
+                    size="sm" 
+                    className="h-9"
+                    onClick={() => setShowPlaceholdersOnly(!showPlaceholdersOnly)}
+                  >
+                    <UserPlus className="mr-2 h-4 w-4" />
+                    Placeholders
+                    {showPlaceholdersOnly && <Badge variant="outline" className="ml-1 px-1 rounded-full">1</Badge>}
+                  </Button>
+
                   {(searchQuery || selectedRoleFilter.length > 0 || selectedDepartmentFilter.length > 0 ||
-                    showIndustryOnly || showLimitedAvailabilityOnly) && (
+                    showIndustryOnly || showLimitedAvailabilityOnly || showResigningOnly || showResignedOnly || showPlaceholdersOnly) && (
                     <Button 
                       variant="ghost" 
                       size="sm" 
@@ -328,26 +407,50 @@ export default function TeacherManagement() {
                           teacher.teacher_role === 'Industry Professional';
                         
                         const isLimitedAvailability = teacher.availability_type === 'limited';
+                        const isPlaceholder = teacher.is_placeholder;
+                        const isResigning = teacher.resignation_status === 'resigning';
+                        const isResigned = teacher.resignation_status === 'resigned';
                         
                         return (
-                          <TableRow key={teacher.id} className="hover:bg-muted/40">
+                          <TableRow key={teacher.id} className={`hover:bg-muted/40 ${isResigned ? 'bg-muted/20' : ''}`}>
                             <TableCell>
                               <div className="flex items-center space-x-3">
                                 <Avatar className="h-8 w-8">
-                                  <AvatarFallback className="bg-primary/10 text-primary">
-                                    {getInitials(firstName, lastName)}
+                                  <AvatarFallback className={`${isPlaceholder ? 'bg-amber-100 text-amber-600' : 'bg-primary/10 text-primary'}`}>
+                                    {isPlaceholder ? 'PH' : getInitials(firstName, lastName)}
                                   </AvatarFallback>
                                 </Avatar>
                                 <div>
                                   <div className="font-medium flex items-center gap-1">
-                                    {fullName}
+                                    {isPlaceholder ? (teacher.staff_code || 'Placeholder') : fullName}
                                     {isPOPOrIndustry && (
                                       <Badge variant="outline" className="text-amber-600 text-xs">
                                         Industry
                                       </Badge>
                                     )}
+                                    {isPlaceholder && (
+                                      <Badge variant="secondary" className="text-xs">
+                                        Placeholder
+                                      </Badge>
+                                    )}
+                                    {isResigning && (
+                                      <Badge variant="outline" className="text-orange-600 text-xs">
+                                        Resigning
+                                      </Badge>
+                                    )}
+                                    {isResigned && (
+                                      <Badge variant="outline" className="text-destructive text-xs">
+                                        Resigned
+                                      </Badge>
+                                    )}
                                   </div>
-                                  <div className="text-xs text-muted-foreground">{teacher.staff_code || 'No Staff Code'}</div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {isPlaceholder ? (
+                                      teacher.placeholder_description || 'No description'
+                                    ) : (
+                                      teacher.staff_code || 'No Staff Code'
+                                    )}
+                                  </div>
                                 </div>
                               </div>
                             </TableCell>
@@ -397,6 +500,42 @@ export default function TeacherManagement() {
                                     <Pencil className="mr-2 h-4 w-4" />
                                     Edit Profile
                                   </DropdownMenuItem>
+                                  {!isPlaceholder && teacher.resignation_status === 'active' && (
+                                    <DropdownMenuItem 
+                                      onClick={() => {
+                                        updateTeacher(
+                                          { resignation_status: 'resigning' },
+                                          {
+                                            onSuccess: () => {
+                                              toast.success('Teacher marked as resigning');
+                                              refetch();
+                                            }
+                                          }
+                                        );
+                                      }}
+                                    >
+                                      <Clock className="mr-2 h-4 w-4 text-orange-600" />
+                                      Mark as Resigning
+                                    </DropdownMenuItem>
+                                  )}
+                                  {!isPlaceholder && teacher.resignation_status === 'resigning' && (
+                                    <DropdownMenuItem 
+                                      onClick={() => {
+                                        updateTeacher(
+                                          { resignation_status: 'resigned' },
+                                          {
+                                            onSuccess: () => {
+                                              toast.success('Teacher marked as resigned');
+                                              refetch();
+                                            }
+                                          }
+                                        );
+                                      }}
+                                    >
+                                      <UserX className="mr-2 h-4 w-4 text-destructive" />
+                                      Mark as Resigned
+                                    </DropdownMenuItem>
+                                  )}
                                   {teacher.dept_id && (
                                     <DropdownMenuItem 
                                       className="text-destructive focus:text-destructive"
@@ -441,6 +580,17 @@ export default function TeacherManagement() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Placeholder Teacher Form Dialog */}
+      {showPlaceholderForm && (
+        <TeacherPlaceholderForm
+          onClose={() => setShowPlaceholderForm(false)}
+          onSuccess={() => {
+            refetch();
+            setShowPlaceholderForm(false);
+          }}
+        />
+      )}
     </div>
   );
 } 

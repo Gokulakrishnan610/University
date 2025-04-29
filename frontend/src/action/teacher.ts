@@ -39,7 +39,10 @@ export interface Teacher {
   is_industry_professional?: boolean;
   availability_type?: 'regular' | 'limited';
   availability_slots?: TeacherAvailability[];
-  
+  resignation_status?: 'active' | 'resigning' | 'resigned';
+  resignation_date?: string | null;
+  is_placeholder?: boolean;
+  placeholder_description?: string;
 }
 
 export interface CreateTeacherRequest {
@@ -59,6 +62,10 @@ export type UpdateTeacherRequest = {
   teacher_specialisation?: string;
   teacher_working_hours?: number;
   availability_type?: 'regular' | 'limited';
+  resignation_status?: 'active' | 'resigning' | 'resigned';
+  resignation_date?: string | null;
+  is_placeholder?: boolean;
+  placeholder_description?: string;
 };
 
 export interface CreateAvailabilityRequest {
@@ -72,6 +79,16 @@ export interface UpdateAvailabilityRequest {
   day_of_week?: number;
   start_time?: string;
   end_time?: string;
+}
+
+export interface CreatePlaceholderTeacherRequest {
+  teacher_id?: string; // Optional for placeholders
+  dept_id: number;
+  staff_code?: string;
+  teacher_role: string;
+  teacher_specialisation?: string;
+  teacher_working_hours: number;
+  placeholder_description: string;
 }
 
 // Get all teachers
@@ -220,7 +237,66 @@ export const useDeleteTeacher = (id: number, onSuccess?: () => void) => {
     'teachers',
     onSuccess
   );
-}; 
+};
+
+// Get resigning teachers
+export const useGetResigningTeachers = () => {
+  return useQueryData(
+    ['resigning-teachers'],
+    async () => {
+      const response = await api.get('/api/teachers/resigning/');
+      return response.data || [];
+    }
+  );
+};
+
+// Get resigned teachers
+export const useGetResignedTeachers = () => {
+  return useQueryData(
+    ['resigned-teachers'],
+    async () => {
+      const response = await api.get('/api/teachers/resigned/');
+      return response.data || [];
+    }
+  );
+};
+
+// Get placeholder teachers
+export const useGetPlaceholderTeachers = () => {
+  return useQueryData(
+    ['placeholder-teachers'],
+    async () => {
+      const response = await api.get('/api/teachers/placeholders/');
+      return response.data || [];
+    }
+  );
+};
+
+// Create a placeholder teacher
+export const useCreatePlaceholderTeacher = (onSuccess?: () => void) => {
+  return useMutationData(
+    ['createPlaceholderTeacher'],
+    async (data: CreatePlaceholderTeacherRequest) => {
+      try {
+        const response = await api.post('/api/teachers/placeholder/create/', data);
+        return {
+          status: response.status,
+          data: response.data.message || 'Placeholder teacher created successfully',
+        };
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          return {
+            status: error.response.status,
+            data: error.response.data.message || 'Failed to create placeholder teacher',
+          };
+        }
+        throw error;
+      }
+    },
+    'teachers',
+    onSuccess
+  );
+};
 
 // Teacher Availability API Calls
 
