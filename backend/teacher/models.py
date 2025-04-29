@@ -6,7 +6,9 @@ class Teacher(models.Model):
         ('Professor', 'Professor'),
         ('Asst. Professor', 'Asst. Professor'),
         ('HOD', 'HOD'),
-        ('DC', 'DC')
+        ('DC', 'DC'),
+        ('POP', 'Professor of Practice'),
+        ('Industry Professional', 'Industry Professional')
                 ]
 
     AVAILABILITY_TYPE = [
@@ -21,10 +23,8 @@ class Teacher(models.Model):
     teacher_specialisation = models.CharField('Specialisation', max_length=100, blank=True)
     teacher_working_hours = models.IntegerField('Working Hour', default=21, blank=False)
     
-    # Fields for industry professionals with limited availability
     availability_type = models.CharField("Availability Type", max_length=20, choices=AVAILABILITY_TYPE, default='regular')
     is_industry_professional = models.BooleanField("Industry Professional", default=False)
-    company_name = models.CharField("Company/Organization", max_length=100, blank=True, null=True)
     
     def __str__(self):
         name = self.teacher_id.get_full_name() if self.teacher_id else "Unknown"
@@ -43,10 +43,11 @@ class Teacher(models.Model):
                     {'teacher_role': 'There is already an HOD for this department.'}
                 )
         
-        # Automatically set is_industry_professional if role is 'Industry Professional'
-        if self.teacher_role == 'Industry Professional':
+        # Automatically set is_industry_professional and availability flags for POP/industry roles
+        if self.teacher_role in ['POP', 'Industry Professional']:
             self.is_industry_professional = True
             self.availability_type = 'limited'
+
         
         return super().clean()
 

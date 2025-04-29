@@ -35,7 +35,10 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, MoreHorizontal, Pencil, Eye, Users, Building, UserMinus, Search, X, Filter } from 'lucide-react';
+import { 
+  PlusCircle, MoreHorizontal, Pencil, Eye, Users, Building, UserMinus, 
+  Search, X, Filter, Briefcase, Calendar
+} from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { Input } from '@/components/ui/input';
@@ -52,6 +55,8 @@ export default function TeacherManagement() {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [selectedRoleFilter, setSelectedRoleFilter] = useState<string[]>([]);
   const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string[]>([]);
+  const [showIndustryOnly, setShowIndustryOnly] = useState<boolean>(false);
+  const [showLimitedAvailabilityOnly, setShowLimitedAvailabilityOnly] = useState<boolean>(false);
 
   const { mutate: updateTeacher } = useUpdateTeacher(
     teacherToRemove?.id || 0,
@@ -94,9 +99,19 @@ export default function TeacherManagement() {
       const matchesDepartment = selectedDepartmentFilter.length === 0 || 
           selectedDepartmentFilter.includes(departmentName);
       
-      return matchesSearch && matchesRole && matchesDepartment;
+      // Industry professional filter
+      const matchesIndustry = !showIndustryOnly || 
+          teacher.is_industry_professional || 
+          teacher.teacher_role === 'POP' || 
+          teacher.teacher_role === 'Industry Professional';
+      
+      // Limited availability filter
+      const matchesAvailability = !showLimitedAvailabilityOnly || 
+          teacher.availability_type === 'limited';
+      
+      return matchesSearch && matchesRole && matchesDepartment && matchesIndustry && matchesAvailability;
     });
-  }, [teachers, searchQuery, selectedRoleFilter, selectedDepartmentFilter]);
+  }, [teachers, searchQuery, selectedRoleFilter, selectedDepartmentFilter, showIndustryOnly, showLimitedAvailabilityOnly]);
 
   const handleRemoveFromDepartment = () => {
     if (!teacherToRemove) return;
@@ -127,6 +142,8 @@ export default function TeacherManagement() {
     setSearchQuery('');
     setSelectedRoleFilter([]);
     setSelectedDepartmentFilter([]);
+    setShowIndustryOnly(false);
+    setShowLimitedAvailabilityOnly(false);
   };
 
   const getInitials = (firstName: string, lastName: string) => {
@@ -243,12 +260,35 @@ export default function TeacherManagement() {
                       ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  
+                  <Button 
+                    variant={showIndustryOnly ? "secondary" : "outline"} 
+                    size="sm" 
+                    className="h-9"
+                    onClick={() => setShowIndustryOnly(!showIndustryOnly)}
+                  >
+                    <Briefcase className="mr-2 h-4 w-4" />
+                    Industry Professionals
+                    {showIndustryOnly && <Badge variant="outline" className="ml-1 px-1 rounded-full">1</Badge>}
+                  </Button>
+                  
+                  <Button 
+                    variant={showLimitedAvailabilityOnly ? "secondary" : "outline"} 
+                    size="sm" 
+                    className="h-9"
+                    onClick={() => setShowLimitedAvailabilityOnly(!showLimitedAvailabilityOnly)}
+                  >
+                    <Calendar className="mr-2 h-4 w-4" />
+                    Limited Availability
+                    {showLimitedAvailabilityOnly && <Badge variant="outline" className="ml-1 px-1 rounded-full">1</Badge>}
+                  </Button>
 
-                  {(searchQuery || selectedRoleFilter.length > 0 || selectedDepartmentFilter.length > 0) && (
+                  {(searchQuery || selectedRoleFilter.length > 0 || selectedDepartmentFilter.length > 0 ||
+                    showIndustryOnly || showLimitedAvailabilityOnly) && (
                     <Button 
                       variant="ghost" 
                       size="sm" 
-                      className="h-9"
+                      className="h-9" 
                       onClick={clearFilters}
                     >
                       <X className="mr-2 h-4 w-4" />
@@ -258,105 +298,123 @@ export default function TeacherManagement() {
                 </div>
               </div>
 
-              <div className="border rounded-lg overflow-hidden">
+              <div className="border rounded-md overflow-hidden">
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead className="w-[300px]">Teacher</TableHead>
+                      <TableHead className="w-[250px]">Teacher</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Department</TableHead>
-                      <TableHead>Specialization</TableHead>
+                      <TableHead>Working Hours</TableHead>
+                      <TableHead>Specialisation</TableHead>
                       <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredTeachers.map((teacher: TeacherType) => (
-                      <TableRow
-                        key={teacher.id}
-                        className="cursor-pointer hover:bg-muted/50 transition-colors"
-                        onClick={() => navigate(`/teachers/${teacher.id}`)}>
-                        <TableCell>
-                          <div className="flex items-center space-x-3">
-                            <Avatar className="h-9 w-9 border border-primary/30">
-                              <AvatarFallback className="bg-primary/10 text-primary text-xs">
-                                {getInitials(
-                                  (teacher.teacher_id?.first_name || ''),
-                                  (teacher.teacher_id?.last_name || '')
-                                )}
-                              </AvatarFallback>
-                            </Avatar>
-                            <div>
-                              <div className="font-medium">
-                                {teacher.teacher_id?.first_name} {teacher.teacher_id?.last_name}
-                              </div>
-                              <div className="text-xs text-muted-foreground">
-                                {teacher.staff_code || 'No Staff Code'}
-                              </div>
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="bg-primary/5 border-primary/20 text-primary">
-                            {teacher.teacher_role}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {teacher.dept_id?.dept_name ? (
-                            <div className="flex items-center gap-1.5 text-sm">
-                              <Building className="h-3.5 w-3.5 text-muted-foreground" />
-                              <span>{teacher.dept_id.dept_name}</span>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-sm italic">Not assigned</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {teacher.teacher_specialisation || (
-                            <span className="text-muted-foreground text-sm italic">Not specified</span>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                <MoreHorizontal className="h-4 w-4" />
-                                <span className="sr-only">Open menu</span>
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-[240px]">
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/teachers/${teacher.id}`);
-                              }}>
-                                <Eye className="mr-2 h-4 w-4" /> View Details
-                              </DropdownMenuItem>
-                              <DropdownMenuItem onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/teachers/${teacher.id}?edit=true`);
-                              }}>
-                                <Pencil className="mr-2 h-4 w-4" /> Edit Teacher
-                              </DropdownMenuItem>
-                              {teacher.dept_id && (
-                                <DropdownMenuItem
-                                  className="text-destructive focus:text-destructive"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setTeacherToRemove(teacher);
-                                  }}
-                                >
-                                  <UserMinus className="mr-2 h-4 w-4" /> Remove from Department
-                                </DropdownMenuItem>
-                              )}
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+                    {filteredTeachers.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="h-24 text-center">
+                          No teachers matching the current filters
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      filteredTeachers.map((teacher: TeacherType) => {
+                        const firstName = teacher.teacher_id?.first_name || '';
+                        const lastName = teacher.teacher_id?.last_name || '';
+                        const fullName = `${firstName} ${lastName}`;
+                        
+                        const isPOPOrIndustry = teacher.is_industry_professional || 
+                          teacher.teacher_role === 'POP' || 
+                          teacher.teacher_role === 'Industry Professional';
+                        
+                        const isLimitedAvailability = teacher.availability_type === 'limited';
+                        
+                        return (
+                          <TableRow key={teacher.id} className="hover:bg-muted/40">
+                            <TableCell>
+                              <div className="flex items-center space-x-3">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="bg-primary/10 text-primary">
+                                    {getInitials(firstName, lastName)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                  <div className="font-medium flex items-center gap-1">
+                                    {fullName}
+                                    {isPOPOrIndustry && (
+                                      <Badge variant="outline" className="text-amber-600 text-xs">
+                                        Industry
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">{teacher.staff_code || 'No Staff Code'}</div>
+                                </div>
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">
+                                {teacher.teacher_role}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {teacher.dept_id ? (
+                                <div className="flex items-center">
+                                  <Building className="h-3.5 w-3.5 text-muted-foreground mr-1.5" />
+                                  <span>{teacher.dept_id.dept_name}</span>
+                                </div>
+                              ) : (
+                                <span className="text-muted-foreground text-sm">Not assigned</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                {teacher.teacher_working_hours} hrs/week
+                                {isLimitedAvailability && (
+                                  <Badge variant="outline" className="text-xs text-amber-600">
+                                    Limited
+                                  </Badge>
+                                )}
+                              </div>
+                            </TableCell>
+                            <TableCell>
+                              <span className="text-sm">
+                                {teacher.teacher_specialisation || 'Not specified'}
+                              </span>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button variant="ghost" size="icon">
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                  <DropdownMenuItem onClick={() => navigate(`/teachers/${teacher.id}`)}>
+                                    <Eye className="mr-2 h-4 w-4" />
+                                    View Details
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem onClick={() => navigate(`/teachers/${teacher.id}?edit=true`)}>
+                                    <Pencil className="mr-2 h-4 w-4" />
+                                    Edit Profile
+                                  </DropdownMenuItem>
+                                  {teacher.dept_id && (
+                                    <DropdownMenuItem 
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => setTeacherToRemove(teacher)}
+                                    >
+                                      <UserMinus className="mr-2 h-4 w-4" />
+                                      Remove from Department
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
                   </TableBody>
                 </Table>
-              </div>
-              <div className="text-sm text-muted-foreground mt-2">
-                Showing {filteredTeachers.length} of {teachers.length} teachers
               </div>
             </>
           )}
@@ -366,20 +424,17 @@ export default function TeacherManagement() {
       <AlertDialog open={!!teacherToRemove} onOpenChange={(open) => !open && setTeacherToRemove(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove from Department</AlertDialogTitle>
+            <AlertDialogTitle>Remove Teacher from Department</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove <span className="font-semibold">
-                {teacherToRemove?.teacher_id?.first_name} {teacherToRemove?.teacher_id?.last_name}
-              </span> from {(teacherToRemove?.dept_id)?.dept_name}?
-              <br /><br />
-              This action will only remove the teacher's department association, not delete the teacher profile.
+              Are you sure you want to remove this teacher from their department? 
+              This will not delete the teacher from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogAction 
               onClick={handleRemoveFromDepartment}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remove
             </AlertDialogAction>

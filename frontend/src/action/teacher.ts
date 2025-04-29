@@ -20,6 +20,14 @@ export interface DepartmentDetails {
   contact_info: string;
 }
 
+export interface TeacherAvailability {
+  id: number;
+  day_of_week: number;
+  day_name: string;
+  start_time: string;
+  end_time: string;
+}
+
 export interface Teacher {
   id: number;
   teacher_id?: UserDetails; // Alternative API structure
@@ -28,6 +36,9 @@ export interface Teacher {
   teacher_role: string;
   teacher_specialisation: string;
   teacher_working_hours: number;
+  is_industry_professional?: boolean;
+  availability_type?: 'regular' | 'limited';
+  availability_slots?: TeacherAvailability[];
 }
 
 export interface CreateTeacherRequest {
@@ -37,6 +48,7 @@ export interface CreateTeacherRequest {
   teacher_role: string;
   teacher_specialisation?: string;
   teacher_working_hours: number;
+  availability_type?: 'regular' | 'limited';
 }
 
 export type UpdateTeacherRequest = {
@@ -45,7 +57,21 @@ export type UpdateTeacherRequest = {
   teacher_role?: string;
   teacher_specialisation?: string;
   teacher_working_hours?: number;
+  availability_type?: 'regular' | 'limited';
 };
+
+export interface CreateAvailabilityRequest {
+  teacher: number;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+}
+
+export interface UpdateAvailabilityRequest {
+  day_of_week?: number;
+  start_time?: string;
+  end_time?: string;
+}
 
 // Get all teachers
 export const useGetTeachers = () => {
@@ -84,6 +110,28 @@ export const useGetTeacher = (id: number) => {
       }
     },
     !!id // enabled when id exists
+  );
+};
+
+// Get POP teachers
+export const useGetPOPTeachers = () => {
+  return useQueryData(
+    ['pop-teachers'],
+    async () => {
+      const response = await api.get('/api/teachers/pop/');
+      return response.data || [];
+    }
+  );
+};
+
+// Get Industry Professional teachers
+export const useGetIndustryProfessionals = () => {
+  return useQueryData(
+    ['industry-professional-teachers'],
+    async () => {
+      const response = await api.get('/api/teachers/industry-professionals/');
+      return response.data || [];
+    }
   );
 };
 
@@ -169,6 +217,115 @@ export const useDeleteTeacher = (id: number, onSuccess?: () => void) => {
       }
     },
     'teachers',
+    onSuccess
+  );
+}; 
+
+// Teacher Availability API Calls
+
+// Get availability slots for a teacher
+export const useGetTeacherAvailability = (teacherId: number) => {
+  return useQueryData(
+    ['teacher-availability', teacherId.toString()],
+    async () => {
+      const response = await api.get(`/api/teachers/availability/${teacherId}/teacher_availability/`);
+      return response.data || [];
+    },
+    !!teacherId // only enabled when teacherId exists
+  );
+};
+
+// Get current teacher's availability slots
+export const useGetMyAvailability = () => {
+  return useQueryData(
+    ['my-availability'],
+    async () => {
+      const response = await api.get('/api/teachers/availability/my_availability/');
+      return response.data || [];
+    }
+  );
+};
+
+// Create a new availability slot
+export const useCreateAvailability = (onSuccess?: () => void) => {
+  return useMutationData(
+    ['createAvailability'],
+    async (data: CreateAvailabilityRequest) => {
+      try {
+        const response = await api.post('/api/teachers/availability/', data);
+        return {
+          status: response.status,
+          data: response.data || 'Availability created successfully',
+        };
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          return {
+            status: error.response.status,
+            data: error.response.data.message || 'Failed to create availability',
+          };
+        }
+        throw error;
+      }
+    },
+    [['teacher-availability'], ['my-availability']],
+    onSuccess
+  );
+};
+
+// Update an existing availability slot
+export const useUpdateAvailability = (id: number, teacherId: number, onSuccess?: () => void) => {
+  return useMutationData(
+    ['updateAvailability', id.toString()],
+    async (data: UpdateAvailabilityRequest) => {
+      try {
+        const response = await api.patch(`/api/teachers/availability/${id}/`, data);
+        return {
+          status: response.status,
+          data: response.data || 'Availability updated successfully',
+        };
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          return {
+            status: error.response.status,
+            data: error.response.data.message || 'Failed to update availability',
+          };
+        }
+        throw error;
+      }
+    },
+    [
+      ['teacher-availability', teacherId.toString()], 
+      ['my-availability']
+    ],
+    onSuccess
+  );
+};
+
+// Delete an availability slot
+export const useDeleteAvailability = (id: number, teacherId: number, onSuccess?: () => void) => {
+  return useMutationData(
+    ['deleteAvailability', id.toString()],
+    async () => {
+      try {
+        const response = await api.delete(`/api/teachers/availability/${id}/`);
+        return {
+          status: response.status,
+          data: response.data || 'Availability deleted successfully',
+        };
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          return {
+            status: error.response.status,
+            data: error.response.data.message || 'Failed to delete availability',
+          };
+        }
+        throw error;
+      }
+    },
+    [
+      ['teacher-availability', teacherId.toString()], 
+      ['my-availability']
+    ],
     onSuccess
   );
 }; 

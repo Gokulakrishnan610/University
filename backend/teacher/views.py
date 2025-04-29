@@ -1,9 +1,14 @@
 from django.shortcuts import get_object_or_404
-from rest_framework import generics, permissions, status
+from rest_framework import generics, permissions, status, viewsets
 from rest_framework.response import Response
+from rest_framework.decorators import action
 from authentication.authentication import IsAuthenticated
-from .models import Teacher
-from .serializers import TeacherSerializer, CreateTeacherSerializer, UpdateTeacherSerializer
+from .models import Teacher, TeacherAvailability
+from .serializers import (
+    TeacherSerializer, CreateTeacherSerializer, UpdateTeacherSerializer,
+    TeacherAvailabilitySerializer, CreateTeacherAvailabilitySerializer, 
+    UpdateTeacherAvailabilitySerializer
+)
 
 class AddNewTeacher(generics.CreateAPIView):
     authentication_classes = [IsAuthenticated]
@@ -64,6 +69,23 @@ class TeacherListView(generics.ListAPIView):
             return Teacher.objects.filter(dept_id=hod_dept)
         except Teacher.DoesNotExist:
             return Teacher.objects.filter(teacher_id=user)
+            
+    def get(self, request, *args, **kwargs):
+        queryset = self.get_queryset()
+        
+        # Filter industry professionals if requested
+        is_industry = request.query_params.get('is_industry_professional')
+        if is_industry:
+            is_industry_bool = is_industry.lower() == 'true'
+            queryset = queryset.filter(is_industry_professional=is_industry_bool)
+            
+        # Filter by teacher role if requested
+        role = request.query_params.get('teacher_role')
+        if role:
+            queryset = queryset.filter(teacher_role=role)
+            
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
 
 class TeacherDetailView(generics.RetrieveUpdateAPIView):
     authentication_classes = [IsAuthenticated]
@@ -121,3 +143,104 @@ class TeacherDetailView(generics.RetrieveUpdateAPIView):
                 },
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+            
+class TeacherAvailabilityViewSet(viewsets.ModelViewSet):
+    """
+    API endpoint for managing teacher availability for industry professionals/POP
+    """
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+    queryset = TeacherAvailability.objects.all()
+    
+    def get_serializer_class(self):
+        if self.action == 'create':
+            return CreateTeacherAvailabilitySerializer
+        elif self.action in ['update', 'partial_update']:
+            return UpdateTeacherAvailabilitySerializer
+        return TeacherAvailabilitySerializer
+    
+    def get_queryset(self):
+        """Only return availability slots for teachers the user has permission to view"""
+        user = self.request.user
+        
+        # Check if user is an HOD
+        try:
+            hod_teacher = Teacher.objects.get(teacher_id=user, teacher_role='HOD')
+            # HODs can see all availability slots for teachers in their department
+            return TeacherAvailability.objects.filter(teacher__dept_id=hod_teacher.dept_id)
+        except Teacher.DoesNotExist:
+            # Regular teachers can only see their own availability slots
+            try:
+                teacher = Teacher.objects.get(teacher_id=user)
+                return TeacherAvailability.objects.filter(teacher=teacher)
+            except Teacher.DoesNotExist:
+                return TeacherAvailability.objects.none()
+    
+    @action(detail=False, methods=['get'])
+    def my_availability(self, request):
+        """Get the current teacher's availability slots"""
+        try:
+            teacher = Teacher.objects.get(teacher_id=request.user)
+            availability = TeacherAvailability.objects.filter(teacher=teacher)
+            serializer = self.get_serializer(availability, many=True)
+            return Response(serializer.data)
+        except Teacher.DoesNotExist:
+            return Response(
+                {'detail': 'You are not registered as a teacher'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+    
+    @action(detail=True, methods=['get'])
+    def teacher_availability(self, request, pk=None):
+        """Get availability slots for a specific teacher"""
+        teacher = get_object_or_404(Teacher, pk=pk)
+        
+        # Check permission
+        user = request.user
+        is_hod = Teacher.objects.filter(
+            teacher_id=user,
+            teacher_role='HOD',
+            dept_id=teacher.dept_id
+        ).exists()
+        
+        if not is_hod and teacher.teacher_id != user:
+            return Response(
+                {'detail': "You don't have permission to view this teacher's availability."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        availability = TeacherAvailability.objects.filter(teacher=teacher)
+        serializer = self.get_serializer(availability, many=True)
+        return Response(serializer.data)
+    
+    def create(self, request, *args, **kwargs):
+        """Create new availability slot"""
+        # Check if the user is trying to create availability for themselves or if HOD
+        teacher_id = request.data.get('teacher')
+        
+        if teacher_id:
+            teacher = get_object_or_404(Teacher, pk=teacher_id)
+            user = request.user
+            
+            is_hod = Teacher.objects.filter(
+                teacher_id=user,
+                teacher_role='HOD',
+                dept_id=teacher.dept_id
+            ).exists()
+            
+            if not is_hod and teacher.teacher_id != user:
+                return Response(
+                    {'detail': "You don't have permission to add availability for this teacher."},
+                    status=status.HTTP_403_FORBIDDEN
+                )
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        
+        headers = self.get_success_headers(serializer.data)
+        return Response(
+            serializer.data, 
+            status=status.HTTP_201_CREATED, 
+            headers=headers
+        )

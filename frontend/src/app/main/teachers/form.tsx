@@ -34,13 +34,21 @@ import {
 import { useGetDepartments } from '@/action/department';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { Loader2, Building, User, BookOpen, Clock } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Loader2, Building, User, BookOpen, Clock, Calendar } from 'lucide-react';
 
 const TEACHER_ROLES = [
   'Professor',
   'Asst. Professor',
   'HOD',
   'DC',
+  'POP',
+  'Industry Professional'
+];
+
+const AVAILABILITY_TYPES = [
+  { value: 'regular', label: 'Regular (All Working Days)' },
+  { value: 'limited', label: 'Limited (Specific Days/Times)' },
 ];
 
 const formSchema = z.object({
@@ -49,6 +57,7 @@ const formSchema = z.object({
   teacher_specialisation: z.string().optional(),
   teacher_working_hours: z.number({ required_error: 'Working hours is required' }).min(1),
   dept: z.number().nullable().optional(),
+  availability_type: z.enum(['regular', 'limited']).default('regular'),
 });
 
 interface TeacherFormProps {
@@ -114,8 +123,19 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
       teacher_working_hours: teacher.teacher_working_hours || 21,
       // @ts-ignore - Access department ID safely
       dept: departmentData?.id || null,
+      availability_type: teacher.availability_type || 'regular',
     },
   });
+
+  // Watch for changes to teacher_role to automatically set availability_type
+  const teacherRole = form.watch('teacher_role');
+  
+  useEffect(() => {
+    // Automatically set availability_type for industry professionals and POPs
+    if (teacherRole === 'POP' || teacherRole === 'Industry Professional') {
+      form.setValue('availability_type', 'limited');
+    }
+  }, [teacherRole, form]);
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -131,8 +151,8 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
         </DialogHeader>
 
         <Separator />
-
-        <Form {...form}>
+    <ScrollArea className='h-[calc(100vh-200px)]'>
+    <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
               <div className="flex items-center gap-2">
@@ -239,6 +259,11 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
                           ))}
                         </SelectContent>
                       </Select>
+                      <FormDescription>
+                        {field.value === 'POP' || field.value === 'Industry Professional' 
+                          ? 'This role will automatically set limited availability' 
+                          : 'Academic role within the institution'}
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -250,13 +275,36 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
                   name="teacher_specialisation"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Specialization</FormLabel>
+                      <FormLabel>Specialisation</FormLabel>
                       <FormControl>
-                      <Input placeholder="e.g. Database Systems, Artificial Intelligence" {...field} className="focus-visible:ring-primary" />
+                        <Input placeholder="e.g. Machine Learning" {...field} className="focus-visible:ring-primary" />
                       </FormControl>
-                    <FormDescription>
-                      Teacher's area of expertise or specialization
-                    </FormDescription>
+                      <FormDescription>
+                        Area of expertise or academic specialisation
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="teacher_working_hours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Working Hours</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          placeholder="21" 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          className="focus-visible:ring-primary" 
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Total teaching hours per week
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -265,51 +313,58 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
 
             <div className="space-y-4">
               <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                <h3 className="text-md font-medium">Working Hours</h3>
+                <Calendar className="h-4 w-4 text-primary" />
+                <h3 className="text-md font-medium">Availability Settings</h3>
               </div>
 
-                <FormField
-                  control={form.control}
-                  name="teacher_working_hours"
-                  render={({ field }) => (
-                    <FormItem>
-                    <FormLabel>Weekly Working Hours</FormLabel>
+              <FormField
+                control={form.control}
+                name="availability_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Availability Type</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                      disabled={teacherRole === 'POP' || teacherRole === 'Industry Professional'}
+                    >
                       <FormControl>
-                          <Input
-                            type="number"
-                            min={1}
-                            {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        className="focus-visible:ring-primary" 
-                          />
+                        <SelectTrigger className="focus-visible:ring-primary">
+                          <SelectValue placeholder="Select availability type" />
+                        </SelectTrigger>
                       </FormControl>
+                      <SelectContent>
+                        {AVAILABILITY_TYPES.map((type) => (
+                          <SelectItem key={type.value} value={type.value}>
+                            {type.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <FormDescription>
-                      Number of working hours per week for this teacher
+                      {teacherRole === 'POP' || teacherRole === 'Industry Professional' 
+                        ? 'Industry professionals and POPs must have limited availability' 
+                        : 'Choose regular for standard working hours or limited for specific time slots'}
                     </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={onClose}>
+              <Button variant="outline" type="button" onClick={onClose}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isUpdating}>
-                {isUpdating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Saving...
-                  </>
-                ) : (
-                  'Save Changes'
-                )}
+                {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                Save Changes
               </Button>
             </DialogFooter>
           </form>
         </Form>
+    </ScrollArea>
+
       </DialogContent>
     </Dialog>
   );
