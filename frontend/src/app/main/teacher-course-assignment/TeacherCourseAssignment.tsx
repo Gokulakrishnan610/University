@@ -31,6 +31,8 @@ export function TeacherCourseAssignment() {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [selectedTeacherFilter, setSelectedTeacherFilter] = useState<string[]>([]);
     const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string[]>([]);
+    const [showIndustryOnly, setShowIndustryOnly] = useState<boolean>(false);
+    const [showPOPOnly, setShowPOPOnly] = useState<boolean>(false);
 
     const {
         data: assignments = [],
@@ -76,10 +78,17 @@ export function TeacherCourseAssignment() {
                 (assignment.teacher_detail?.teacher_id && selectedTeacherFilter.includes(
                     `${assignment.teacher_detail.teacher_id.first_name || ''} ${assignment.teacher_detail.teacher_id.last_name || ''}`.trim()
                 ));
+                
+            const matchesIndustryFilter = !showIndustryOnly || 
+                assignment.teacher_detail?.is_industry_professional === true;
+                
+            const matchesPOPFilter = !showPOPOnly || 
+                assignment.teacher_detail?.teacher_role === 'POP';
 
-            return matchesSearch && matchesDepartment && matchesTeacher;
+            return matchesSearch && matchesDepartment && matchesTeacher && 
+                   matchesIndustryFilter && matchesPOPFilter;
         });
-    }, [assignments, searchQuery, selectedDepartmentFilter, selectedTeacherFilter]);
+    }, [assignments, searchQuery, selectedDepartmentFilter, selectedTeacherFilter, showIndustryOnly, showPOPOnly]);
 
     const handleDelete = () => {
         if (!assignmentToDelete) return;
@@ -107,6 +116,8 @@ export function TeacherCourseAssignment() {
         setSearchQuery('');
         setSelectedTeacherFilter([]);
         setSelectedDepartmentFilter([]);
+        setShowIndustryOnly(false);
+        setShowPOPOnly(false);
     };
 
     // Function to export assignments as CSV
@@ -228,7 +239,26 @@ export function TeacherCourseAssignment() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            {(searchQuery || selectedTeacherFilter.length > 0 || selectedDepartmentFilter.length > 0) && (
+                            <Button 
+                                variant={showIndustryOnly ? "default" : "outline"}
+                                onClick={() => setShowIndustryOnly(!showIndustryOnly)}
+                                className="gap-2"
+                            >
+                                <span>🏢</span> Industry Professionals 
+                                {showIndustryOnly && <Badge variant="secondary" className="ml-1">Active</Badge>}
+                            </Button>
+
+                            <Button 
+                                variant={showPOPOnly ? "default" : "outline"}
+                                onClick={() => setShowPOPOnly(!showPOPOnly)}
+                                className="gap-2"
+                            >
+                                POP Teachers
+                                {showPOPOnly && <Badge variant="secondary" className="ml-1">Active</Badge>}
+                            </Button>
+
+                            {(searchQuery || selectedTeacherFilter.length > 0 || selectedDepartmentFilter.length > 0 || 
+                              showIndustryOnly || showPOPOnly) && (
                                 <Button variant="ghost" onClick={clearFilters} className="ml-auto">
                                     <X className="mr-2 h-4 w-4" />
                                     Clear Filters
@@ -260,8 +290,14 @@ export function TeacherCourseAssignment() {
                                 {filteredAssignments.map((assignment) => (
                                     <TableRow key={assignment.id}>
                                         <TableCell>
-                                            <div className="font-medium">
+                                            <div className="font-medium flex items-center gap-1">
                                                 {assignment.teacher_detail?.teacher_id?.first_name} {assignment.teacher_detail?.teacher_id?.last_name}
+                                                {assignment.teacher_detail?.teacher_role === 'POP' && (
+                                                    <Badge variant="secondary" className="ml-1 text-xs">POP</Badge>
+                                                )}
+                                                {assignment.teacher_detail?.is_industry_professional && (
+                                                    <Badge variant="outline" className="ml-1 text-xs">🏢 Industry</Badge>
+                                                )}
                                             </div>
                                             <div className="text-sm text-muted-foreground">
                                                 {assignment.teacher_detail?.staff_code}

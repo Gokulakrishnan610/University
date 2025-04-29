@@ -39,6 +39,7 @@ export interface Teacher {
   is_industry_professional?: boolean;
   availability_type?: 'regular' | 'limited';
   availability_slots?: TeacherAvailability[];
+  
 }
 
 export interface CreateTeacherRequest {

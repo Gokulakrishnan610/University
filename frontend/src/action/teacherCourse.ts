@@ -33,6 +33,7 @@ export type TeacherCourseAssignment = {
         teacher_role: string;
         teacher_specialisation: string;
         teacher_working_hours: number;
+        is_industry_professional?: boolean;
     };
     course_detail: {
         id: number;
