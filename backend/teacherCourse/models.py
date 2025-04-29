@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 
-# Create your models here.
 class TeacherCourse(models.Model):
     teacher_id = models.ForeignKey("teacher.Teacher", on_delete=models.CASCADE, null=True)
     course_id = models.ForeignKey("course.Course", on_delete=models.CASCADE, null=True)
@@ -39,9 +38,11 @@ class TeacherCourse(models.Model):
             teacher_id=self.teacher_id
         )
 
-        total_hours_assigned = sum(course.course_id.credits for course in assigned_courses if course.course_id)
+        # Calculate weekly hours based on course type
+        weekly_hours = self.calculate_weekly_hours()
+        total_hours_assigned = sum(course.calculate_weekly_hours() for course in assigned_courses if course.course_id)
         
-        if total_hours_assigned + self.course_id.credits > self.teacher_id.teacher_working_hours:
+        if total_hours_assigned + weekly_hours > self.teacher_id.teacher_working_hours:
             raise ValidationError("Teacher working hour limit exceeded")
         
         if self.teacher_id.dept_id != self.course_id.teaching_dept_id:
@@ -49,6 +50,20 @@ class TeacherCourse(models.Model):
                 "Teacher and course must belong to the same department"
             )
         return super().clean()
+    
+    def calculate_weekly_hours(self):
+        """Calculate weekly hours based on course type"""
+        if not self.course_id:
+            return 0
+            
+        course = self.course_id
+        if course.course_type == 'T':  # Theory
+            return course.lecture_hours + course.tutorial_hours
+        elif course.course_type == 'LoT':  # Lab and Theory
+            return course.lecture_hours + course.tutorial_hours + course.practical_hours
+        elif course.course_type == 'L':  # Lab only
+            return course.practical_hours
+        return 0
     
     def save(self, *args, **kwargs):
         self.clean()

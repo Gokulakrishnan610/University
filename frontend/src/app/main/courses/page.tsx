@@ -862,6 +862,11 @@ export default function CourseManagementPage() {
               onSubmit={handleCreateCourse}
               onCancel={() => setShowAddDialog(false)}
               submitLabel="Create Course"
+              defaultValues={{
+                for_dept_id: currentDepartment?.id,
+                teaching_dept_id: currentDepartment?.id
+              }}
+              editableFields={['course_id', 'course_year', 'course_semester', 'lecture_hours', 'tutorial_hours', 'practical_hours', 'credits', 'for_dept_id', 'need_assist_teacher', 'regulation', 'course_type', 'elective_type', 'lab_type', 'no_of_students', 'is_zero_credit_course', 'teaching_status']}
             />
           </ScrollArea>
         </DialogContent>

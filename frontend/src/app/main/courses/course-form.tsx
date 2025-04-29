@@ -105,7 +105,8 @@ export default function CourseForm({
   }, [defaultValues, form]);
 
   const isFieldEditable = (fieldName: string): boolean => {
-    if (!isEdit) return true; // If not editing, all fields are editable
+    if (fieldName === 'teaching_dept_id') return false; // Always disable teaching department
+    if (isEdit) return true; // If editing, all other fields are editable
     if (editableFields.length === 0) return true; 
     return editableFields.includes(fieldName);
   };
