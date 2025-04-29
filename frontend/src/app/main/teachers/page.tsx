@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { 
   useGetTeachers, 
@@ -9,6 +9,7 @@ import {
   useGetPlaceholderTeachers,
   Teacher as TeacherType 
 } from '@/action/teacher';
+import api from '@/action/api';
 import { Button } from '@/components/ui/button';
 import {
   Table,
@@ -85,6 +86,21 @@ export default function TeacherManagement() {
     setShowPlaceholderForm(false);
     toast.success("Placeholder teacher created successfully");
   });
+
+  // Create a dedicated function for marking a teacher as resigning/resigned
+  const markTeacherStatus = (teacher: TeacherType, status: 'resigning' | 'resigned') => {
+    api.patch(`/api/teachers/${teacher.id}/`, { resignation_status: status })
+      .then(() => {
+        toast.success(`Teacher marked as ${status}`);
+        refetch();
+      })
+      .catch((error: any) => {
+        console.error(`Error marking teacher as ${status}:`, error);
+        toast.error(`Failed to mark teacher as ${status}`, {
+          description: error.message || 'An unexpected error occurred'
+        });
+      });
+  };
 
   // Extract unique values for filters
   const uniqueRoles = useMemo<string[]>(() => {
@@ -502,17 +518,7 @@ export default function TeacherManagement() {
                                   </DropdownMenuItem>
                                   {!isPlaceholder && teacher.resignation_status === 'active' && (
                                     <DropdownMenuItem 
-                                      onClick={() => {
-                                        updateTeacher(
-                                          { resignation_status: 'resigning' },
-                                          {
-                                            onSuccess: () => {
-                                              toast.success('Teacher marked as resigning');
-                                              refetch();
-                                            }
-                                          }
-                                        );
-                                      }}
+                                      onClick={() => markTeacherStatus(teacher, 'resigning')}
                                     >
                                       <Clock className="mr-2 h-4 w-4 text-orange-600" />
                                       Mark as Resigning
@@ -520,17 +526,7 @@ export default function TeacherManagement() {
                                   )}
                                   {!isPlaceholder && teacher.resignation_status === 'resigning' && (
                                     <DropdownMenuItem 
-                                      onClick={() => {
-                                        updateTeacher(
-                                          { resignation_status: 'resigned' },
-                                          {
-                                            onSuccess: () => {
-                                              toast.success('Teacher marked as resigned');
-                                              refetch();
-                                            }
-                                          }
-                                        );
-                                      }}
+                                      onClick={() => markTeacherStatus(teacher, 'resigned')}
                                     >
                                       <UserX className="mr-2 h-4 w-4 text-destructive" />
                                       Mark as Resigned

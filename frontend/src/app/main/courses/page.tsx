@@ -34,7 +34,13 @@ import {
   Info,
   Users,
   GraduationCap,
-  ListFilter
+  ListFilter,
+  HelpCircle,
+  BookMarked,
+  BookCopy,
+  ChartPieIcon,
+  PieChart,
+  CircleDot
 } from 'lucide-react';
 import { 
   useGetCurrentDepartmentCourses, 
@@ -60,6 +66,40 @@ import {
   RadioGroup,
   RadioGroupItem,
 } from "@/components/ui/radio-group";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
+// Stats card component for the dashboard
+interface StatCardProps {
+  title: string;
+  icon: React.ReactNode;
+  color: string;
+  count: number;
+  total: number;
+  description: string;
+}
+
+const StatCard = ({ title, icon, color, count, total, description }: StatCardProps) => (
+  <div className={`border rounded-lg p-4 shadow-sm ${color}`}>
+    <div className="flex justify-between items-start">
+      <div>
+        <h3 className="font-medium text-sm text-muted-foreground">{title}</h3>
+        <div className="mt-1 flex items-baseline gap-2">
+          <span className="text-2xl font-bold">{count}</span>
+          <span className="text-sm text-muted-foreground">of {total} courses</span>
+        </div>
+      </div>
+      <div className="p-2 rounded-full bg-background/80">
+        {icon}
+      </div>
+    </div>
+    <p className="mt-2 text-xs text-muted-foreground">{description}</p>
+  </div>
+);
 
 export default function CourseManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -124,6 +164,13 @@ export default function CourseManagementPage() {
   const teachingCourses = useMemo(() => filterCourses(allTeachingCourses), [allTeachingCourses, searchQuery]);
   const receivingCourses = useMemo(() => filterCourses(allReceivingCourses), [allReceivingCourses, searchQuery]);
   const forDeptCourses = useMemo(() => filterCourses(allForDeptCourses), [allForDeptCourses, searchQuery]);
+  
+  // Count courses that are both owned and taught by the department
+  const selfOwnedSelfTaughtCount = useMemo(() => {
+    return allOwnedCourses.filter(course => 
+      course.course_detail.course_dept_detail.id === course.teaching_dept_id
+    ).length;
+  }, [allOwnedCourses]);
   
   // Create course mutation
   const { mutate: createCourse, isPending: isCreating } = useCreateCourse(() => {
@@ -213,54 +260,145 @@ export default function CourseManagementPage() {
             </div>
           </div>
           <CardDescription>
-            Manage courses for your department, including those you teach and those your students take
+            Manage courses for your department, including those you own, teach, and your students take
           </CardDescription>
         </CardHeader>
         
         <CardContent className="px-6 pb-6">
-          {/* Department Role Information - Simplified */}
+          {/* Department Role Dashboard */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <PieChart className="h-5 w-5 text-primary" />
+              <h3 className="text-base font-medium">Departmental Role Summary</h3>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" className="h-7 w-7 p-0 rounded-full">
+                      <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-sm">
+                    <p>This dashboard shows the number of courses your department is involved with in different roles.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+              <StatCard 
+                title="Course Owner" 
+                icon={<BookOpen className="h-5 w-5 text-blue-500" />}
+                color="bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900"
+                count={allOwnedCourses.length}
+                total={allOwnedCourses.length}
+                description="Courses created and maintained by your department"
+              />
+              
+              <StatCard 
+                title="Teaching Department" 
+                icon={<School className="h-5 w-5 text-orange-500" />}
+                color="bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-900"
+                count={allTeachingCourses.length}
+                total={allTeachingCourses.length}
+                description="Courses you teach for other departments"
+              />
+              
+              <StatCard 
+                title="For Our Students" 
+                icon={<GraduationCap className="h-5 w-5 text-purple-500" />}
+                color="bg-purple-50 border-purple-200 dark:bg-purple-950/30 dark:border-purple-900"
+                count={allForDeptCourses.length}
+                total={allForDeptCourses.length}
+                description="External courses taken by your department's students"
+              />
+              
+              <StatCard 
+                title="Self-Taught Courses" 
+                icon={<CircleDot className="h-5 w-5 text-green-500" />}
+                color="bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900"
+                count={selfOwnedSelfTaughtCount}
+                total={allOwnedCourses.length}
+                description="Courses you both own and teach (subset of Course Owner)"
+              />
+            </div>
+          </div>
+          
+          {/* Department Role Information - Enhanced */}
           <div className="mb-6 p-4 bg-muted/30 rounded-lg">
             <h3 className="text-sm font-medium mb-3 flex items-center gap-2">
               <Info className="h-4 w-4 text-primary" />
-              Course Management Overview
+              Course Role Definitions
             </h3>
             <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <div className="flex items-start gap-2">
-                <BookOpen className="h-4 w-4 mt-0.5 text-blue-500 flex-shrink-0" />
-                <div>
-                  <span className="font-medium">We Own</span>
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    Courses created and owned by our department
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <School className="h-4 w-4 mt-0.5 text-orange-500 flex-shrink-0" />
-                <div>
-                  <span className="font-medium">We Teach</span>
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    Courses we teach for other departments
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <ArrowLeftRight className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
-                <div>
-                  <span className="font-medium">Others Teach Ours</span>
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    Our courses taught by other departments
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2">
-                <GraduationCap className="h-4 w-4 mt-0.5 text-purple-500 flex-shrink-0" />
-                <div>
-                  <span className="font-medium">Our Students Take</span>
-                  <p className="text-muted-foreground text-xs mt-0.5">
-                    External courses taken by our students
-                  </p>
-                </div>
-              </div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-start gap-2 cursor-help p-2 hover:bg-muted/50 rounded-md transition-colors">
+                      <BookOpen className="h-4 w-4 mt-0.5 text-blue-500 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium">Course Owner</span>
+                        <p className="text-muted-foreground text-xs mt-0.5">
+                          Department that created and controls the course content
+                        </p>
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p>The <strong>Course Owner</strong> department creates the course, defines its content and curriculum, and maintains academic standards. These are courses where your department is the originating department.</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-start gap-2 cursor-help p-2 hover:bg-muted/50 rounded-md transition-colors">
+                      <School className="h-4 w-4 mt-0.5 text-orange-500 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium">Teaching Department</span>
+                        <p className="text-muted-foreground text-xs mt-0.5">
+                          Department teaching courses owned by other departments
+                        </p>
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p>The <strong>Teaching Department</strong> provides faculty to teach courses that are owned by other departments. These courses are not created by your department, but your faculty teaches them.</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-start gap-2 cursor-help p-2 hover:bg-muted/50 rounded-md transition-colors">
+                      <ArrowLeftRight className="h-4 w-4 mt-0.5 text-green-500 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium">Others Teach Ours</span>
+                        <p className="text-muted-foreground text-xs mt-0.5">
+                          Your courses taught by other departments
+                        </p>
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p>These are courses <strong>owned by your department</strong> but <strong>taught by faculty from other departments</strong>. Your department creates and maintains the curriculum, but another department handles the teaching.</p>
+                  </TooltipContent>
+                </Tooltip>
+                
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex items-start gap-2 cursor-help p-2 hover:bg-muted/50 rounded-md transition-colors">
+                      <GraduationCap className="h-4 w-4 mt-0.5 text-purple-500 flex-shrink-0" />
+                      <div>
+                        <span className="font-medium">For Our Students</span>
+                        <p className="text-muted-foreground text-xs mt-0.5">
+                          External courses taken by your students
+                        </p>
+                      </div>
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p>These are courses that your department's students take, but are both <strong>owned and taught by other departments</strong>. Your department is not involved in creating or teaching these courses.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             </div>
           </div>
 
@@ -268,23 +406,23 @@ export default function CourseManagementPage() {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
               <TabsList className="flex flex-wrap h-auto p-1">
                 <TabsTrigger value="owned" className="flex items-center gap-1 h-9 px-3 py-1">
-                  <BookOpen className="h-4 w-4" />
+                  <BookOpen className="h-4 w-4 text-blue-500" />
                   <span className="hidden sm:inline">We Own</span>
-                  <span className="inline sm:hidden">We Own</span>
+                  <span className="inline sm:hidden">Owner</span>
                   <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 rounded-full">
                     {ownedCourses.length}/{allOwnedCourses.length}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="teaching" className="flex items-center gap-1 h-9 px-3 py-1">
-                  <School className="h-4 w-4" />
+                  <School className="h-4 w-4 text-orange-500" />
                   <span className="hidden sm:inline">We Teach</span>
-                  <span className="inline sm:hidden">We Teach</span>
+                  <span className="inline sm:hidden">Teaching</span>
                   <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 rounded-full">
                     {teachingCourses.length}/{allTeachingCourses.length}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="receiving" className="flex items-center gap-1 h-9 px-3 py-1">
-                  <ArrowLeftRight className="h-4 w-4" />
+                  <ArrowLeftRight className="h-4 w-4 text-green-500" />
                   <span className="hidden sm:inline">Others Teach Ours</span>
                   <span className="inline sm:hidden">Others Teach</span>
                   <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 rounded-full">
@@ -292,9 +430,9 @@ export default function CourseManagementPage() {
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="fordept" className="flex items-center gap-1 h-9 px-3 py-1">
-                  <GraduationCap className="h-4 w-4" />
-                  <span className="hidden sm:inline">Our Students Take</span>
-                  <span className="inline sm:hidden">Students Take</span>
+                  <GraduationCap className="h-4 w-4 text-purple-500" />
+                  <span className="hidden sm:inline">For Our Students</span>
+                  <span className="inline sm:hidden">For Students</span>
                   <Badge variant="secondary" className="ml-1 px-1.5 py-0 h-5 rounded-full">
                     {forDeptCourses.length}/{allForDeptCourses.length}
                   </Badge>
@@ -331,11 +469,23 @@ export default function CourseManagementPage() {
             {/* Owned Courses Tab */}
             <TabsContent value="owned">
               <Card>
-                <CardHeader className="px-6 py-4 bg-muted/30">
+                <CardHeader className="px-6 py-4 bg-blue-50/50 dark:bg-blue-950/20 border-b border-blue-100 dark:border-blue-900/30">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <BookOpen className="h-5 w-5 text-primary" />
-                      Courses We Own
+                      <BookOpen className="h-5 w-5 text-blue-500" />
+                      <span>Courses We Own</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0 rounded-full">
+                              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p>As the <strong>Course Owner</strong>, your department has created these courses and controls their content, curriculum, and academic standards.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardTitle>
                     <CardDescription className="mt-1 sm:mt-0 sm:text-right">
                       {searchQuery ? (
@@ -456,11 +606,23 @@ export default function CourseManagementPage() {
             {/* Teaching to Other Departments Tab */}
             <TabsContent value="teaching">
               <Card>
-                <CardHeader className="px-6 py-4 bg-muted/30">
+                <CardHeader className="px-6 py-4 bg-orange-50/50 dark:bg-orange-950/20 border-b border-orange-100 dark:border-orange-900/30">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <School className="h-5 w-5 text-primary" />
-                      Courses We Teach (For Other Departments)
+                      <School className="h-5 w-5 text-orange-500" />
+                      <span>We Teach for Others</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0 rounded-full">
+                              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p>As the <strong>Teaching Department</strong>, your faculty are responsible for delivering these courses for other departments, even though your department didn't create them.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardTitle>
                     <CardDescription className="mt-1 sm:mt-0 sm:text-right">
                       {searchQuery ? (
@@ -577,11 +739,23 @@ export default function CourseManagementPage() {
             {/* Courses Taught by Other Departments Tab */}
             <TabsContent value="receiving">
               <Card>
-                <CardHeader className="px-6 py-4 bg-muted/30">
+                <CardHeader className="px-6 py-4 bg-green-50/50 dark:bg-green-950/20 border-b border-green-100 dark:border-green-900/30">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <ArrowLeftRight className="h-5 w-5 text-primary" />
-                      Our Courses Taught By Other Departments
+                      <ArrowLeftRight className="h-5 w-5 text-green-500" />
+                      <span>Others Teach Ours</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0 rounded-full">
+                              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p>Your department is the <strong>Course Owner</strong> but another department is the <strong>Teaching Department</strong>. You maintain the curriculum while they provide faculty.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardTitle>
                     <CardDescription className="mt-1 sm:mt-0 sm:text-right">
                       {searchQuery ? (
@@ -642,7 +816,7 @@ export default function CourseManagementPage() {
                               <TableCell>{course.course_detail.course_name}</TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1">
-                                  <School className="h-3.5 w-3.5 text-indigo-500" />
+                                  <School className="h-3.5 w-3.5 text-orange-500" />
                                   <span>{course.teaching_dept_detail.dept_name}</span>
                                 </div>
                               </TableCell>
@@ -696,11 +870,23 @@ export default function CourseManagementPage() {
             {/* Courses For Our Department's Students Tab */}
             <TabsContent value="fordept">
               <Card>
-                <CardHeader className="px-6 py-4 bg-muted/30">
+                <CardHeader className="px-6 py-4 bg-purple-50/50 dark:bg-purple-950/20 border-b border-purple-100 dark:border-purple-900/30">
                   <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <GraduationCap className="h-5 w-5 text-primary" />
-                      External Courses Our Students Take
+                      <GraduationCap className="h-5 w-5 text-purple-500" />
+                      <span>For Our Students</span>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0 rounded-full">
+                              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p>Your department is the <strong>For Students</strong> department. These courses are created and taught by other departments, but your students take them as part of their curriculum.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </CardTitle>
                     <CardDescription className="mt-1 sm:mt-0 sm:text-right">
                       {searchQuery ? (
@@ -768,7 +954,7 @@ export default function CourseManagementPage() {
                               </TableCell>
                               <TableCell>
                                 <div className="flex items-center gap-1">
-                                  <School className="h-3.5 w-3.5 text-indigo-500" />
+                                  <School className="h-3.5 w-3.5 text-orange-500" />
                                   <span>{course.teaching_dept_detail.dept_name}</span>
                                 </div>
                               </TableCell>

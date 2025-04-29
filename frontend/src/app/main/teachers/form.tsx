@@ -136,11 +136,9 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
     },
   });
 
-  // Watch for changes to teacher_role to automatically set availability_type
   const teacherRole = form.watch('teacher_role');
   
   useEffect(() => {
-    // Automatically set availability_type for industry professionals and POPs
     if (teacherRole === 'POP' || teacherRole === 'Industry Professional') {
       form.setValue('availability_type', 'limited');
     }

@@ -210,22 +210,22 @@ class DepartmentCoursesView(APIView):
             "status": "success",
             "owned_courses": {
                 "role": "owner",
-                "description": "These courses are owned by your department",
+                "description": "Courses created and maintained by your department",
                 "data": owned_courses_serializer.data
             },
             "teaching_courses": {
                 "role": "teacher",
-                "description": "These courses are taught by your department but owned by other departments",
+                "description": "Courses taught by your department for other departments",
                 "data": teaching_courses_serializer.data
             },
             "receiving_courses": {
                 "role": "owner_not_teacher",
-                "description": "These courses are owned by your department but taught by other departments",
+                "description": "Your courses taught by other departments",
                 "data": receiving_courses_serializer.data
             },
             "for_dept_courses": {
                 "role": "learner",
-                "description": "These courses are for your department's students but owned and taught by other departments",
+                "description": "External courses taken by your department's students",
                 "data": for_dept_courses_serializer.data
             }
         }
