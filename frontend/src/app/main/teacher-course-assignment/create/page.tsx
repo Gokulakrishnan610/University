@@ -5,10 +5,10 @@ import { useGetCourses, Course } from '@/action/course';
 import { useGetTeacherCourseAssignments, useCreateTeacherCourseAssignment } from '@/action/teacherCourse';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Combobox, ComboboxOption } from '@/components/ui/combobox';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from 'sonner';
-import { Loader2, ArrowLeft, Users } from 'lucide-react';
+import { Loader2, ArrowLeft, Users, AlertTriangle, Briefcase, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { useGetCourseAssignmentStats } from '@/action/course';
@@ -24,14 +24,90 @@ import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 // Define the Zod schema for teacher course assignment
 const teacherCourseFormSchema = z.object({
     teacher_id: z.string().min(1, "Teacher is required"),
     course_id: z.string().min(1, "Course is required"),
+    // For industry professionals, we might need special schedules
+    requires_special_scheduling: z.boolean().default(false),
 });
 
 type TeacherCourseFormValues = z.infer<typeof teacherCourseFormSchema>;
+
+// Extend the Teacher type to include industry professional properties
+interface ExtendedTeacher extends Teacher {
+    is_industry_professional?: boolean;
+    company_name?: string;
+    availability_slots?: Array<{
+        id: number;
+        day_of_week: number;
+        start_time: string;
+        end_time: string;
+    }>;
+}
+
+// Extend the teacher stats type
+interface TeacherStats {
+    teacher_id: number;
+    teacher_name: string;
+    semester: number;
+    academic_year: number;
+    student_count: number;
+    is_industry_professional?: boolean;
+}
+
+// Helper component to display teacher availability
+const TeacherAvailabilityDisplay = ({ teacher }: { teacher: ExtendedTeacher }) => {
+    // This assumes we have availability information in the teacher object
+    const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+    
+    return (
+        <div className="space-y-4">
+            <div className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-amber-500" />
+                <h4 className="font-medium">Limited Availability Schedule</h4>
+            </div>
+            
+            <div className="border rounded-md divide-y">
+                {teacher.availability_slots && teacher.availability_slots.length > 0 ? (
+                    teacher.availability_slots.map((slot, index) => (
+                        <div key={index} className="p-2 flex justify-between items-center">
+                            <div>
+                                <span className="font-medium">{daysOfWeek[slot.day_of_week]}</span>
+                            </div>
+                            <div>
+                                <span className="text-sm">{slot.start_time} - {slot.end_time}</span>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    <div className="p-4 text-center text-muted-foreground">
+                        No availability schedule set for this industry professional
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+};
+
+// Extend the TeacherCourseAssignment type
+interface TeacherCourseAssignmentExtended {
+    teacher_id: number;
+    course_id: number;
+    semester?: number;
+    academic_year?: number;
+    student_count?: number;
+    requires_special_scheduling?: boolean;
+}
 
 export default function CreateTeacherCourseAssignment() {
     const navigate = useNavigate();
@@ -49,6 +125,7 @@ export default function CreateTeacherCourseAssignment() {
         defaultValues: {
             teacher_id: "",
             course_id: "",
+            requires_special_scheduling: false,
         },
     });
 
@@ -58,6 +135,25 @@ export default function CreateTeacherCourseAssignment() {
         navigate('/teacher-course-assignment');
     });
 
+    // Transform teachers into combobox options
+    const teacherOptions: ComboboxOption[] = useMemo(() => {
+        return teachers.map((teacher: Teacher) => ({
+            value: teacher.id.toString(),
+            label: `${teacher.teacher_id?.first_name} ${teacher.teacher_id?.last_name} (${teacher.staff_code} - ${teacher.dept_id?.dept_name || 'No Department'})`
+        }));
+    }, [teachers]);
+    
+    // Get the selected teacher data
+    const selectedTeacherData = useMemo(() => {
+        if (!selectedTeacher) return null;
+        return teachers.find((t: Teacher) => t.id.toString() === selectedTeacher) as ExtendedTeacher | null;
+    }, [selectedTeacher, teachers]);
+
+    // Check if the selected teacher is an industry professional
+    const isIndustryProfessional = useMemo(() => {
+        return selectedTeacherData?.is_industry_professional || false;
+    }, [selectedTeacherData]);
+
     // Calculate teacher's current workload and availability
     const teacherWorkload = useMemo(() => {
         if (!selectedTeacher || !assignments) return null;
@@ -66,7 +162,6 @@ export default function CreateTeacherCourseAssignment() {
             a => a.teacher_detail?.id?.toString() === selectedTeacher
         );
 
-        const selectedTeacherData = teachers.find((t: Teacher) => t.id.toString() === selectedTeacher);
         if (!selectedTeacherData) return null;
 
         const totalAssignedHours = teacherAssignments.reduce((total, assignment) => {
@@ -81,19 +176,33 @@ export default function CreateTeacherCourseAssignment() {
             maxHours: selectedTeacherData.teacher_working_hours || 0,
             assignments: teacherAssignments
         };
-    }, [selectedTeacher, assignments, teachers]);
+    }, [selectedTeacher, assignments, teachers, selectedTeacherData]);
 
     // Filter available courses based on selected teacher's department
     const availableCourses = useMemo(() => {
         if (!selectedTeacher || !teachers || !courses) return [];
 
-        const selectedTeacherData = teachers.find((t: Teacher) => t.id.toString() === selectedTeacher);
         if (!selectedTeacherData || !selectedTeacherData.dept_id) return [];
 
-        return courses.filter(course =>
-            course.teaching_dept_id === selectedTeacherData.dept_id.id
+        // For industry professionals, we might show all courses as they can teach specialized courses
+        // across departments
+        if (isIndustryProfessional) {
+            return courses;
+        }
+
+        // For regular faculty, only show courses from their department
+        return courses.filter(course => 
+            selectedTeacherData?.dept_id?.id && course.teaching_dept_id === selectedTeacherData.dept_id.id
         );
-    }, [selectedTeacher, teachers, courses]);
+    }, [selectedTeacher, teachers, courses, selectedTeacherData, isIndustryProfessional]);
+
+    // Transform filtered courses into combobox options
+    const courseOptions: ComboboxOption[] = useMemo(() => {
+        return availableCourses.map((course: Course) => ({
+            value: course.id.toString(),
+            label: `${course.course_detail?.course_name} (${course.course_detail?.course_id} - ${course.id} - ${course.credits} credits)`
+        }));
+    }, [availableCourses]);
 
     // Get course assignment stats
     const { data: courseStats, isPending: courseStatsLoading } = useGetCourseAssignmentStats(
@@ -121,14 +230,38 @@ export default function CreateTeacherCourseAssignment() {
             });
             return;
         }
+        
+        // If the teacher is an industry professional, ensure we're setting the special scheduling flag
+        const requires_special_scheduling = isIndustryProfessional;
 
-        createAssignment.mutate({
+        // Prepare assignment data
+        const assignmentData: TeacherCourseAssignmentExtended = {
             teacher_id: parseInt(data.teacher_id),
             course_id: parseInt(data.course_id),
             semester: 1, // Default value
             academic_year: new Date().getFullYear(), // Default current year
-            student_count: 0 // Default value
-        }, {
+            student_count: 0, // Default value
+        };
+
+        // Only add the requires_special_scheduling if it's an industry professional
+        if (isIndustryProfessional) {
+            assignmentData.requires_special_scheduling = true;
+        }
+
+        createAssignment.mutate(assignmentData, {
+            onSuccess: () => {
+                if (isIndustryProfessional) {
+                    toast.success('Assignment created successfully', {
+                        description: 'Please configure special scheduling for this industry professional in the next step'
+                    });
+                    // Navigate to the special scheduling page for this assignment
+                    // You would need to implement this page separately
+                    // navigate(`/teacher-course-assignment/${result.id}/schedule`);
+                } else {
+                    toast.success('Teacher course assignment created successfully');
+                    navigate('/teacher-course-assignment');
+                }
+            },
             onError: (error: any) => {
                 const errorMessage = error.response?.data?.non_field_errors?.[0] || 
                                     error.response?.data?.detail || 
@@ -145,6 +278,11 @@ export default function CreateTeacherCourseAssignment() {
     const handleTeacherChange = (value: string) => {
         setSelectedTeacher(value);
         form.setValue("teacher_id", value);
+        // Clear course selection when teacher changes
+        if (selectedCourse) {
+            setSelectedCourse('');
+            form.setValue("course_id", '');
+        }
     };
 
     const handleCourseChange = (value: string) => {
@@ -165,28 +303,31 @@ export default function CreateTeacherCourseAssignment() {
                     <CardContent className="space-y-6">
                         <div className="space-y-2">
                             <Label>Select Teacher</Label>
-                            <Select
+                            <Combobox
+                                options={teacherOptions}
                                 value={selectedTeacher}
                                 onValueChange={handleTeacherChange}
+                                placeholder={teachersLoading ? "Loading teachers..." : "Search for a teacher"}
+                                searchPlaceholder="Search by name or department..."
+                                emptyMessage="No teachers found"
                                 disabled={teachersLoading}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder={teachersLoading ? "Loading teachers..." : "Select a teacher"} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {teachers.map((teacher: Teacher) => (
-                                        <SelectItem key={teacher.id} value={teacher.id.toString()}>
-                                            <div className="flex flex-col">
-                                                <span>{teacher.teacher_id?.first_name} {teacher.teacher_id?.last_name}</span>
-                                                <span className="text-xs text-muted-foreground">
-                                                    {teacher.staff_code} • {teacher.teacher_role} • {teacher.dept_id?.dept_name || 'No Department'}
-                                                </span>
-                                            </div>
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
+                            />
                         </div>
+
+                        {isIndustryProfessional && selectedTeacherData && (
+                            <Alert className="bg-amber-50 border-amber-200">
+                                <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                <AlertTitle className="text-amber-700">Industry Professional</AlertTitle>
+                                <AlertDescription className="text-amber-700">
+                                    {selectedTeacherData.teacher_id?.first_name} is an industry professional from{' '}
+                                    {selectedTeacherData.company_name || 'an external organization'} with limited availability.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+
+                        {isIndustryProfessional && selectedTeacherData && (
+                            <TeacherAvailabilityDisplay teacher={selectedTeacherData} />
+                        )}
 
                         {teacherWorkload && (
                             <div className="space-y-4">
@@ -242,32 +383,31 @@ export default function CreateTeacherCourseAssignment() {
                                             <FormItem>
                                                 <FormLabel>Course</FormLabel>
                                                 <FormControl>
-                                                    <Select
+                                                    <Combobox
+                                                        options={courseOptions}
                                                         value={selectedCourse}
                                                         onValueChange={handleCourseChange}
+                                                        placeholder={!selectedTeacher ? "Select a teacher first" : coursesLoading ? "Loading courses..." : "Search for a course"}
+                                                        searchPlaceholder="Search by name or code..."
+                                                        emptyMessage={!selectedTeacher ? "Please select a teacher first" : "No courses found for this teacher's department"}
                                                         disabled={!selectedTeacher || coursesLoading}
-                                                    >
-                                                        <SelectTrigger className="w-full">
-                                                            <SelectValue placeholder={coursesLoading ? "Loading courses..." : "Select a course"} />
-                                                        </SelectTrigger>
-                                                        <SelectContent>
-                                                            {availableCourses.map((course: Course) => (
-                                                                <SelectItem key={course.id} value={course.id.toString()}>
-                                                                    <div className="flex flex-col">
-                                                                        <span>{course.course_detail?.course_name}</span>
-                                                                        <span className="text-xs text-muted-foreground">
-                                                                            {course.course_detail?.course_id} • {course.credits} credits
-                                                                        </span>
-                                                                    </div>
-                                                                </SelectItem>
-                                                            ))}
-                                                        </SelectContent>
-                                                    </Select>
+                                                    />
                                                 </FormControl>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
+
+                                    {isIndustryProfessional && selectedTeacher && selectedCourse && (
+                                        <Alert>
+                                            <Briefcase className="h-4 w-4" />
+                                            <AlertTitle>Special Scheduling Required</AlertTitle>
+                                            <AlertDescription>
+                                                After creating this assignment, you'll need to set up the specific days and times 
+                                                when this industry professional will teach this course.
+                                            </AlertDescription>
+                                        </Alert>
+                                    )}
 
                                     <Button
                                         type="submit"
@@ -323,12 +463,20 @@ export default function CreateTeacherCourseAssignment() {
                                                     <TableHeader>
                                                         <TableRow>
                                                             <TableHead>Teacher</TableHead>
+                                                            <TableHead>Type</TableHead>
                                                         </TableRow>
                                                     </TableHeader>
                                                     <TableBody>
-                                                        {courseStats.teachers.map((teacher) => (
+                                                        {courseStats.teachers.map((teacher: TeacherStats) => (
                                                             <TableRow key={teacher.teacher_id}>
                                                                 <TableCell>{teacher.teacher_name}</TableCell>
+                                                                <TableCell>
+                                                                    {teacher.is_industry_professional ? (
+                                                                        <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                                                                            Industry Professional
+                                                                        </Badge>
+                                                                    ) : 'Regular Faculty'}
+                                                                </TableCell>
                                                             </TableRow>
                                                         ))}
                                                     </TableBody>

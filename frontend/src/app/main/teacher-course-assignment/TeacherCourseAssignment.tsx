@@ -40,7 +40,6 @@ export function TeacherCourseAssignment() {
 
     // Delete assignment mutation
     const deleteAssignment = useDeleteTeacherCourseAssignment(() => {
-        toast.success('Teacher course assignment deleted successfully');
         refetchAssignments();
     });
 

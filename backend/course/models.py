@@ -98,17 +98,3 @@ class CourseRoomPreference(models.Model):
     def __str__(self):
         return f"{self.course_id} - Room: {self.room_id} (Level: {self.preference_level})"
 
-class TeacherCourseAssignment(models.Model):
-    teacher = models.ForeignKey("teacher.Teacher", on_delete=models.CASCADE, related_name='course_assignments')
-    course = models.ForeignKey(Course, on_delete=models.CASCADE, related_name='teacher_assignments')
-    semester = models.IntegerField("Semester")
-    academic_year = models.IntegerField("Academic Year")
-    student_count = models.IntegerField("Student Count", default=0)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        unique_together = ['teacher', 'course', 'semester', 'academic_year']
-
-    def __str__(self):
-        return f"{self.teacher} - {self.course} (Sem: {self.semester}, Year: {self.academic_year})"

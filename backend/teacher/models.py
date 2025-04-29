@@ -6,7 +6,12 @@ class Teacher(models.Model):
         ('Professor', 'Professor'),
         ('Asst. Professor', 'Asst. Professor'),
         ('HOD', 'HOD'),
-        ('DC', 'DC'),
+        ('DC', 'DC')
+                ]
+
+    AVAILABILITY_TYPE = [
+        ('regular', 'Regular (All Working Days)'),
+        ('limited', 'Limited (Specific Days/Times)'),
     ]
 
     teacher_id = models.ForeignKey('authentication.User', on_delete=models.CASCADE, related_name='teacher_profile', null=True)
@@ -15,7 +20,12 @@ class Teacher(models.Model):
     teacher_role = models.CharField("Teacher Role", default="Professor", max_length=100, blank=False, choices=TEACHER_ROLES)
     teacher_specialisation = models.CharField('Specialisation', max_length=100, blank=True)
     teacher_working_hours = models.IntegerField('Working Hour', default=21, blank=False)
-
+    
+    # Fields for industry professionals with limited availability
+    availability_type = models.CharField("Availability Type", max_length=20, choices=AVAILABILITY_TYPE, default='regular')
+    is_industry_professional = models.BooleanField("Industry Professional", default=False)
+    company_name = models.CharField("Company/Organization", max_length=100, blank=True, null=True)
+    
     def __str__(self):
         name = self.teacher_id.get_full_name() if self.teacher_id else "Unknown"
         dept_name = self.dept_id.dept_name if self.dept_id else "No Department"
@@ -33,4 +43,47 @@ class Teacher(models.Model):
                     {'teacher_role': 'There is already an HOD for this department.'}
                 )
         
+        # Automatically set is_industry_professional if role is 'Industry Professional'
+        if self.teacher_role == 'Industry Professional':
+            self.is_industry_professional = True
+            self.availability_type = 'limited'
+        
+        return super().clean()
+
+class TeacherAvailability(models.Model):
+    DAYS_OF_WEEK = [
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday'),
+    ]
+    
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='availability_slots')
+    day_of_week = models.IntegerField("Day of Week", choices=DAYS_OF_WEEK)
+    start_time = models.TimeField("Start Time")
+    end_time = models.TimeField("End Time")
+    
+    class Meta:
+        verbose_name = "Teacher Availability"
+        verbose_name_plural = "Teacher Availabilities"
+        ordering = ['day_of_week', 'start_time']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['teacher', 'day_of_week', 'start_time', 'end_time'],
+                name='unique_teacher_availability_slot'
+            )
+        ]
+    
+    def __str__(self):
+        day_name = dict(self.DAYS_OF_WEEK)[self.day_of_week]
+        return f"{self.teacher} - {day_name}: {self.start_time.strftime('%H:%M')} to {self.end_time.strftime('%H:%M')}"
+    
+    def clean(self):
+        if self.start_time >= self.end_time:
+            raise ValidationError(
+                {'end_time': 'End time must be after start time.'}
+            )
         return super().clean()
