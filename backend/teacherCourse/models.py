@@ -53,16 +53,16 @@ class TeacherCourse(models.Model):
     
     def calculate_weekly_hours(self):
         """Calculate weekly hours based on course type"""
-        if not self.course_id:
+        if not self.course_id or not self.course_id.course_id:
             return 0
             
-        course = self.course_id
-        if course.course_type == 'T':  # Theory
-            return course.lecture_hours + course.tutorial_hours
-        elif course.course_type == 'LoT':  # Lab and Theory
-            return course.lecture_hours + course.tutorial_hours + course.practical_hours
-        elif course.course_type == 'L':  # Lab only
-            return course.practical_hours
+        course_master = self.course_id.course_id
+        if course_master.course_type == 'T':  # Theory
+            return course_master.lecture_hours + course_master.tutorial_hours
+        elif course_master.course_type == 'LoT':  # Lab and Theory
+            return course_master.lecture_hours + course_master.tutorial_hours + course_master.practical_hours
+        elif course_master.course_type == 'L':  # Lab only
+            return course_master.practical_hours
         return 0
     
     def save(self, *args, **kwargs):

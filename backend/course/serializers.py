@@ -12,6 +12,16 @@ class CourseSerializer(serializers.ModelSerializer):
     relationship_type = serializers.SerializerMethodField()
     permissions = serializers.SerializerMethodField()
     
+    # Proxy fields from CourseMaster
+    lecture_hours = serializers.IntegerField(source='course_id.lecture_hours', read_only=True)
+    tutorial_hours = serializers.IntegerField(source='course_id.tutorial_hours', read_only=True)
+    practical_hours = serializers.IntegerField(source='course_id.practical_hours', read_only=True)
+    credits = serializers.IntegerField(source='course_id.credits', read_only=True)
+    regulation = serializers.CharField(source='course_id.regulation', read_only=True)
+    course_type = serializers.CharField(source='course_id.course_type', read_only=True)
+    is_zero_credit_course = serializers.BooleanField(source='course_id.is_zero_credit_course', read_only=True)
+    no_of_students = serializers.IntegerField(default=0, read_only=True)
+    
     class Meta:
         model = Course
         fields = [
@@ -95,17 +105,15 @@ class CourseSerializer(serializers.ModelSerializer):
         # Determine which fields can be edited based on role
         editable_fields = []
         if is_owner:
-            # Owner can edit all fields
+            # Owner can edit all fields except those now in CourseMaster
             editable_fields = [
-                'course_year', 'course_semester', 'lecture_hours', 
-                'tutorial_hours', 'practical_hours', 'credits',
+                'course_year', 'course_semester',
                 'for_dept_id', 'teaching_dept_id', 'need_assist_teacher',
-                'regulation', 'course_type', 'elective_type', 'lab_type',
-                'no_of_students', 'is_zero_credit_course', 'teaching_status'
+                'elective_type', 'lab_type', 'teaching_status'
             ]
         elif is_teacher:
             # Teaching department can only edit teaching-related fields
-            editable_fields = ['teaching_status', 'no_of_students']
+            editable_fields = ['teaching_status']
         
         return {
             'can_edit': can_edit,
@@ -299,19 +307,11 @@ class CreateCourseSerializer(serializers.ModelSerializer):
             'course_id',
             'course_year',
             'course_semester',
-            'lecture_hours',
-            'tutorial_hours',
-            'practical_hours',
-            'credits',
             'for_dept_id',
             'teaching_dept_id',
             'need_assist_teacher',
-            'regulation',
-            'course_type',
             'elective_type',
             'lab_type',
-            'no_of_students',
-            'is_zero_credit_course',
             'teaching_status'
         ]
 
@@ -339,19 +339,11 @@ class UpdateCourseSerializer(serializers.ModelSerializer):
         fields = [
             'course_year',
             'course_semester',
-            'lecture_hours',
-            'tutorial_hours',
-            'practical_hours',
-            'credits',
             'for_dept_id',
             'teaching_dept_id',
             'need_assist_teacher',
-            'regulation',
-            'course_type',
             'elective_type',
             'lab_type',
-            'no_of_students',
-            'is_zero_credit_course',
             'teaching_status'
         ]
 

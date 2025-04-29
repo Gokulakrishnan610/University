@@ -59,11 +59,18 @@ class TeacherCourseSerializer(serializers.ModelSerializer):
 
         # Check teacher's working hours
         assigned_courses = TeacherCourse.objects.filter(teacher_id=teacher_id)
-        total_hours_assigned = sum(course.course_id.credits for course in assigned_courses if course.course_id)
         
-        if total_hours_assigned + course_id.credits > teacher_id.teacher_working_hours:
+        # Calculate total hours using the calculate_weekly_hours method
+        total_hours_assigned = sum(course.calculate_weekly_hours() for course in assigned_courses)
+        
+        # Calculate hours for the current course
+        current_course_hours = 0
+        if course_id and course_id.course_id:
+            current_course_hours = course_id.course_id.credits
+        
+        if total_hours_assigned + current_course_hours > teacher_id.teacher_working_hours:
             raise serializers.ValidationError(
-                f"Teacher working hour limit exceeded. Current total: {total_hours_assigned}, New course credits: {course_id.credits}, Limit: {teacher_id.teacher_working_hours}"
+                f"Teacher working hour limit exceeded. Current total: {total_hours_assigned}, New course credits: {current_course_hours}, Limit: {teacher_id.teacher_working_hours}"
             )
 
         return data

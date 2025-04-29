@@ -15,7 +15,7 @@ class CourseMaster(models.Model):
     #     ('MTECH', 'Master of Technology'),
     #     ('MBA', 'Master of Business Administration'),
     #     ('MCA', 'Master of Computer Applications'),
-    # ]
+    # ] 
     course_id = models.CharField("Course ID", max_length=50, blank=False)
     course_name = models.CharField("Course Name", max_length=255, blank=False)
     course_dept_id = models.ForeignKey("department.Department", on_delete=models.SET_NULL, null=True, related_name='course_master')

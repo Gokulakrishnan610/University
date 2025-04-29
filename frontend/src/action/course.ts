@@ -14,7 +14,15 @@ export interface CourseMaster {
   id: number;
   course_id: string;
   course_name: string;
+  course_dept_id: number;
   course_dept_detail: DepartmentDetails;
+  is_zero_credit_course: boolean;
+  lecture_hours: number;
+  practical_hours: number;
+  tutorial_hours: number;
+  credits: number;
+  regulation: string;
+  course_type: string;
 }
 
 export interface Course {

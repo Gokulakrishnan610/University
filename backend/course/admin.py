@@ -8,9 +8,9 @@ class CourseAdmin(ModelAdmin):
         'get_course_name',
         'course_year', 
         'course_semester', 
-        'regulation', 
-        'course_type', 
-        'credits',
+        'get_regulation', 
+        'get_course_type', 
+        'get_credits',
         'teaching_dept_id'
     )
     search_fields = ('course_id__course_id', 'course_id__course_name')
@@ -18,8 +18,8 @@ class CourseAdmin(ModelAdmin):
         'course_id__course_dept_id', 
         'course_year', 
         'course_semester', 
-        'regulation', 
-        'course_type',
+        'course_id__regulation', 
+        'course_id__course_type',
         'elective_type',
         'teaching_dept_id'
     )
@@ -34,6 +34,21 @@ class CourseAdmin(ModelAdmin):
         return obj.course_id.course_name
     get_course_name.short_description = 'Course Name'
     get_course_name.admin_order_field = 'course_id__course_name'
+    
+    def get_regulation(self, obj):
+        return obj.course_id.regulation
+    get_regulation.short_description = 'Regulation'
+    get_regulation.admin_order_field = 'course_id__regulation'
+    
+    def get_course_type(self, obj):
+        return obj.course_id.course_type
+    get_course_type.short_description = 'Course Type'
+    get_course_type.admin_order_field = 'course_id__course_type'
+    
+    def get_credits(self, obj):
+        return obj.course_id.credits
+    get_credits.short_description = 'Credits'
+    get_credits.admin_order_field = 'course_id__credits'
 
 class CourseResourceAllocationAdmin(ModelAdmin):
     list_display = ('course_id', 'original_dept_id', 'teaching_dept_id', 'allocation_date', 'status')
