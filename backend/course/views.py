@@ -10,6 +10,8 @@ from rest_framework.views import APIView
 from django.core.exceptions import PermissionDenied
 from .serializers import CourseSerializer, CreateCourseSerializer, UpdateCourseSerializer, CourseResourceAllocationSerializer, CourseRoomPreferenceSerializer
 from rest_framework import serializers
+from teacher.models import Teacher
+from course.models import Course
 
 class AddNewCourse(generics.CreateAPIView):
     authentication_classes = [IsAuthenticated]
@@ -988,3 +990,37 @@ class CourseAssignmentStatsView(APIView):
             return Response({'error': 'Course not found'}, status=404)
         except Exception as e:
             return Response({'error': str(e)}, status=500)
+
+        
+class CourseNotification(APIView):
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, req):
+        try:
+            teacher = Teacher.objects.get(teacher_id=req.user)
+            teacher_dept = teacher.dept_id.dept_name
+            
+            other_dept_using_my_course = Course.objects.filter(
+                course_id__course_dept_id__dept_name=teacher_dept
+            ).exclude(
+                for_dept_id__dept_name=teacher_dept
+            ).exclude(
+                teaching_dept_id__dept_name=teacher_dept
+            )
+            
+            serializer = CourseSerializer(other_dept_using_my_course, many=True)
+            
+            return Response({
+                "detail": "Success",
+                "data": serializer.data
+            })
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {
+                    "detail": "No data found",
+                    "error": "no_data_found"
+                },
+                status=404
+            )
