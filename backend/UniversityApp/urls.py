@@ -17,6 +17,7 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
+from utlis.views import ImportDataView
 
 # Simple health check view
 def health_check(request):
@@ -35,6 +36,7 @@ api_urlpatterns = [
     path("slots/", include('slot.urls')),
     path('rooms/', include('rooms.urls')),
     path('dashboard/', include('dashboard.urls')),
+    path('import/<str:resource_name>/', ImportDataView.as_view(), name="import-resource"),
     # Health check endpoint
     path('health/', health_check, name='health_check'),
 ]
