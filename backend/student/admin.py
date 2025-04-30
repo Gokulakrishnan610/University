@@ -2,7 +2,7 @@ from django.contrib import admin
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 from .models import Student
-from unfold.admin import ModelAdmin
+from unfold.admin import ModelAdmin, StackedInline
 
 class StudentResource(resources.ModelResource):
     class Meta:
@@ -25,4 +25,15 @@ class StudentAdmin(ImportExportModelAdmin, ModelAdmin):
     list_filter = ('batch', 'current_semester', 'year', 'dept_id', 'student_type', 'degree_type')
     ordering = ('batch', 'student_id__first_name')
 
+class StudentAdminInline(StackedInline):
+    model = Student
+    extra = 1
+    max_num = 1
+    can_delete = False
+    verbose_name_plural = 'Student Details'
+    fieldsets = (
+        (None, {
+            'fields': ('batch', 'current_semester', 'year', 'dept_id', 'roll_no', 'student_type', 'degree_type')
+        }),
+    )
 admin.site.register(Student, StudentAdmin)

@@ -3,6 +3,8 @@ from unfold.admin import ModelAdmin
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from .models import User, ForgetPassword, BlockedStudents
+from student.admin import StudentAdminInline
+from teacher.admin import TeacherInline
 
 # User Resource
 class UserResource(resources.ModelResource):
@@ -27,6 +29,7 @@ class UserResource(resources.ModelResource):
 @admin.register(User)
 class CustomUserAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = UserResource
+    inlines = []
 
     list_display = ('email', 'first_name', 'last_name', 'is_staff')
     search_fields = ('email', 'first_name', 'last_name')
@@ -39,6 +42,19 @@ class CustomUserAdmin(ImportExportModelAdmin, ModelAdmin):
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important Dates', {'fields': ('last_login', 'date_joined')}),
     )
+
+    def get_inline_instances(self, request, obj = ...):
+        if not obj:
+            return []
+        
+        self.inlines = []
+
+        if obj.user_type == 'student':
+            self.inlines = [StudentAdminInline]
+        elif obj.user_type == 'teacher':
+            self.inlines = [TeacherInline]
+
+        return super().get_inline_instances(request, obj)
 
     def save_model(self, request, obj, form, change):
         if not change and 'password' in form.cleaned_data:
