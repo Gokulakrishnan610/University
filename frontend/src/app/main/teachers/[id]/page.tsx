@@ -5,7 +5,7 @@ import {
   useUpdateTeacher,
   Teacher as TeacherType
 } from '@/action/teacher';
-import { useGetTeacherCourseAssignments } from '@/action/teacherCourse';
+import { useGetTeacherCourseAssignmentsByTeacher } from '@/action/teacherCourse';
 import {
   Card,
   CardContent,
@@ -60,21 +60,13 @@ export default function TeacherDetails() {
     setShowEditForm(false);
   });
 
-  // Fetch assigned courses for this teacher
-  const { data: allAssignments = [], isPending: isAssignmentsLoading } = useGetTeacherCourseAssignments();
-  
-  // Filter only this teacher's assignments
-  const teacherAssignments = allAssignments.filter(
-    assignment => assignment.teacher_detail?.id === teacherId
-  );
-  
-  // Calculate total teaching hours
+  const { data: teacherAssignments = [], isPending: isAssignmentsLoading } = useGetTeacherCourseAssignmentsByTeacher(teacherId);
+
   const totalTeachingHours = teacherAssignments.reduce((total, assignment) => {
     const credits = assignment.course_detail?.credits || 0;
     return total + credits;
   }, 0);
 
-  // Clean up URL if edit parameter exists
   useEffect(() => {
     if (isEditMode) {
       const cleanUrl = location.pathname;
@@ -82,7 +74,6 @@ export default function TeacherDetails() {
     }
   }, [isEditMode, location.pathname]);
 
-  // Add error handling for invalid data
   useEffect(() => {
     if (isFetched && teacher && Object.keys(teacher).length === 0) {
       toast.error("Teacher data not found", {
@@ -181,6 +172,8 @@ export default function TeacherDetails() {
     });
     setShowRemoveDialog(false);
   };
+
+  console.log(teacherAssignments);
 
   return (
     <div className="w-full mx-auto">
@@ -319,6 +312,7 @@ export default function TeacherDetails() {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Course</TableHead>
+                            <TableHead>Role</TableHead>
                             <TableHead className="text-right">Credits</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -327,6 +321,13 @@ export default function TeacherDetails() {
                             <TableRow key={assignment.id}>
                               <TableCell>
                                 {assignment.course_detail?.course_detail?.course_name || 'Unknown Course'}
+                              </TableCell>
+                              <TableCell>
+                                {assignment.is_assistant === true ? (
+                                  <Badge variant="outline">Assistant Teacher</Badge>
+                                ) : (
+                                  <Badge>Primary Teacher</Badge>
+                                )}
                               </TableCell>
                               <TableCell className="text-right">
                                 {assignment.course_detail?.credits || 0}

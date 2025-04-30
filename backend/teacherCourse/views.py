@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from rest_framework import generics, permissions, status, serializers
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from authentication.authentication import IsAuthenticated
 from .models import TeacherCourse
 from .serializers import TeacherCourseSerializer
@@ -9,7 +10,7 @@ from django.core.exceptions import ValidationError
 from teacher.models import Teacher
 
 # Create your views here.
-class TeacherCourseListCreateView(generics.ListCreateAPIView):
+class TeacherCourseListView(generics.ListCreateAPIView):
     authentication_classes = [IsAuthenticated]
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TeacherCourseSerializer
@@ -74,11 +75,11 @@ class TeacherCourseListCreateView(generics.ListCreateAPIView):
                 {"detail": "Teacher profile not found. Cannot create assignments."}
             )
 
-class TeacherCourseRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIView):
+class TeacherCourseDetailView(generics.RetrieveUpdateDestroyAPIView):
     authentication_classes = [IsAuthenticated]
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = TeacherCourseSerializer
-    lookup_field = 'id'
+    lookup_field = 'pk'
 
     def get_queryset(self):
         user = self.request.user
@@ -160,4 +161,61 @@ class TeacherCourseRetrieveUpdateDestroyView(generics.RetrieveUpdateDestroyAPIVi
         except Teacher.DoesNotExist:
             raise serializers.ValidationError(
                 {"detail": "Teacher profile not found. Cannot delete assignments."}
+            )
+
+class TeacherAssignmentsByTeacherView(APIView):
+    """
+    API view to get all course assignments for a specific teacher
+    """
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request, teacher_id):
+        try:
+            # Check permissions
+            user = request.user
+            
+            # Admin users can see any teacher's assignments
+            if not (user.is_superuser or user.is_staff):
+                try:
+                    # Check if the user is requesting their own data or is an HOD
+                    user_teacher = Teacher.objects.get(teacher_id=user)
+                    
+                    # If user is not HOD and not requesting their own data, deny
+                    if user_teacher.teacher_role != 'HOD' and user_teacher.id != teacher_id:
+                        return Response(
+                            {"detail": "You don't have permission to view other teachers' assignments."},
+                            status=status.HTTP_403_FORBIDDEN
+                        )
+                    
+                    # If user is HOD but teacher is not in their department, deny
+                    if user_teacher.teacher_role == 'HOD' and user_teacher.dept_id:
+                        requested_teacher = Teacher.objects.get(id=teacher_id)
+                        if requested_teacher.dept_id != user_teacher.dept_id:
+                            return Response(
+                                {"detail": "You can only view assignments for teachers in your department."},
+                                status=status.HTTP_403_FORBIDDEN
+                            )
+                except Teacher.DoesNotExist:
+                    return Response(
+                        {"detail": "Teacher profile not found."},
+                        status=status.HTTP_404_NOT_FOUND
+                    )
+            
+            # Get assignments for the specified teacher
+            teacher = Teacher.objects.get(id=teacher_id)
+            assignments = TeacherCourse.objects.filter(teacher_id=teacher)
+            serializer = TeacherCourseSerializer(assignments, many=True)
+            
+            return Response(serializer.data, status=status.HTTP_200_OK)
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {"detail": "Teacher not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )

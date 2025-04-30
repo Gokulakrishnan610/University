@@ -107,6 +107,8 @@ export interface CourseAssignmentStats {
     semester: number;
     academic_year: number;
     student_count: number;
+    is_assistant?: boolean;
+    assignment_id?: number;
   }[];
 }
 

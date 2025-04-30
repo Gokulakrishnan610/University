@@ -8,8 +8,8 @@ class TeacherCourse(models.Model):
     academic_year = models.IntegerField("Academic Year", default=0)
     semester = models.IntegerField("Semester", default=0)
     requires_special_scheduling = models.BooleanField("Requires Special Scheduling", default=False)
+    is_assistant = models.BooleanField("Is Assistant Teacher", default=False)
     
-    # For industry professionals/POP, link directly to their availability slots
     preferred_availability_slots = models.ManyToManyField(
         "teacher.TeacherAvailability",
         verbose_name="Preferred Availability Slots",
@@ -24,7 +24,8 @@ class TeacherCourse(models.Model):
     def __str__(self):
         teacher_str = str(self.teacher_id) if self.teacher_id else "Unknown Teacher"
         course_str = str(self.course_id) if self.course_id else "Unknown Course"
-        return f"{teacher_str} - {course_str} (Year: {self.academic_year}, Sem: {self.semester})"
+        role_str = " (Assistant)" if self.is_assistant else ""
+        return f"{teacher_str} - {course_str}{role_str} (Year: {self.academic_year}, Sem: {self.semester})"
 
     def clean(self):
         if not self.teacher_id or not self.course_id:

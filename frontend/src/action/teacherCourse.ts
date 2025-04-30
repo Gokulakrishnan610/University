@@ -76,9 +76,10 @@ export type TeacherCourseAssignment = {
     semester?: number;
     academic_year?: number;
     student_count?: number;
+    is_assistant?: boolean;
+    requires_special_scheduling?: boolean;
 }
 
-// Get all teacher-course assignments
 export const useGetTeacherCourseAssignments = () => {
     return useQuery({
         queryKey: ['teacherCourseAssignments'],
@@ -108,6 +109,8 @@ export const useCreateTeacherCourseAssignment = (onSuccess?: () => void) => {
             semester?: number;
             academic_year?: number;
             student_count?: number;
+            is_assistant?: boolean;
+            preferred_availability_slots?: number[];
         }) => {
             // Use default values if not provided
             const payload = {
@@ -115,7 +118,9 @@ export const useCreateTeacherCourseAssignment = (onSuccess?: () => void) => {
                 course_id: data.course_id,
                 semester: data.semester || 1,
                 academic_year: data.academic_year || new Date().getFullYear(),
-                student_count: data.student_count || 0
+                student_count: data.student_count || 0,
+                is_assistant: data.is_assistant || false,
+                preferred_availability_slots: data.preferred_availability_slots || []
             };
             
             const response = await api.post('/api/teacher-courses/', payload);
@@ -137,5 +142,16 @@ export const useDeleteTeacherCourseAssignment = (onSuccess?: () => void) => {
         onSuccess: () => {
             if (onSuccess) onSuccess();
         }
+    });
+};
+
+export const useGetTeacherCourseAssignmentsByTeacher = (teacherId: number) => {
+    return useQuery({
+        queryKey: ['teacherCourseAssignmentsByTeacher', teacherId],
+        queryFn: async () => {
+            const response = await api.get(`/api/teacher-courses/teacher/${teacherId}/`);
+            return response.data as TeacherCourseAssignment[];
+        },
+        enabled: !!teacherId 
     });
 }; 
