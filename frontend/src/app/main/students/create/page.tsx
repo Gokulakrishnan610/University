@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGetCurrentDepartment } from '@/action';
 
 // Define the validation schema using Zod
 const studentFormSchema = z.object({
@@ -46,6 +47,8 @@ type StudentFormValues = z.infer<typeof studentFormSchema>;
 
 const StudentCreate = () => {
   const navigate = useNavigate();
+  const { data: department } = useGetCurrentDepartment();
+  console.log(department);
 
   // Initialize form with Zod schema
   const form = useForm<StudentFormValues>({
@@ -69,7 +72,6 @@ const StudentCreate = () => {
 
   // Form submission handler
   const onSubmit = (data: StudentFormValues) => {
-    console.log('Submitting form data:', data);
     createStudent(data as CreateStudentRequest);
   };
 
@@ -112,28 +114,6 @@ const StudentCreate = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
-                      name="student"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">Student User ID <span className="text-red-500">*</span></FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="number" 
-                              className="h-11" 
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            The User ID associated with this student
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
                       name="roll_no"
                       render={({ field }) => (
                         <FormItem>
@@ -151,30 +131,7 @@ const StudentCreate = () => {
                       )}
                     />
 
-                    <FormField
-                      control={form.control}
-                      name="dept"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">Department ID</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              value={field.value || ""}
-                              type="number" 
-                              className="h-11" 
-                              placeholder="Enter department ID"
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || null)}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Department the student belongs to
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
+        
                     <FormField
                       control={form.control}
                       name="student_type"
