@@ -19,25 +19,9 @@ from department.models import Department
 from unfold.admin import ModelAdmin
 from import_export import resources
 from import_export.admin import ImportExportModelAdmin
+from .resources import CourseMasterResource
 
 # Resource class for import/export
-class CourseMasterResource(resources.ModelResource):
-    class Meta:
-        model = CourseMaster
-        fields = (
-            'id',
-            'course_id',
-            'course_name',
-            'course_dept_id',
-            'credits',  # Corrected from course_credits
-            'is_zero_credit_course',
-            'lecture_hours',
-            'practical_hours',
-            'tutorial_hours',
-            'regulation',
-            'course_type',
-        )
-        export_order = fields
 
 # Admin class
 @admin.register(CourseMaster)
