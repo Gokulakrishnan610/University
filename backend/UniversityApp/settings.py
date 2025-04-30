@@ -9,9 +9,13 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
 from pathlib import Path
+from decouple import config
+import os
 
+ENVIRONMENT = config("ENVIRONMENT", default="production")
+
+is_dev = ENVIRONMENT == "development"
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-u2vgw=@#o06f1^xs0n_)np$bu8^c+)=kg6wo9eq0er$cak+a9p'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = is_dev
 
 ALLOWED_HOSTS = []
 
@@ -145,13 +149,24 @@ WSGI_APPLICATION = 'UniversityApp.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if is_dev:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
-
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME'),
+            'USER': config('DB_USER'),
+            'PASSWORD': config('DB_PASSWORD'),
+            'HOST': config('DB_HOST'),
+            'PORT': '5432',
+        }
+    }
 DATA_UPLOAD_MAX_NUMBER_FIELDS = 5000
 
 
@@ -180,7 +195,7 @@ AUTH_USER_MODEL = "authentication.User"
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
@@ -198,9 +213,9 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-JWT_KEY = "secret"
+JWT_KEY = config("JWT_KEY", default="secret")
 
-COOKIE_DOMAIN="localhost"
+COOKIE_DOMAIN=config('COOKIE_DOMAIN')
 
 
 UNFOLD = {
@@ -260,7 +275,40 @@ UNFOLD = {
     },
 }
 
-REST_FRAMEWORK = {
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 100
+# REST_FRAMEWORK = {
+#     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+#     'PAGE_SIZE': 100
+# }
+if not is_dev:
+    FORCE_SCRIPT_NAME = '/api'
+
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'file': {
+            'level': 'INFO',  # Log level
+            'class': 'logging.FileHandler',  # Use FileHandler
+            'filename': os.path.join(BASE_DIR, 'log/debug7.log'),  # Log file path
+            'formatter': 'verbose',  # Formatter (defined below)
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{asctime} {levelname} {name} {message}',  # Log format
+            'style': '{',  # Use curly braces for formatting
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file'],  # Use the 'file' handler
+            'level': 'INFO',  # Log level
+            'propagate': True,  # Propagate logs to parent loggers
+        },
+        'hostel': {
+            'handlers': ['file'],
+            'level': 'INFO',
+            'propagate': True,
+        },
+    },
 }
