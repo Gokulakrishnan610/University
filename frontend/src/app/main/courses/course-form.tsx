@@ -130,8 +130,8 @@ export default function CourseForm({
       tutorial_hours: 0,
       practical_hours: 0,
       credits: 3,
-      for_dept_id: 0,
-      teaching_dept_id: 0,
+      for_dept_id: defaultValues?.for_dept_id || 0,
+      teaching_dept_id: defaultValues?.teaching_dept_id || 0,
       need_assist_teacher: false,
       regulation: "R2019",
       course_type: "T",
@@ -139,23 +139,36 @@ export default function CourseForm({
       lab_type: "NULL",
       is_zero_credit_course: false,
       teaching_status: "active",
-      ...defaultValues
     }
   });
 
   useEffect(() => {
     if (defaultValues) {
+      // Instead of just merging, do a complete reset to ensure all values are properly initialized
       form.reset({
-        ...form.getValues(),
+        // Start with the form's default values
+        course_id: 0,
+        course_year: 1,
+        course_semester: 1,
+        lecture_hours: 3,
+        tutorial_hours: 0,
+        practical_hours: 0,
+        credits: 3,
+        for_dept_id: 0,
+        teaching_dept_id: 0,
+        need_assist_teacher: false,
+        regulation: "R2019",
+        course_type: "T",
+        elective_type: "NE",
+        lab_type: "NULL",
+        is_zero_credit_course: false,
+        teaching_status: "active",
+        // Override with provided default values
         ...defaultValues
       });
+      
+      console.log('Reset form with defaultValues:', defaultValues);
     }
-
-  }, [defaultValues, form]);
-
-  useEffect(() => {
-    form.setValue('for_dept_id', defaultValues?.for_dept_id || 0);
-    form.setValue('teaching_dept_id', defaultValues?.teaching_dept_id || 0);
   }, [defaultValues, form]);
 
   const isFieldEditable = (fieldName: string): boolean => {
@@ -171,6 +184,7 @@ export default function CourseForm({
       if (name === 'course_id' && value.course_id) {
         const selectedCourse:any = initialCourseMasters.find(course => course.id === value.course_id);
         if (selectedCourse) {
+          // Set values for pre-populated fields
           form.setValue('lecture_hours', selectedCourse.lecture_hours);
           form.setValue('tutorial_hours', selectedCourse.tutorial_hours);
           form.setValue('practical_hours', selectedCourse.practical_hours);
@@ -178,8 +192,8 @@ export default function CourseForm({
           form.setValue('course_type', selectedCourse.course_type);
           form.setValue('is_zero_credit_course', selectedCourse.is_zero_credit_course);
           form.setValue('regulation', selectedCourse.regulation);
-    
- 
+          
+          // Disable pre-populated fields
           form.setValue('lecture_hours', selectedCourse.lecture_hours, { shouldValidate: true, shouldDirty: true });
           form.setValue('tutorial_hours', selectedCourse.tutorial_hours, { shouldValidate: true, shouldDirty: true });
           form.setValue('practical_hours', selectedCourse.practical_hours, { shouldValidate: true, shouldDirty: true });
@@ -216,6 +230,19 @@ export default function CourseForm({
     onSubmit(submissionValues as z.infer<typeof courseFormSchema>);
   };
 
+  // Debug form values
+  const formValues = form.watch();
+  useEffect(() => {
+    console.log('Form values changed:', formValues);
+  }, [formValues]);
+  
+  // Function to handle page changes properly
+  const handlePageChange = (newPage: number) => {
+    if (newPage > 0 && (newPage <= totalPages || totalPages === 0)) {
+      setPage(newPage);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8 py-4">
@@ -243,7 +270,7 @@ export default function CourseForm({
                         className="w-full"
                         onSearchChange={setSearchTermState}
                         searchValue={searchTermState}
-                        onPageChange={setPage}
+                        onPageChange={handlePageChange}
                         currentPage={page}
                         totalPages={totalPages}
                         isLoading={isLoadingCourseMasters}
@@ -298,9 +325,7 @@ export default function CourseForm({
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Department Information</h3>
           <div className="grid grid-cols-2 gap-4">
-            {
-              defaultValues?.for_dept_id && (
-                <FormField
+            <FormField
               control={form.control}
               name="for_dept_id"
               render={({ field }) => (
@@ -308,7 +333,7 @@ export default function CourseForm({
                   <FormLabel>For Department</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))} 
-                    defaultValue={defaultValues?.for_dept_id?.toString()}
+                    value={field.value ? field.value.toString() : ''}
                     disabled={!isFieldEditable('for_dept_id')}
                   >
                     <FormControl>
@@ -330,44 +355,39 @@ export default function CourseForm({
                   <FormMessage />
                 </FormItem>
               )}
-            />)
-            }
+            />
             
-            {
-              defaultValues?.for_dept_id && (
-                <FormField
-                control={form.control}
-                name="teaching_dept_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Teaching Department</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(parseInt(value))} 
-                      defaultValue={defaultValues?.teaching_dept_id?.toString()}
-                      disabled={!isFieldEditable('teaching_dept_id')}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select department" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {departments.map((dept) => (
-                          <SelectItem key={dept.id} value={dept.id.toString()}>
-                            {dept.dept_name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormDescription>
-                      Department that will provide faculty to teach this course
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />)
-            }
-           
+            <FormField
+              control={form.control}
+              name="teaching_dept_id"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Teaching Department</FormLabel>
+                  <Select 
+                    onValueChange={(value) => field.onChange(parseInt(value))} 
+                    value={field.value ? field.value.toString() : ''}
+                    disabled={!isFieldEditable('teaching_dept_id')}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select department" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {departments.map((dept) => (
+                        <SelectItem key={dept.id} value={dept.id.toString()}>
+                          {dept.dept_name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormDescription>
+                    Department that will provide faculty to teach this course
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
           </div>
         </div>
         

@@ -30,22 +30,30 @@ export default function CreateCoursePage() {
   
   const departments = departmentsData || [];
   
+  // When new course masters are loaded, append them to the existing list
   useEffect(() => {
     if (courseMastersData?.results) {
       if (page === 1) {
+        // Reset the list if it's the first page (new search)
         setAllCourseMasters(courseMastersData.results);
       } else {
+        // Append to the list for subsequent pages (infinite scroll)
         setAllCourseMasters(prev => {
+          // Create a Set of existing IDs to avoid duplicates
           const existingIds = new Set(prev.map(item => item.id));
+          // Filter out any duplicates from the new results
           const newItems = courseMastersData.results.filter(item => !existingIds.has(item.id));
+          // Return combined list
           return [...prev, ...newItems];
         });
       }
     }
   }, [courseMastersData, page]);
   
+  // Reset page to 1 when search term changes
   useEffect(() => {
     setPage(1);
+    // When search term changes, the page reset will trigger a reload of data
   }, [searchTerm]);
   
   // Course creation mutation
@@ -63,10 +71,13 @@ export default function CreateCoursePage() {
   
   useEffect(() => {
     if (currentDepartment && currentDepartment.id) {
-      setCourseFormDefaults({
+      console.log('Setting default departments:', currentDepartment);
+      // Set both for_dept_id and teaching_dept_id to the current department's ID
+      setCourseFormDefaults(prev => ({
+        ...prev,
         for_dept_id: currentDepartment.id,
         teaching_dept_id: currentDepartment.id
-      });
+      }));
     }
   }, [currentDepartment]);
   
