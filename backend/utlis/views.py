@@ -5,13 +5,15 @@ from rest_framework.parsers import MultiPartParser
 from utlis.import_csv import import_from_csv
 
 from course.resources import CourseResource
+from courseMaster.resources import CourseMasterResource
 
 class ImportDataView(APIView):
     parser_classes = [MultiPartParser]
 
     def post(self, request, resource_name):
         RESOURCE_MAPPING = {
-            'course': CourseResource
+            'course': CourseResource,
+            'course-master': CourseMasterResource
         }
 
         if resource_name not in RESOURCE_MAPPING:
