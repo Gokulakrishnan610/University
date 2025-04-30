@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash, Search } from 'lucide-react';
+import { Plus, Pencil, Trash, Search, Mail, User } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -36,8 +36,16 @@ const StudentManagement = () => {
   const filteredStudents = students?.filter((student: Student) => {
     const searchTermLower = searchTerm.toLowerCase();
     const rollNo = student.roll_no?.toLowerCase() || '';
+    const firstName = student.student_detail?.first_name?.toLowerCase() || '';
+    const lastName = student.student_detail?.last_name?.toLowerCase() || '';
+    const email = student.student_detail?.email?.toLowerCase() || '';
+    const fullName = `${firstName} ${lastName}`.toLowerCase();
     
-    return rollNo.includes(searchTermLower);
+    return rollNo.includes(searchTermLower) || 
+           firstName.includes(searchTermLower) || 
+           lastName.includes(searchTermLower) || 
+           fullName.includes(searchTermLower) ||
+           email.includes(searchTermLower);
   });
 
   return (
@@ -57,7 +65,7 @@ const StudentManagement = () => {
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search by roll number..."
+            placeholder="Search by name, email, roll number..."
             className="pl-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -76,10 +84,11 @@ const StudentManagement = () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
+                <TableHead className="font-semibold">Name</TableHead>
+                <TableHead className="font-semibold">Email</TableHead>
                 <TableHead className="font-semibold">Roll No.</TableHead>
                 <TableHead className="font-semibold">Department</TableHead>
-                <TableHead className="font-semibold">Batch</TableHead>
-                <TableHead className="font-semibold">Semester</TableHead>
+                <TableHead className="font-semibold">Batch/Sem</TableHead>
                 <TableHead className="font-semibold">Type</TableHead>
                 <TableHead className="font-semibold text-right">Actions</TableHead>
               </TableRow>
@@ -92,10 +101,30 @@ const StudentManagement = () => {
                     className="hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => navigate(`/students/${student.id}`)}
                   >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">
+                          {student.student_detail?.first_name} {student.student_detail?.last_name}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {student.student_detail?.email}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell>{student.roll_no || 'N/A'}</TableCell>
-                    <TableCell>{student.dept_detail.dept_name || 'N/A'}</TableCell>
-                    <TableCell>{student.batch}</TableCell>
-                    <TableCell>{student.current_semester}</TableCell>
+                    <TableCell>{student.dept_detail?.dept_name || 'N/A'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span>Batch: {student.batch}</span>
+                        <span className="text-xs text-muted-foreground">Sem: {student.current_semester}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={student.student_type === 'Mgmt' ? 'default' : 'secondary'} className="font-normal">
                         {student.student_type}
