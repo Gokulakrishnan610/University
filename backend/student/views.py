@@ -31,9 +31,9 @@ class StudentListCreateView(generics.ListCreateAPIView):
             search_query = self.request.query_params.get('search', None)
             if search_query:
                 queryset = queryset.filter(
-                    Q(student_detail__first_name__icontains=search_query) |
-                    Q(student_detail__last_name__icontains=search_query) |
-                    Q(student_detail__email__icontains=search_query) |
+                    Q(student_id__first_name__icontains=search_query) |
+                    Q(student_id__last_name__icontains=search_query) |
+                    Q(student_id__email__icontains=search_query) |
                     Q(roll_no__icontains=search_query)
                 )
             

@@ -20,7 +20,7 @@ class StudentResource(resources.ModelResource):
 class StudentAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = StudentResource 
 
-    list_display = ('student_id', 'batch', 'current_semester', 'year', 'dept_id', 'roll_no', 'student_type', 'degree_type')
+    list_display = ('id', 'student_id', 'batch', 'current_semester', 'year', 'dept_id', 'roll_no', 'student_type', 'degree_type')
     search_fields = ('student_id__email', 'student_id__first_name', 'student_id__last_name', 'roll_no')
     list_filter = ('batch', 'current_semester', 'year', 'dept_id', 'student_type', 'degree_type')
     ordering = ('batch', 'student_id__first_name')
