@@ -382,4 +382,22 @@ export function useGetCourseAssignmentStats(courseId?: number) {
       return response.data;
     }
   );
+}
+
+export function useGetCourseNotifications() {
+  return useQueryData<{
+    detail: string;
+    data: Course[];
+  }>(
+    ['course-notifications'],
+    async () => {
+      try {
+        const response = await api.get('/api/course/course-notification/');
+        return response.data || { detail: "No data found", data: [] };
+      } catch (error) {
+        console.error('Error fetching course notifications:', error);
+        return { detail: "Error", data: [] };
+      }
+    }
+  );
 } 

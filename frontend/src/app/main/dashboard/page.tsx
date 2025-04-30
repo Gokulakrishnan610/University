@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { 
   AlertCircle, BookOpen, CheckCircle2, Clock, MapPin, Users, Building, 
   ChevronUp, ChevronDown, Briefcase, GraduationCap, PieChart, BarChart, 
-  Award, User, UserCheck, UserX, LucideIcon 
+  Award, User, UserCheck, UserX, LucideIcon, Bell 
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router'
@@ -12,6 +12,9 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { CourseNotifications } from '../courses/course-notifications'
+import { useGetCourseNotifications } from '@/action/course'
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'
 
 // Define interface for StatCard props
 interface StatCardProps {
@@ -78,6 +81,9 @@ const StatCard: React.FC<StatCardProps> = ({
 
 const Page = () => {
   const { data: stats, isPending: isLoading } = useGetDashboardStats()
+  const { data: courseNotifications } = useGetCourseNotifications()
+  
+  const notificationCount = courseNotifications?.data?.length || 0
 
   return (
     <div className="flex flex-col gap-6 px-6 pb-8">
@@ -288,7 +294,59 @@ const Page = () => {
         
         {/* Courses Tab */}
         <TabsContent value="courses" className="pt-4">
+          <div className="mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-orange-500" />
+                    Course Utilization
+                  </CardTitle>
+                  <CardDescription>
+                    Summary of how your department's courses are being used
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">
+                      {notificationCount > 0 
+                        ? `${notificationCount} of your department's courses are being used by other departments` 
+                        : "None of your department's courses are currently being used by other departments"}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Check the notification bell in the header for details
+                    </p>
+                  </div>
+                  {notificationCount > 0 && (
+                    <Badge className="bg-orange-500">
+                      {notificationCount} Courses
+                    </Badge>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+          
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <StatCard
+              title="Active Courses"
+              value={stats?.total_courses || 0}
+              icon={BookOpen}
+              description="Courses currently active in the system"
+              isLoading={isLoading}
+            />
+            
+            <StatCard
+              title="Course Notifications"
+              value={notificationCount}
+              icon={Bell}
+              iconClassName={notificationCount > 0 ? "text-orange-500" : ""}
+              description="Courses from your department used by others"
+              isLoading={isLoading}
+            />
+            
             <StatCard
               title="Total Enrollments"
               value={stats?.total_enrollments || 0}

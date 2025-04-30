@@ -40,7 +40,8 @@ import {
   BookCopy,
   ChartPieIcon,
   PieChart,
-  CircleDot
+  CircleDot,
+  Bell
 } from 'lucide-react';
 import { 
   useGetCurrentDepartmentCourses, 
@@ -56,6 +57,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogTrigger,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -72,6 +74,8 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CourseNotifications } from './course-notifications';
+import { useGetCourseNotifications } from '@/action/course';
 
 // Stats card component for the dashboard
 interface StatCardProps {
@@ -112,8 +116,10 @@ export default function CourseManagementPage() {
   const { data: departmentData, isPending, refetch } = useGetCurrentDepartmentCourses();
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
   const { data: courseMastersData, isPending: loadingCourseMasters, refetch: refetchCourseMasters } = useGetCourseMasters();
-  // console.log(courseMastersData)
   const { data: currentDepartment, isPending: loadingCurrentDept } = useGetCurrentDepartment();
+  const { data: courseNotifications } = useGetCourseNotifications();
+  
+  const notificationCount = courseNotifications?.data?.length || 0;
   
   const departments = departmentsData || [];
   const courseMasters = courseMastersData || [];
