@@ -221,6 +221,10 @@ export default function TeacherManagement() {
             </CardDescription>
           </div>
           <div className="flex gap-2">
+            <Button onClick={() => navigate('/teachers/slot-allocation')} className="gap-2">
+              <Calendar className="h-4 w-4" />
+              Slot Allocation
+            </Button>
             <Button onClick={() => setShowPlaceholderForm(true)} className="gap-2">
               <UserPlus className="h-4 w-4" />
               New Placeholder Teacher
