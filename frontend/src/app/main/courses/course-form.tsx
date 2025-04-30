@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
@@ -24,6 +24,9 @@ import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { CourseMaster } from '@/action/courseMaster';
 import { DepartmentDetails, Course } from '@/action/course';
+import { useDebounce } from '@/hooks/useDebounce';
+import { SearchableDropdown, DropdownOption } from '@/components/ui/searchable-dropdown';
+import { Checkbox } from '@/components/ui/checkbox';
 
 // Form schema for course creation and editing
 export const courseFormSchema = z.object({
@@ -58,19 +61,65 @@ export interface CourseFormProps {
   submitLabel?: string;
   isEdit?: boolean;
   editableFields?: string[];
+  searchTerm?: string;
+  onSearchChange?: (searchTerm: string) => void;
+  onPageChange?: (page: number) => void;
+  isLoadingCourseMasters?: boolean;
+  currentPage?: number;
+  totalPages?: number;
 }
 
 export default function CourseForm({
   departments,
-  courseMasters,
+  courseMasters: initialCourseMasters,
   defaultValues,
   isLoading,
   onSubmit,
   onCancel,
   submitLabel = 'Submit',
   isEdit = false,
-  editableFields = []
+  editableFields = [],
+  searchTerm,
+  onSearchChange,
+  onPageChange,
+  isLoadingCourseMasters,
+  currentPage = 1,
+  totalPages: parentTotalPages = 1
 }: CourseFormProps) {
+  const [searchTermState, setSearchTermState] = useState(searchTerm || '');
+  const debouncedSearchTerm = useDebounce(searchTermState, 300);
+  const [page, setPage] = useState(currentPage);
+  const pageSize = 10;
+  console.log('defaultValues', departments);
+  useEffect(() => {
+    if (onSearchChange && debouncedSearchTerm !== searchTerm) {
+      onSearchChange(debouncedSearchTerm);
+    }
+  }, [debouncedSearchTerm, onSearchChange, searchTerm]);
+  
+  useEffect(() => {
+    if (onPageChange && page !== currentPage) {
+      onPageChange(page);
+    }
+  }, [page, onPageChange, currentPage]);
+  
+  useEffect(() => {
+    if (currentPage !== page) {
+      setPage(currentPage);
+    }
+  }, [currentPage]);
+  
+  const totalResults = initialCourseMasters?.length || 0;
+  const calculatedTotalPages = Math.ceil(totalResults / pageSize);
+  
+  const totalPages = parentTotalPages || calculatedTotalPages;
+  
+  const courseOptions: DropdownOption[] = initialCourseMasters?.map((course) => ({
+    value: course.id.toString(),
+    label: `${course.course_id} - ${course.course_name} (${course.course_dept_detail.dept_name})`
+  })) || [];
+
+
   const form = useForm<CourseFormValues>({
     resolver: zodResolver(courseFormSchema),
     defaultValues: {
@@ -81,8 +130,8 @@ export default function CourseForm({
       tutorial_hours: 0,
       practical_hours: 0,
       credits: 3,
-      for_dept_id: 0,
-      teaching_dept_id: 0,
+      for_dept_id: defaultValues?.for_dept_id || 0,
+      teaching_dept_id: defaultValues?.teaching_dept_id || 0,
       need_assist_teacher: false,
       regulation: "R2019",
       course_type: "T",
@@ -90,16 +139,35 @@ export default function CourseForm({
       lab_type: "NULL",
       is_zero_credit_course: false,
       teaching_status: "active",
-      ...defaultValues
     }
   });
 
   useEffect(() => {
     if (defaultValues) {
+      // Instead of just merging, do a complete reset to ensure all values are properly initialized
       form.reset({
-        ...form.getValues(),
+        // Start with the form's default values
+        course_id: 0,
+        course_year: 1,
+        course_semester: 1,
+        lecture_hours: 3,
+        tutorial_hours: 0,
+        practical_hours: 0,
+        credits: 3,
+        for_dept_id: 0,
+        teaching_dept_id: 0,
+        need_assist_teacher: false,
+        regulation: "R2019",
+        course_type: "T",
+        elective_type: "NE",
+        lab_type: "NULL",
+        is_zero_credit_course: false,
+        teaching_status: "active",
+        // Override with provided default values
         ...defaultValues
       });
+      
+      console.log('Reset form with defaultValues:', defaultValues);
     }
   }, [defaultValues, form]);
 
@@ -114,7 +182,7 @@ export default function CourseForm({
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
       if (name === 'course_id' && value.course_id) {
-        const selectedCourse:any = courseMasters.find(course => course.id === value.course_id);
+        const selectedCourse:any = initialCourseMasters.find(course => course.id === value.course_id);
         if (selectedCourse) {
           // Set values for pre-populated fields
           form.setValue('lecture_hours', selectedCourse.lecture_hours);
@@ -138,7 +206,7 @@ export default function CourseForm({
     });
 
     return () => subscription.unsubscribe();
-  }, [form, courseMasters]);
+  }, [form, initialCourseMasters]);
 
   const handleSubmit = (values: z.infer<typeof courseFormSchema>) => {
     if (isEdit && defaultValues?.course_id) {
@@ -162,6 +230,19 @@ export default function CourseForm({
     onSubmit(submissionValues as z.infer<typeof courseFormSchema>);
   };
 
+  // Debug form values
+  const formValues = form.watch();
+  useEffect(() => {
+    console.log('Form values changed:', formValues);
+  }, [formValues]);
+  
+  // Function to handle page changes properly
+  const handlePageChange = (newPage: number) => {
+    if (newPage > 0 && (newPage <= totalPages || totalPages === 0)) {
+      setPage(newPage);
+    }
+  };
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8 py-4">
@@ -176,23 +257,25 @@ export default function CourseForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Course</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(parseInt(value))} 
-                      defaultValue={field.value as any}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select a course" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {courseMasters.map((course) => (
-                          <SelectItem key={course.id} value={course.id.toString()}>
-                            {course.course_id} - {course.course_name} ({course.course_dept_detail.dept_name})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <div className="space-y-4">
+                      <SearchableDropdown
+                        options={courseOptions}
+                        value={field.value ? field.value.toString() : ''}
+                        onValueChange={(value) => {
+                          field.onChange(parseInt(value));
+                        }}
+                        placeholder="Select a course"
+                        searchPlaceholder="Search courses..."
+                        emptyMessage={isLoadingCourseMasters ? "Loading..." : "No courses found."}
+                        className="w-full"
+                        onSearchChange={setSearchTermState}
+                        searchValue={searchTermState}
+                        onPageChange={handlePageChange}
+                        currentPage={page}
+                        totalPages={totalPages}
+                        isLoading={isLoadingCourseMasters}
+                      />
+                    </div>
                     <FormDescription>
                       Selecting a course also selects its owning department that controls the curriculum
                     </FormDescription>
@@ -250,7 +333,7 @@ export default function CourseForm({
                   <FormLabel>For Department</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))} 
-                    defaultValue={field.value.toString()}
+                    value={field.value ? field.value.toString() : ''}
                     disabled={!isFieldEditable('for_dept_id')}
                   >
                     <FormControl>
@@ -282,7 +365,7 @@ export default function CourseForm({
                   <FormLabel>Teaching Department</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))} 
-                    defaultValue={field.value.toString()}
+                    value={field.value ? field.value.toString() : ''}
                     disabled={!isFieldEditable('teaching_dept_id')}
                   >
                     <FormControl>
@@ -517,7 +600,7 @@ export default function CourseForm({
                     </FormDescription>
                   </div>
                   <FormControl>
-                    <Switch
+                    <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
                     />
