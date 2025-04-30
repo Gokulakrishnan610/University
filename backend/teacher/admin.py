@@ -19,6 +19,8 @@ class TeacherResource(resources.ModelResource):
             'teacher_role',
             'availability_type',
             'is_industry_professional',
+            'is_placeholder',
+            'placeholder_description',
         )
         export_order = fields
 
@@ -32,9 +34,9 @@ class TeacherAdmin(ImportExportModelAdmin, ModelAdmin):
     inlines = [TeacherAvailabilityInline]
 
     list_display = ('teacher_id', 'dept_id', 'staff_code', 'teacher_role', 'teacher_specialisation', 
-                    'teacher_working_hours', 'is_industry_professional', 'availability_type')
+                    'teacher_working_hours', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
     search_fields = ('teacher_id__email', 'teacher_id__first_name', 'teacher_id__last_name', 'staff_code', 'teacher_specialisation')
-    list_filter = ('dept_id', 'teacher_working_hours', 'teacher_role', 'is_industry_professional', 'availability_type')
+    list_filter = ('dept_id', 'teacher_working_hours', 'teacher_role', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
     ordering = ('staff_code',)
     
     # Group fields in fieldsets
@@ -49,6 +51,10 @@ class TeacherAdmin(ImportExportModelAdmin, ModelAdmin):
             'fields': ('availability_type', 'is_industry_professional'),
             'classes': ('collapse',),
             'description': 'Industry professionals/POPs need specific availability slots defined'
+        }),
+        ('Status', {
+            'fields': ('resignation_status', 'resignation_date', 'is_placeholder', 'placeholder_description'),
+            'description': 'Manage teacher status including placeholders for future positions'
         }),
     )
     

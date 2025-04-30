@@ -38,7 +38,6 @@ export default function Header({
   const { data: currentUser } = useCurrentUser();
   const { data: courseNotifications } = useGetCourseNotifications();
   
-  // State to track whether notifications have been viewed
   const [viewedNotifications, setViewedNotifications] = useState<boolean>(false);
   const [dialogOpen, setDialogOpen] = useState<boolean>(false);
   const [lastReadCount, setLastReadCount] = useState<number>(0);
@@ -113,10 +112,8 @@ export default function Header({
   const getDisplayName = (segment: string) => {
     if (displayNames[segment]) return displayNames[segment];
     
-    // For dynamic segments like [id], get the pretty version
     if (segment.match(/^\d+$/)) return "Details";
     
-    // Capitalize and replace hyphens with spaces
     return segment
       .replace(/-/g, " ")
       .replace(/\b\w/g, c => c.toUpperCase());
