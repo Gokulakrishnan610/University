@@ -7,6 +7,7 @@ from .serializers import CourseMasterSerializer
 from rest_framework.permissions import IsAuthenticated
 from authentication.authentication import JWTCookieAuthentication
 from department.views import get_user_department
+from utlis.pagination import PagePagination
 
 # Create your views here.
 class CourseMasterListAPIView(generics.ListCreateAPIView):
@@ -14,6 +15,7 @@ class CourseMasterListAPIView(generics.ListCreateAPIView):
     permission_classes=[IsAuthenticated]
     queryset = CourseMaster.objects.all()
     serializer_class = CourseMasterSerializer
+    pagination_class = PagePagination
     
     def get_queryset(self):
         queryset = CourseMaster.objects.all()
