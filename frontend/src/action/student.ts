@@ -6,7 +6,13 @@ import api from "./api";
 // Types
 export interface Student {
   id: number;
-  student: number; // User ID
+  student_detail: {
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone_number: string;
+    gender: string;
+  };
   batch: number;
   current_semester: number;
   year: number;
@@ -17,11 +23,15 @@ export interface Student {
 }
 
 export interface CreateStudentRequest {
-  student: number; // User ID
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  gender: string;
   batch: number;
   current_semester: number;
   year: number;
-  dept?: number;
+  dept_id?: number;
   roll_no?: string;
   student_type: string;
   degree_type: string;

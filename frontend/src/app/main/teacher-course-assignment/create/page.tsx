@@ -129,6 +129,17 @@ export default function CreateTeacherCourseAssignment() {
         };
     }, [selectedTeacher, assignments, selectedTeacherData]);
 
+    // Check if teacher is resigning or has resigned
+    const isTeacherResigning = useMemo(() => {
+        if (!selectedTeacherData) return false;
+        return selectedTeacherData.resignation_status === 'resigning';
+    }, [selectedTeacherData]);
+
+    const isTeacherResigned = useMemo(() => {
+        if (!selectedTeacherData) return false;
+        return selectedTeacherData.resignation_status === 'resigned';
+    }, [selectedTeacherData]);
+
     // Filter available courses based on selected teacher's department
     const availableCourses = useMemo(() => {
         if (!selectedTeacher || !teachers || !courses) return [];
@@ -189,6 +200,21 @@ export default function CreateTeacherCourseAssignment() {
     const onSubmit = (data: TeacherCourseFormValues) => {
         const selectedCourseData = courses.find(c => c.id.toString() === data.course_id);
         if (!selectedCourseData) return;
+
+        // Prevent assignment if teacher has resigned
+        if (isTeacherResigned) {
+            toast.error('Cannot assign a resigned teacher', {
+                description: 'This teacher has already resigned and cannot be assigned to new courses.'
+            });
+            return;
+        }
+
+        // Show warning if teacher is in the process of resigning
+        if (isTeacherResigning) {
+            if (!confirm('This teacher is in the process of resigning. Are you sure you want to assign them to this course?')) {
+                return;
+            }
+        }
 
         if (teacherWorkload && (teacherWorkload.availableHours < selectedCourseData.credits)) {
             toast.error('Teacher does not have enough available hours for this course');
@@ -293,6 +319,26 @@ export default function CreateTeacherCourseAssignment() {
                                 disabled={teachersLoading}
                             />
                         </div>
+
+                        {isTeacherResigned && (
+                            <Alert className="bg-red-50 border-red-300">
+                                <AlertTriangle className="h-4 w-4 text-red-600" />
+                                <AlertTitle className="text-red-600">Teacher Has Resigned</AlertTitle>
+                                <AlertDescription className="text-red-700">
+                                    This teacher has resigned and cannot be assigned to courses.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        
+                        {isTeacherResigning && (
+                            <Alert className="bg-amber-50 border-amber-300">
+                                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                <AlertTitle className="text-amber-600">Teacher Is Resigning</AlertTitle>
+                                <AlertDescription className="text-amber-700">
+                                    This teacher is in the process of resigning. Assigning them to courses is not recommended.
+                                </AlertDescription>
+                            </Alert>
+                        )}
 
                         {isPOPOrIndustry && (
                             <Alert>

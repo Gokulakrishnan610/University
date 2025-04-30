@@ -31,6 +31,10 @@ class TeacherCourse(models.Model):
         if not self.teacher_id or not self.course_id:
             return super().clean()
             
+        # Check if teacher has resigned
+        if self.teacher_id.resignation_status == 'resigned':
+            raise ValidationError("Cannot assign a resigned teacher to courses.")
+            
         # Check if this teacher is already assigned to this course
         existing_assignment = TeacherCourse.objects.filter(
             teacher_id=self.teacher_id,

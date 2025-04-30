@@ -43,6 +43,13 @@ class TeacherCourseListView(generics.ListCreateAPIView):
         # Admin users can create assignments for any department
         if user.is_superuser or user.is_staff:
             try:
+                # Check if teacher has resigned
+                teacher_to_assign = serializer.validated_data['teacher_id']
+                if teacher_to_assign.resignation_status == 'resigned':
+                    raise serializers.ValidationError(
+                        {"teacher_id": "Cannot assign a resigned teacher to courses."}
+                    )
+                    
                 serializer.save()
                 return
             except ValidationError as e:
@@ -55,6 +62,12 @@ class TeacherCourseListView(generics.ListCreateAPIView):
             teacher_to_assign = serializer.validated_data['teacher_id']
             course = serializer.validated_data['course_id']
             
+            # Check if teacher has resigned
+            if teacher_to_assign.resignation_status == 'resigned':
+                raise serializers.ValidationError(
+                    {"teacher_id": "Cannot assign a resigned teacher to courses."}
+                )
+                
             if teacher.teacher_role != 'HOD':
                 raise serializers.ValidationError(
                     {"detail": "Only HOD or admin can create teacher course assignments."}
@@ -108,6 +121,14 @@ class TeacherCourseDetailView(generics.RetrieveUpdateDestroyAPIView):
         
         # Admin users can update any assignment
         if user.is_superuser or user.is_staff:
+            # Check if updating with a resigned teacher
+            if 'teacher_id' in serializer.validated_data:
+                teacher_to_assign = serializer.validated_data['teacher_id']
+                if teacher_to_assign.resignation_status == 'resigned':
+                    raise serializers.ValidationError(
+                        {"teacher_id": "Cannot assign a resigned teacher to courses."}
+                    )
+            
             serializer.save()
             return
             
@@ -123,7 +144,15 @@ class TeacherCourseDetailView(generics.RetrieveUpdateDestroyAPIView):
             instance = self.get_object()
             
             if 'teacher_id' in serializer.validated_data:
-                if serializer.validated_data['teacher_id'].dept_id != teacher.dept_id:
+                teacher_to_assign = serializer.validated_data['teacher_id']
+                
+                # Check if teacher has resigned
+                if teacher_to_assign.resignation_status == 'resigned':
+                    raise serializers.ValidationError(
+                        {"teacher_id": "Cannot assign a resigned teacher to courses."}
+                    )
+                
+                if teacher_to_assign.dept_id != teacher.dept_id:
                     raise serializers.ValidationError(
                         {"teacher_id": "You can only assign teachers from your department."}
                     )

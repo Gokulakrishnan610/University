@@ -25,7 +25,6 @@ class StudentListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         try:
             hod_dept = Department.objects.get(hod_id=user)
-            student_user = serializer.validated_data['student_id']
             
             if serializer.validated_data.get('dept_id') != hod_dept:
                 raise serializers.ValidationError(
