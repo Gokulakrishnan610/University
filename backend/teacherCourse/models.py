@@ -69,14 +69,12 @@ class TeacherCourse(models.Model):
             if not availability_slots.exists():
                 raise ValidationError("Industry professional/POP teachers must have defined availability slots")
         
-        # For POP or industry professionals, check if we're creating a new assignment
-        # If so, ensure the department constraint can be relaxed if needed
         if self.teacher_id.dept_id != self.course_id.teaching_dept_id:
             if self.teacher_id.is_industry_professional or self.teacher_id.teacher_role == 'POP':
-                # Allow cross-department teaching for industry professionals/POPs
+               
                 pass
             else:
-                # For regular teachers, maintain department constraint
+            
                 raise ValidationError(
                     "Teacher and course must belong to the same department"
                 )

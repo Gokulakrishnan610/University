@@ -21,9 +21,7 @@ from import_export import resources
 from import_export.admin import ImportExportModelAdmin
 from .resources import CourseMasterResource
 
-# Resource class for import/export
 
-# Admin class
 @admin.register(CourseMaster)
 class CourseMasterAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = CourseMasterResource

@@ -40,12 +40,18 @@ export interface CreateStudentRequest {
 export type UpdateStudentRequest = Partial<CreateStudentRequest>;
 
 // Get all students
-export const useGetStudents = () => {
+export const useGetStudents = (page: number = 1, pageSize: number = 10, searchQuery: string = '') => {
   return useQueryData(
-    ['students'],
+    ['students', page, pageSize, searchQuery],
     async () => {
       try {
-        const response = await api.get('/api/students/');
+        const response = await api.get('/api/students/', {
+          params: {
+            page,
+            page_size: pageSize,
+            search: searchQuery || undefined
+          }
+        });
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -128,12 +134,12 @@ export const useUpdateStudent = (id: number, onSuccess?: () => void) => {
 };
 
 // Delete a student
-export const useDeleteStudent = (id: number, onSuccess?: () => void) => {
+export const useDeleteStudent = (id: number = 0, onSuccess?: () => void) => {
   return useMutationData(
-    ['deleteStudent', id.toString()],
-    async () => {
+    ['deleteStudent'],
+    async (studentId: number) => {
       try {
-        const response = await api.delete(`/api/students/${id}/`);
+        const response = await api.delete(`/api/students/${studentId}/`);
         return {
           status: response.status,
           data: response.data.message || 'Student deleted successfully',
