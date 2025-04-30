@@ -13,6 +13,7 @@ class Slot(models.Model):
 
 class TeacherSlotAssignment(models.Model):
     DAYS_OF_WEEK = [
+        (0, 'Monday'),
         (1, 'Tuesday'),
         (2, 'Wednesday'),
         (3, 'Thursday'),
@@ -29,12 +30,10 @@ class TeacherSlotAssignment(models.Model):
         verbose_name_plural = "Teacher Slot Assignments"
         ordering = ['day_of_week', 'slot__slot_start_time']
         constraints = [
-            # Existing unique constraint
             models.UniqueConstraint(
                 fields=['teacher', 'slot', 'day_of_week'],
                 name='unique_teacher_slot_assignment'
             ),
-            # NEW: One slot per teacher per day
             models.UniqueConstraint(
                 fields=['teacher', 'day_of_week'],
                 name='one_slot_per_teacher_per_day'

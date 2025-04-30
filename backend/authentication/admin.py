@@ -31,7 +31,7 @@ class CustomUserAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = UserResource
     inlines = []
 
-    list_display = ('email', 'first_name', 'last_name', 'is_staff')
+    list_display = ('pk', 'email', 'first_name', 'last_name', 'is_staff')
     search_fields = ('email', 'first_name', 'last_name')
     list_filter = ('is_staff', 'is_superuser', 'user_type', 'gender')
     ordering = ('email',)

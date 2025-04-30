@@ -6,7 +6,7 @@ from django.core.exceptions import ValidationError
 
 @admin.register(Slot)
 class SlotAdmin(ModelAdmin):
-    list_display = ['slot_name', 'slot_start_time', 'slot_end_time']
+    list_display = ['id','slot_name', 'slot_start_time', 'slot_end_time']
     list_filter = list_display
     search_fields = list_display
 
