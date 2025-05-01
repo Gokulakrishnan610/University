@@ -4,11 +4,9 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Save, User, BookOpen, AlertCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useGetStudent, useUpdateStudent, UpdateStudentRequest, Student } from '@/action/student';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from '@/components/ui/separator';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import * as z from "zod";
 import { useForm } from "react-hook-form";
@@ -29,19 +27,29 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGetCurrentDepartment } from '@/action';
 
 // Define the validation schema using Zod
 const studentFormSchema = z.object({
-  student: z.number().int().positive({ message: "Student ID is required" }),
+  // User information fields
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  first_name: z.string().min(1, { message: "First name is required" }),
+  last_name: z.string().min(1, { message: "Last name is required" }),
+  phone_number: z.string().min(7, { message: "Please enter a valid phone number" }),
+  gender: z.enum(["M", "F"], {
+    required_error: "Gender is required",
+  }),
+
+  // Student information fields
   batch: z.number().int().positive({ message: "Batch year is required" }),
   current_semester: z.number().int().min(1).max(10, { message: "Semester must be between 1 and 10" }),
   year: z.number().int().min(1).max(5, { message: "Year must be between 1 and 5" }),
-  dept: z.number().int().nullable(),
-  roll_no: z.string().nullable(),
-  student_type: z.enum(["Mgmt", "Govt"], { 
+  dept_id: z.number().int().nullable().optional(),
+  roll_no: z.string().nullable().optional(),
+  student_type: z.enum(["Mgmt", "Govt"], {
     required_error: "Student type is required",
   }),
-  degree_type: z.enum(["UG", "PG"], { 
+  degree_type: z.enum(["UG", "PG"], {
     required_error: "Degree type is required",
   }),
 });
@@ -52,23 +60,28 @@ const StudentEdit = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const studentId = parseInt(id || '0', 10);
-  
+
   const [dataLoaded, setDataLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
 
   // Get student data
   const { data: student, isPending: isLoading, refetch } = useGetStudent(studentId);
+  const { data: department } = useGetCurrentDepartment();
 
   // Initialize form with Zod schema
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
-      student: 0,
+      email: "",
+      first_name: "",
+      last_name: "",
+      phone_number: "",
+      gender: "M",
       batch: new Date().getFullYear(),
       current_semester: 1,
       year: 1,
       roll_no: "",
-      dept: null,
+      dept_id: department?.id,
       student_type: "Mgmt",
       degree_type: "UG",
     },
@@ -76,24 +89,28 @@ const StudentEdit = () => {
 
   // Update form data when student data is loaded
   useEffect(() => {
-    if (student && typeof student === 'object') {
-      console.log('Setting form data from student:', student);
-      
+    if (student && !isLoading) {
       // Reset form with student data
       form.reset({
-        student: student.student,
-        batch: student.batch,
-        current_semester: student.current_semester,
-        year: student.year,
-        dept: student.dept,
+        email: student.student_detail?.email || "",
+        first_name: student.student_detail?.first_name || "",
+        last_name: student.student_detail?.last_name || "",
+        phone_number: student.student_detail?.phone_number || "",
+        gender: student.student_detail?.gender || "M",
+        batch: student.batch || new Date().getFullYear(),
+        current_semester: student.current_semester || 1,
+        year: student.year || 1,
+        dept_id: student.dept_id || department?.id,
         roll_no: student.roll_no || "",
         student_type: student.student_type as "Mgmt" | "Govt",
         degree_type: student.degree_type as "UG" | "PG",
       });
-      
+
       setDataLoaded(true);
+    } else if (!student && !isLoading) {
+      setHasError(true);
     }
-  }, [student, form]);
+  }, [student, isLoading, form, department?.id]);
 
   // Update student mutation
   const { mutate: updateStudent, isPending: isSubmitting } = useUpdateStudent(studentId, () => {
@@ -102,8 +119,7 @@ const StudentEdit = () => {
 
   // Form submission handler
   const onSubmit = (data: StudentFormValues) => {
-    console.log('Submitting form data:', data);
-    updateStudent(data);
+    updateStudent(data as UpdateStudentRequest);
   };
 
   // Main loading state
@@ -160,8 +176,8 @@ const StudentEdit = () => {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <Button 
-              variant="ghost" 
+            <Button
+              variant="ghost"
               size="icon"
               className="h-8 w-8"
               onClick={() => navigate(`/students/${studentId}`)}
@@ -172,6 +188,7 @@ const StudentEdit = () => {
               Edit Student <span className="text-muted-foreground text-xl font-normal ml-2">ID: {studentId}</span>
             </h1>
           </div>
+          <p className="text-muted-foreground ml-10">Update student information</p>
         </div>
       </div>
 
@@ -207,22 +224,99 @@ const StudentEdit = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
-                      name="student"
+                      name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base">Student User ID <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-base">Email <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
-                            <Input 
-                              {...field} 
-                              disabled
-                              type="number" 
-                              className="h-11 opacity-70" 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            <Input
+                              {...field}
+                              className="h-11"
+                              placeholder="Enter email address"
                             />
                           </FormControl>
                           <FormDescription>
-                            The User ID cannot be changed
+                            Student will use this email to login
                           </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">First Name <span className="text-red-500">*</span></FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className="h-11"
+                              placeholder="Enter first name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="last_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Last Name <span className="text-red-500">*</span></FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className="h-11"
+                              placeholder="Enter last name"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="phone_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Phone Number <span className="text-red-500">*</span></FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              className="h-11"
+                              placeholder="Enter phone number"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Gender <span className="text-red-500">*</span></FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="M">Male</SelectItem>
+                              <SelectItem value="F">Female</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -235,66 +329,13 @@ const StudentEdit = () => {
                         <FormItem>
                           <FormLabel className="text-base">Roll Number</FormLabel>
                           <FormControl>
-                            <Input 
-                              {...field} 
+                            <Input
+                              {...field}
                               value={field.value || ""}
-                              className="h-11" 
-                              placeholder="Enter roll number" 
+                              className="h-11"
+                              placeholder="Enter roll number"
                             />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="dept"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">Department ID</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              value={field.value || ""}
-                              type="number" 
-                              disabled
-                              className="h-11 opacity-70" 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Department cannot be changed
-                          </FormDescription>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="student_type"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">Student Type <span className="text-red-500">*</span></FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
-                            value={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="h-11">
-                                <SelectValue placeholder="Select student type" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="Mgmt">Management</SelectItem>
-                              <SelectItem value="Govt">Government</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormDescription>
-                            Admission category of the student
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -309,18 +350,47 @@ const StudentEdit = () => {
                       name="batch"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base">Batch <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-base">Batch Year <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
-                            <Input 
-                              {...field} 
-                              type="number" 
-                              className="h-11" 
+                            <Input
+                              {...field}
+                              type="number"
+                              className="h-11"
+                              placeholder="Enter batch year"
                               onChange={(e) => field.onChange(parseInt(e.target.value))}
                             />
                           </FormControl>
                           <FormDescription>
-                            Admission year of the student
+                            The year the student joined
                           </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="year"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Current Year <span className="text-red-500">*</span></FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value.toString()}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select year" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1">Year 1</SelectItem>
+                              <SelectItem value="2">Year 2</SelectItem>
+                              <SelectItem value="3">Year 3</SelectItem>
+                              <SelectItem value="4">Year 4</SelectItem>
+                              <SelectItem value="5">Year 5</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -332,16 +402,28 @@ const StudentEdit = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-base">Current Semester <span className="text-red-500">*</span></FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="number" 
-                              min="1" 
-                              max="10" 
-                              className="h-11" 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
+                          <Select
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                            value={field.value.toString()}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select semester" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1">Semester 1</SelectItem>
+                              <SelectItem value="2">Semester 2</SelectItem>
+                              <SelectItem value="3">Semester 3</SelectItem>
+                              <SelectItem value="4">Semester 4</SelectItem>
+                              <SelectItem value="5">Semester 5</SelectItem>
+                              <SelectItem value="6">Semester 6</SelectItem>
+                              <SelectItem value="7">Semester 7</SelectItem>
+                              <SelectItem value="8">Semester 8</SelectItem>
+                              <SelectItem value="9">Semester 9</SelectItem>
+                              <SelectItem value="10">Semester 10</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -349,23 +431,24 @@ const StudentEdit = () => {
 
                     <FormField
                       control={form.control}
-                      name="year"
+                      name="student_type"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base">Year <span className="text-red-500">*</span></FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              type="number" 
-                              min="1" 
-                              max="5" 
-                              className="h-11" 
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Current year of study
-                          </FormDescription>
+                          <FormLabel className="text-base">Admission Type <span className="text-red-500">*</span></FormLabel>
+                          <Select
+                            onValueChange={field.onChange}
+                            value={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select admission type" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="Mgmt">Management</SelectItem>
+                              <SelectItem value="Govt">Government</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -377,9 +460,8 @@ const StudentEdit = () => {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel className="text-base">Degree Type <span className="text-red-500">*</span></FormLabel>
-                          <Select 
-                            onValueChange={field.onChange} 
-                            defaultValue={field.value}
+                          <Select
+                            onValueChange={field.onChange}
                             value={field.value}
                           >
                             <FormControl>
@@ -396,27 +478,47 @@ const StudentEdit = () => {
                         </FormItem>
                       )}
                     />
+
+                    <FormField
+                      control={form.control}
+                      name="dept_id"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Department</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              {...field}
+                              value={field.value || ""}
+                              className="h-11"
+                              placeholder="Department ID"
+                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : null)}
+                              disabled
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            Department cannot be changed
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   </div>
                 </TabsContent>
-
-                <div className="flex gap-3 justify-end pt-4 border-t mt-8">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => navigate(`/students/${studentId}`)}
-                    className="w-28"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting || !dataLoaded || form.formState.isSubmitting}
-                    className="w-28"
-                  >
-                    {isSubmitting || form.formState.isSubmitting ? 'Saving...' : 'Save Changes'}
-                  </Button>
-                </div>
               </Tabs>
+
+              <div className="flex justify-end gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => navigate(`/students/${studentId}`)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? 'Saving...' : 'Save Changes'}
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>

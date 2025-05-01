@@ -25,7 +25,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -53,11 +53,11 @@ export default function CreateTeacherCourseAssignment() {
     const { data: teachers = [], isPending: teachersLoading } = useGetTeachers();
     const { data: courses = [], isPending: coursesLoading } = useGetCourses();
     const { data: assignments = [], isPending: assignmentsLoading } = useGetTeacherCourseAssignments();
-    
+
     // Fetch teacher availability if a teacher is selected
-    const { data: teacherAvailability = [], isPending: availabilityLoading } = 
+    const { data: teacherAvailability = [], isPending: availabilityLoading } =
         useGetTeacherAvailability(selectedTeacher ? parseInt(selectedTeacher) : 0);
-    
+
     // Setup form with Zod  
     const form = useForm<TeacherCourseFormValues>({
         resolver: zodResolver(teacherCourseFormSchema),
@@ -79,7 +79,7 @@ export default function CreateTeacherCourseAssignment() {
     const teacherOptions: ComboboxOption[] = useMemo(() => {
         return teachers.map((teacher: Teacher) => ({
             value: teacher.id.toString(),
-            label: teacher.is_placeholder 
+            label: teacher.is_placeholder
                 ? `[Placeholder] ${teacher.placeholder_description || 'Unnamed'} (${teacher.staff_code || 'No Code'} - ${teacher.dept_id?.dept_name || 'No Department'})`
                 : `${teacher.teacher_id?.first_name} ${teacher.teacher_id?.last_name} (${teacher.staff_code} - ${teacher.dept_id?.dept_name || 'No Department'})${teacher.is_industry_professional ? ' 🏢' : ''}`
         }));
@@ -94,9 +94,9 @@ export default function CreateTeacherCourseAssignment() {
     // Check if selected teacher is a POP/industry professional
     const isPOPOrIndustry = useMemo(() => {
         if (!selectedTeacherData) return false;
-        return selectedTeacherData.is_industry_professional || 
-               selectedTeacherData.teacher_role === 'POP' || 
-               selectedTeacherData.teacher_role === 'Industry Professional';
+        return selectedTeacherData.is_industry_professional ||
+            selectedTeacherData.teacher_role === 'POP' ||
+            selectedTeacherData.teacher_role === 'Industry Professional';
     }, [selectedTeacherData]);
 
     // Check if teacher has limited availability
@@ -176,6 +176,21 @@ export default function CreateTeacherCourseAssignment() {
         });
     }, [teacherAvailability]);
 
+    // Calculate required teachers based on student count (1 teacher per 70 students, max 5)
+    // One teacher can handle up to 140 students (twice standard load) if needed
+    const calculateRequiredTeachers = (studentCount: number) => {
+        // First teacher can handle up to 140 students (twice regular load)
+        if (studentCount <= 140) {
+            return 1;
+        }
+        // For additional students beyond 140, add teachers at normal capacity (70 per teacher)
+        const additionalStudents = studentCount - 140;
+        const additionalTeachers = Math.ceil(additionalStudents / 70);
+        const totalTeachers = 1 + additionalTeachers;
+
+        return Math.min(totalTeachers, 5); // Cap at 5 teachers maximum
+    };
+
     // Get course assignment stats
     const { data: courseStats, isPending: courseStatsLoading } = useGetCourseAssignmentStats(
         selectedCourse ? parseInt(selectedCourse) : undefined
@@ -222,8 +237,8 @@ export default function CreateTeacherCourseAssignment() {
         }
 
         // Check if this teacher is already assigned to this course
-        const existingAssignment = assignments.find(a => 
-            a.teacher_detail?.id?.toString() === data.teacher_id && 
+        const existingAssignment = assignments.find(a =>
+            a.teacher_detail?.id?.toString() === data.teacher_id &&
             a.course_detail?.id?.toString() === data.course_id
         );
 
@@ -243,7 +258,7 @@ export default function CreateTeacherCourseAssignment() {
         }
 
         // Warning for POP/industry professional without selected availability slots
-        if (isPOPOrIndustry && hasLimitedAvailability && sortedAvailability.length > 0 && 
+        if (isPOPOrIndustry && hasLimitedAvailability && sortedAvailability.length > 0 &&
             (!data.preferred_availability_slots || data.preferred_availability_slots.length === 0)) {
             if (!confirm('This industry professional has availability slots defined but none selected. Continue anyway?')) {
                 return;
@@ -258,23 +273,23 @@ export default function CreateTeacherCourseAssignment() {
             course_id: parseInt(data.course_id),
             semester: 1, // Default value
             academic_year: new Date().getFullYear(), // Default current year
-            student_count: 0, // Default value
+            student_count: 70, // Default student count per teacher
             is_assistant: data.is_assistant,
             // @ts-ignore - API accepts this parameter but type definition hasn't been updated
             preferred_availability_slots: preferred_slots
         }, {
             onError: (error: any) => {
-                const errorMessage = error.response?.data?.non_field_errors?.[0] || 
-                                    error.response?.data?.detail || 
-                                    'An error occurred';
-                
+                const errorMessage = error.response?.data?.non_field_errors?.[0] ||
+                    error.response?.data?.detail ||
+                    'An error occurred';
+
                 toast.error('Failed to create assignment', {
                     description: errorMessage
                 });
             }
         });
     };
-    
+
     // Update the selected s and course when form values change
     const handleTeacherChange = (value: string) => {
         setSelectedTeacher(value);
@@ -298,7 +313,7 @@ export default function CreateTeacherCourseAssignment() {
             <div className="flex items-center space-x-2 mb-6">
                 <h1 className="text-xl font-bold">Create New Course Assignment</h1>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Teacher Workload Information */}
                 <Card>
@@ -329,7 +344,7 @@ export default function CreateTeacherCourseAssignment() {
                                 </AlertDescription>
                             </Alert>
                         )}
-                        
+
                         {isTeacherResigning && (
                             <Alert className="bg-amber-50 border-amber-300">
                                 <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -392,7 +407,7 @@ export default function CreateTeacherCourseAssignment() {
                                     <Calendar className="h-4 w-4 text-primary" />
                                     <h4 className="font-medium">Availability Schedule</h4>
                                 </div>
-                                
+
                                 {availabilityLoading ? (
                                     <div className="flex justify-center my-4">
                                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -464,10 +479,10 @@ export default function CreateTeacherCourseAssignment() {
                                                             !selectedTeacher
                                                                 ? "Select a teacher first"
                                                                 : coursesLoading
-                                                                ? "Loading courses..."
-                                                                : courseOptions.length === 0
-                                                                ? "No available courses"
-                                                                : "Select a course"
+                                                                    ? "Loading courses..."
+                                                                    : courseOptions.length === 0
+                                                                        ? "No available courses"
+                                                                        : "Select a course"
                                                         }
                                                         disabled={!selectedTeacher || coursesLoading || courseOptions.length === 0}
                                                         emptyMessage="No courses found for this teacher's department"
@@ -575,22 +590,81 @@ export default function CreateTeacherCourseAssignment() {
                                             <div className="p-4 bg-muted/20 rounded-lg">
                                                 <p className="text-sm text-muted-foreground">Assigned Teachers</p>
                                                 <p className="text-2xl font-bold">
-                                                    {Array.isArray(courseStats) 
-                                                        ? 0 
+                                                    {Array.isArray(courseStats)
+                                                        ? 0
                                                         : courseStats.total_teachers || 0}
                                                 </p>
                                             </div>
                                             <div className="p-4 bg-muted/20 rounded-lg">
                                                 <p className="text-sm text-muted-foreground">Total Students</p>
                                                 <p className="text-2xl font-bold">
-                                                    {Array.isArray(courseStats) 
-                                                        ? 0 
-                                                        : courseStats.teachers?.reduce((total: number, teacher: {student_count: number}) => 
+                                                    {Array.isArray(courseStats)
+                                                        ? 0
+                                                        : courseStats.teachers?.reduce((total: number, teacher: { student_count: number }) =>
                                                             total + (teacher.student_count || 0), 0) || 0}
                                                 </p>
                                             </div>
                                         </div>
-                                        
+
+                                        {/* Teacher requirements based on student count */}
+                                        {!Array.isArray(courseStats) && courseStats?.teachers && (
+                                            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="font-medium">Teacher Requirements</p>
+                                                    <Badge variant={
+                                                        (courseStats.total_teachers || 0) >= calculateRequiredTeachers(104)
+                                                            ? "outline" : "destructive"
+                                                    }>
+                                                        {courseStats.total_teachers || 0} / {calculateRequiredTeachers(104)} teachers
+                                                    </Badge>
+                                                </div>
+
+                                                {selectedCourseData && (
+                                                    <div className="mt-3 space-y-2">
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-medium">Semester:</span>
+                                                                    <Badge variant="secondary">{selectedCourseData.course_semester}</Badge>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <span className="text-sm font-medium">Academic Year:</span>
+                                                                    <Badge variant="secondary">{selectedCourseData.course_year}</Badge>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm text-muted-foreground">
+                                                                    <span className="font-medium">Total Students:</span> {courseStats.teachers?.reduce(
+                                                                        (total: number, teacher: { student_count: number }) =>
+                                                                            total + (teacher.student_count || 0), 0) || 0}
+                                                                </div>
+                                                                <div className="text-sm text-muted-foreground mt-1">
+                                                                    <span className="font-medium">Year {selectedCourseData.course_year} Students:</span> 104
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="text-sm bg-secondary/10 p-2 rounded">
+                                                            {(courseStats.total_teachers || 0) >= calculateRequiredTeachers(104) ?
+                                                                <span className="text-green-600 font-medium">Adequate</span> :
+                                                                <span className="text-red-600 font-medium">Inadequate</span>} teacher staffing for this course.
+                                                            <br />
+                                                            {calculateRequiredTeachers(104) === 1 ? (
+                                                                <span className="text-xs">This course has 104 students, which is within the capacity of a single teacher (up to 140 students).</span>
+                                                            ) : (
+                                                                <span className="text-xs">This course has 104 students, requiring {calculateRequiredTeachers(104)} teachers at standard capacity.</span>
+                                                            )}
+                                                            {courseStats.total_teachers > 0 && courseStats.total_teachers < calculateRequiredTeachers(104) && (
+                                                                <span className="block mt-1 text-xs text-amber-600">
+                                                                    Currently {courseStats.total_teachers} teacher(s) assigned. Need {calculateRequiredTeachers(104) - courseStats.total_teachers} more.
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         <div className="mt-4">
                                             <h4 className="text-sm font-medium mb-2">Current Assignments</h4>
                                             {Array.isArray(courseStats) || !courseStats.teachers || courseStats.teachers.length === 0 ? (
@@ -614,8 +688,8 @@ export default function CreateTeacherCourseAssignment() {
                                                                         </div>
                                                                     </TableCell>
                                                                     <TableCell>
-                                                                        {teacher.is_assistant === true ? 
-                                                                            <Badge variant="outline">Assistant</Badge> : 
+                                                                        {teacher.is_assistant === true ?
+                                                                            <Badge variant="outline">Assistant</Badge> :
                                                                             <Badge>Primary</Badge>
                                                                         }
                                                                     </TableCell>

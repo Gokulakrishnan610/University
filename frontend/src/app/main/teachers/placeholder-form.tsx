@@ -39,12 +39,22 @@ import { useEffect } from 'react';
 
 const TEACHER_ROLES = [
   'Professor',
+  'Associate Professor',
+  'Assistant Professor',
   'Asst. Professor',
   'HOD',
   'DC',
   'POP',
-  'Industry Professional'
+  'Industry Professional',
+  'Dean',
+  'Admin',
+  'Vice Principal',
+  'Principal',
+  'Physical Director'
 ];
+
+// Special roles that typically have unique institution-wide positions
+const UNIQUE_ROLES = ['Dean', 'Principal', 'Vice Principal', 'Physical Director'];
 
 const formSchema = z.object({
   staff_code: z.string().optional(),
@@ -64,7 +74,10 @@ export default function TeacherPlaceholderForm({ onClose, onSuccess }: TeacherPl
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
   const departments = departmentsData || [];
   const { data: currentUser } = useCurrentUser();
-  
+
+  // State for unique role warning
+  const [showUniqueRoleWarning, setShowUniqueRoleWarning] = useState(false);
+
   const { mutate: createPlaceholder, isPending: isCreating } = useCreatePlaceholderTeacher(onSuccess);
 
   // Setup form with default values
@@ -79,13 +92,20 @@ export default function TeacherPlaceholderForm({ onClose, onSuccess }: TeacherPl
       placeholder_description: '',
     },
   });
-  
+
   // Set default department to current user's department when data is loaded
   useEffect(() => {
     if (currentUser?.teacher?.department?.id) {
       form.setValue('dept_id', currentUser.teacher.department.id);
     }
   }, [currentUser, form]);
+
+  const teacherRole = form.watch('teacher_role');
+
+  // Update warning when role changes
+  useEffect(() => {
+    setShowUniqueRoleWarning(UNIQUE_ROLES.includes(teacherRole));
+  }, [teacherRole]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     createPlaceholder(values);
@@ -106,192 +126,202 @@ export default function TeacherPlaceholderForm({ onClose, onSuccess }: TeacherPl
 
         <Separator />
         <ScrollArea className='h-[calc(100vh-200px)]'>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" />
-                <h3 className="text-md font-medium">Basic Information</h3>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  <h3 className="text-md font-medium">Basic Information</h3>
+                </div>
+
+                <FormField
+                  control={form.control}
+                  name="staff_code"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Position Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. PH-001" {...field} className="focus-visible:ring-primary" />
+                      </FormControl>
+                      <FormDescription>
+                        Optional identifier for this placeholder position
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <FormField
-                control={form.control}
-                name="staff_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Position Code</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. PH-001" {...field} className="focus-visible:ring-primary" />
-                    </FormControl>
-                    <FormDescription>
-                      Optional identifier for this placeholder position
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Building className="h-4 w-4 text-primary" />
+                  <h3 className="text-md font-medium">Department & Role</h3>
+                </div>
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-primary" />
-                <h3 className="text-md font-medium">Department & Role</h3>
+                <FormField
+                  control={form.control}
+                  name="dept_id"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value?.toString()}
+                          onValueChange={(value) => field.onChange(parseInt(value))}
+                          disabled={loadingDepartments || currentUser?.teacher?.department?.id !== undefined}
+                        >
+                          <SelectTrigger className="focus-visible:ring-primary">
+                            <SelectValue placeholder="Select department" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {departments.map((dept) => (
+                              <SelectItem key={dept.id} value={dept.id.toString()}>
+                                {dept.dept_name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormDescription>
+                        {currentUser?.teacher?.department ?
+                          "Using your department" :
+                          "Department this position belongs to"
+                        }
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="teacher_role"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Role</FormLabel>
+                      <FormControl>
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                        >
+                          <SelectTrigger className="focus-visible:ring-primary">
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {TEACHER_ROLES.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {role}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormDescription>
+                        {field.value === 'POP' || field.value === 'Industry Professional'
+                          ? 'Industry professionals have limited availability'
+                          : UNIQUE_ROLES.includes(field.value)
+                            ? 'This role is typically unique within the institution'
+                            : 'The teaching role for this position'
+                        }
+                      </FormDescription>
+                      {showUniqueRoleWarning && (
+                        <div className="mt-2 text-xs text-amber-600">
+                          Note: {field.value} is typically a unique role. The system may prevent creating if another teacher with this role already exists.
+                        </div>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <FormField
-                control={form.control}
-                name="dept_id"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value?.toString()}
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                        disabled={loadingDepartments || currentUser?.teacher?.department?.id !== undefined}
-                      >
-                        <SelectTrigger className="focus-visible:ring-primary">
-                          <SelectValue placeholder="Select department" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {departments.map((dept) => (
-                            <SelectItem key={dept.id} value={dept.id.toString()}>
-                              {dept.dept_name}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormDescription>
-                      {currentUser?.teacher?.department ? 
-                        "Using your department" : 
-                        "Department this position belongs to"
-                      }
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <BookOpen className="h-4 w-4 text-primary" />
+                  <h3 className="text-md font-medium">Required Qualifications</h3>
+                </div>
 
-              <FormField
-                control={form.control}
-                name="teacher_role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Role</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                      >
-                        <SelectTrigger className="focus-visible:ring-primary">
-                          <SelectValue placeholder="Select role" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TEACHER_ROLES.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormDescription>
-                      The teaching role for this position
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="teacher_specialisation"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Specialisation</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. Machine Learning, Database Systems" {...field} className="focus-visible:ring-primary" />
+                      </FormControl>
+                      <FormDescription>
+                        Required specialisation for this position
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <BookOpen className="h-4 w-4 text-primary" />
-                <h3 className="text-md font-medium">Required Qualifications</h3>
+                <FormField
+                  control={form.control}
+                  name="placeholder_description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Position Description</FormLabel>
+                      <FormControl>
+                        <Textarea
+                          placeholder="Describe the requirements and responsibilities for this position"
+                          className="focus-visible:ring-primary resize-none min-h-[100px]"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Detailed description of the position requirements
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <FormField
-                control={form.control}
-                name="teacher_specialisation"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Specialisation</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. Machine Learning, Database Systems" {...field} className="focus-visible:ring-primary" />
-                    </FormControl>
-                    <FormDescription>
-                      Required specialisation for this position
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Clock className="h-4 w-4 text-primary" />
+                  <h3 className="text-md font-medium">Workload</h3>
+                </div>
 
-              <FormField
-                control={form.control}
-                name="placeholder_description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Position Description</FormLabel>
-                    <FormControl>
-                      <Textarea 
-                        placeholder="Describe the requirements and responsibilities for this position"
-                        className="focus-visible:ring-primary resize-none min-h-[100px]"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Detailed description of the position requirements
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Clock className="h-4 w-4 text-primary" />
-                <h3 className="text-md font-medium">Workload</h3>
+                <FormField
+                  control={form.control}
+                  name="teacher_working_hours"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Working Hours</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={40}
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          className="focus-visible:ring-primary"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        Required weekly working hours for this position
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
-              <FormField
-                control={form.control}
-                name="teacher_working_hours"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Working Hours</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={40}
-                        {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value))}
-                        className="focus-visible:ring-primary"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Required weekly working hours for this position
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <DialogFooter>
-              <Button variant="outline" type="button" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isCreating}>
-                {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Create Placeholder
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isCreating}>
+                  {isCreating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Create Placeholder
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
         </ScrollArea>
       </DialogContent>
     </Dialog>
