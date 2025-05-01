@@ -9,6 +9,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useLogin, clearAuthCookies } from "@/action";
 import { toast } from "sonner";
+import { useCsrfToken } from "@/action";
 
 // Define the login schema with Zod
 const loginSchema = z.object({
@@ -29,6 +30,8 @@ export default function Login() {
   const navigate = useNavigate();
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [nextImageIndex, setNextImageIndex] = useState(1);
+
+  useCsrfToken();
 
   useEffect(() => {
     const timer = setInterval(() => {
