@@ -20,7 +20,13 @@ import {
   verticalListSortingStrategy
 } from '@dnd-kit/sortable';
 import { useGetTeachers, Teacher as TeacherType } from '@/action/teacher';
-import { FIXED_SLOTS, SlotOperation, useSaveTeacherSlotAssignments } from '@/action/slot';
+import { 
+  FIXED_SLOTS, 
+  SlotOperation, 
+  TeacherSlotAssignment, 
+  useGetTeacherSlotAssignments,
+  useSaveTeacherSlotAssignments
+} from '@/action/slot';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -266,6 +272,14 @@ export default function SlotAllocationPage() {
   const teachers = teachersData || [];
   
   const [currentDay, setCurrentDay] = useState(0); // Monday by default
+  
+  // Get assignments for the current day from the server
+  const { 
+    data: currentDayAssignmentsData, 
+    isPending: isLoadingAssignments, 
+    refetch: refetchCurrentDayAssignments 
+  } = useGetTeacherSlotAssignments(currentDay);
+  
   const [dayAssignments, setDayAssignments] = useState<Record<number, SlotAssignment[]>>({
     0: [], // Monday
     1: [], // Tuesday
@@ -283,6 +297,7 @@ export default function SlotAllocationPage() {
   // Calculate max teachers per slot (33% rule)
   const maxTeachersPerSlot = Math.ceil((teachers?.length || 0) / 3);
   
+  // Save mutation for the current day
   const { mutate: saveAssignments } = useSaveTeacherSlotAssignments(() => {
     toast.success(`Assignments saved for ${DAYS_OF_WEEK.find(d => d.value === currentDay)?.label}`);
     setIsSaving(false);
@@ -292,7 +307,32 @@ export default function SlotAllocationPage() {
       setCurrentDay(nextDayChange);
       setNextDayChange(null);
     }
+    
+    // Refetch assignments after saving
+    refetchCurrentDayAssignments();
   });
+
+  // Process current day assignments from the server
+  useEffect(() => {
+    if (currentDayAssignmentsData) {
+      // Convert server data to our local format
+      const currentAssignments = (currentDayAssignmentsData || []).map((assignment: TeacherSlotAssignment) => ({
+        teacherId: assignment.teacher,
+        slotId: assignment.slot
+      }));
+      
+      // Update only the current day's assignments in our state
+      setDayAssignments(prev => ({
+        ...prev,
+        [currentDay]: currentAssignments
+      }));
+    }
+  }, [currentDayAssignmentsData, currentDay]);
+
+  // Fetch data when day changes
+  useEffect(() => {
+    refetchCurrentDayAssignments();
+  }, [currentDay, refetchCurrentDayAssignments]);
 
   // Set up DnD sensors for better touch and mouse support
   const sensors = useSensors(
@@ -362,13 +402,16 @@ export default function SlotAllocationPage() {
     }
     
     // Add the assignment (keep all existing assignments)
-    setDayAssignments(prev => ({
-      ...prev,
+    const updatedAssignments = {
+      ...dayAssignments,
       [currentDay]: [
-        ...prev[currentDay].filter(a => !(a.teacherId === teacherId || (a.slotId === slotId && a.teacherId === teacherId))),
+        ...dayAssignments[currentDay].filter(a => !(a.teacherId === teacherId || (a.slotId === slotId && a.teacherId === teacherId))),
         { slotId, teacherId }
       ]
-    }));
+    };
+    
+    // Update state only (we'll save to server on explicit save)
+    setDayAssignments(updatedAssignments);
 
     // Show success toast
     toast.success('Teacher assigned successfully', {
@@ -396,10 +439,13 @@ export default function SlotAllocationPage() {
       `${teacher.teacher_id?.first_name || ''} ${teacher.teacher_id?.last_name || ''}` : 
       'Teacher';
     
-    setDayAssignments(prev => ({
-      ...prev,
-      [currentDay]: prev[currentDay].filter(a => !(a.slotId === slotId && a.teacherId === teacherId))
-    }));
+    const updatedAssignments = {
+      ...dayAssignments,
+      [currentDay]: dayAssignments[currentDay].filter(a => !(a.slotId === slotId && a.teacherId === teacherId))
+    };
+    
+    // Update state only (we'll save to server on explicit save)
+    setDayAssignments(updatedAssignments);
 
     toast.success(`Removed ${teacherName} from ${getSlotName(slotId)}`);
   };
@@ -420,8 +466,14 @@ export default function SlotAllocationPage() {
 
   // Handle day change
   const changeDay = (newDay: number) => {
-    // Check if there are unsaved changes
-    if (dayAssignments[currentDay].length > 0) {
+    // Check if there are unsaved changes by comparing with server data
+    const hasUnsavedChanges = currentDayAssignmentsData && dayAssignments[currentDay].length > 0 && 
+      JSON.stringify(currentDayAssignmentsData.map((a: TeacherSlotAssignment) => ({
+        teacherId: a.teacher,
+        slotId: a.slot
+      }))) !== JSON.stringify(dayAssignments[currentDay]);
+    
+    if (hasUnsavedChanges) {
       setShowConfirmDialog(true);
       setNextDayChange(newDay);
     } else {
@@ -433,11 +485,15 @@ export default function SlotAllocationPage() {
   const saveCurrentDayAssignments = () => {
     setIsSaving(true);
     
-    const operations: SlotOperation[] = dayAssignments[currentDay].map(assignment => ({
-      action: 'create',
-      slot_id: assignment.slotId,
-      day_of_week: currentDay
-    }));
+    // First delete all existing assignments for this day, then create new ones
+    const operations: SlotOperation[] = [
+      // First add all the assignments as 'create' operations
+      ...dayAssignments[currentDay].map(assignment => ({
+        action: 'create' as const,
+        slot_id: assignment.slotId,
+        day_of_week: currentDay
+      }))
+    ];
     
     // If there are no assignments, don't make an API call
     if (operations.length === 0) {
@@ -451,8 +507,13 @@ export default function SlotAllocationPage() {
       return;
     }
     
-    // Get the first teacher ID for the API call (in a real app, this would be handled differently)
-    const teacherId = dayAssignments[currentDay][0]?.teacherId;
+    // Find a valid teacher ID for the API call
+    let teacherId = dayAssignments[currentDay][0]?.teacherId;
+    
+    if (!teacherId && teachers.length > 0) {
+      // If no specific teacher assigned, use the first available teacher
+      teacherId = teachers[0].id;
+    }
     
     if (!teacherId) {
       toast.error('No teacher found for assignment');
@@ -460,6 +521,7 @@ export default function SlotAllocationPage() {
       return;
     }
     
+    // Save assignments for current day
     saveAssignments({
       teacher_id: teacherId,
       operations
@@ -482,13 +544,13 @@ export default function SlotAllocationPage() {
     return teachers.find((t: TeacherType) => t.id === teacherId);
   };
 
-  const isLoading = isLoadingTeachers;
+  const isLoading = isLoadingTeachers || isLoadingAssignments;
 
   // Create arrays of teacher IDs for the DnD context
   const teacherIds = teachers.map((teacher: TeacherType) => `teacher-${teacher.id}`);
 
   return (
-    <div className="w-full mx-auto space-y-4">
+    <div className="w-full mx-auto space-y-4 pb-6">
       <Card className="shadow-md border-t-4 border-t-primary overflow-hidden">
         <CardHeader className="flex flex-row items-center justify-between pb-2">
           <div>
@@ -549,6 +611,21 @@ export default function SlotAllocationPage() {
                 ))}
               </div>
               
+              <div className="my-6 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/30 p-4 rounded-md w-full">
+                <div className="flex items-start">
+                  <AlertCircle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5 shrink-0" />
+                  <div className="flex-1">
+                    <h4 className="font-medium text-yellow-900 dark:text-yellow-500">Slot Assignment Rules</h4>
+                    <ul className="mt-2 space-y-1 text-sm text-yellow-800 dark:text-yellow-400">
+                      <li>• A teacher can only be assigned to one slot per day</li>
+                      <li>• A teacher can have the same slot on a maximum of 2 different days</li>
+                      <li>• Teachers cannot have overlapping time slots on the same day</li>
+                      <li>• Maximum {maxTeachersPerSlot} teachers per slot (33% distribution rule)</li>
+                    </ul>
+                  </div>
+                </div>
+              </div>
+              
               <DndContext
                 sensors={sensors}
                 onDragStart={handleDragStart}
@@ -592,21 +669,6 @@ export default function SlotAllocationPage() {
                           maxTeachers={maxTeachersPerSlot}
                         />
                       ))}
-                    </div>
-                    
-                    <div className="mt-6 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/30 p-4 rounded-md">
-                      <div className="flex items-start">
-                        <AlertCircle className="h-5 w-5 text-yellow-600 mr-2 mt-0.5" />
-                        <div>
-                          <h4 className="font-medium text-yellow-900 dark:text-yellow-500">Slot Assignment Rules</h4>
-                          <ul className="mt-2 space-y-1 text-sm text-yellow-800 dark:text-yellow-400">
-                            <li>• A teacher can only be assigned to one slot per day</li>
-                            <li>• A teacher can have the same slot on a maximum of 2 different days</li>
-                            <li>• Teachers cannot have overlapping time slots on the same day</li>
-                            <li>• Maximum {maxTeachersPerSlot} teachers per slot (33% distribution rule)</li>
-                          </ul>
-                        </div>
-                      </div>
                     </div>
                   </div>
                 </div>
