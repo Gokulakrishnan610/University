@@ -179,7 +179,7 @@ export default function CourseDetails() {
   const { data: courseMastersData, isPending: loadingCourseMasters } = useGetCourseMasters();
 
   const departments = departmentsData || [];
-  const courseMasters = courseMastersData || [];
+  const courseMasters = courseMastersData?.results || [];
 
   // Extract course data from the response
   const course = courseResponse?.status === "success" ? courseResponse.data : null;

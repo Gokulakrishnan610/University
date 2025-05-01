@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { Plus, Pencil, Trash, Search } from 'lucide-react';
+import { Plus, Pencil, Trash, Search, Mail, User, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import {
   Table,
@@ -16,14 +16,30 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Badge } from '@/components/ui/badge';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useDebounce } from '@/hooks/useDebounce';
 
 const StudentManagement = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
-
-  // Fetch students data
-  const { data: students, isPending: isLoading, refetch }= useGetStudents();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   
+  // Debounce search term to avoid excessive API calls
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
+
+  // Fetch students data with pagination and search
+  const { data, isPending: isLoading, refetch } = useGetStudents(page, pageSize, debouncedSearchTerm);
+  
+  // Reset to first page when search term changes
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedSearchTerm]);
+  
+  const students = data?.results || [];
+  const totalPages = Math.ceil((data?.count || 0) / pageSize);
+  
+  // Initialize the delete student mutation
   const { mutate: deleteStudent } = useDeleteStudent(0, () => {
     refetch();
   });
@@ -33,12 +49,11 @@ const StudentManagement = () => {
     deleteStudent(id);
   };
 
-  const filteredStudents = students?.filter((student: Student) => {
-    const searchTermLower = searchTerm.toLowerCase();
-    const rollNo = student.roll_no?.toLowerCase() || '';
-    
-    return rollNo.includes(searchTermLower);
-  });
+  const handlePageChange = (newPage: number) => {
+    if (newPage > 0 && newPage <= totalPages) {
+      setPage(newPage);
+    }
+  };
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
@@ -52,16 +67,30 @@ const StudentManagement = () => {
         </Button>
       </div>
 
-      <div className="mb-6">
+      <div className="mb-6 flex flex-wrap gap-4 justify-between items-center">
         <div className="relative w-full sm:max-w-xs">
           <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
             type="search"
-            placeholder="Search by roll number..."
+            placeholder="Search by name, email, roll number..."
             className="pl-8 w-full"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-muted-foreground">Items per page:</span>
+          <Select value={pageSize.toString()} onValueChange={(value) => setPageSize(Number(value))}>
+            <SelectTrigger className="w-[80px]">
+              <SelectValue placeholder="10" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="5">5</SelectItem>
+              <SelectItem value="10">10</SelectItem>
+              <SelectItem value="20">20</SelectItem>
+              <SelectItem value="50">50</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -76,26 +105,47 @@ const StudentManagement = () => {
           <Table>
             <TableHeader>
               <TableRow className="bg-muted/40">
+                <TableHead className="font-semibold">Name</TableHead>
+                <TableHead className="font-semibold">Email</TableHead>
                 <TableHead className="font-semibold">Roll No.</TableHead>
                 <TableHead className="font-semibold">Department</TableHead>
-                <TableHead className="font-semibold">Batch</TableHead>
-                <TableHead className="font-semibold">Semester</TableHead>
+                <TableHead className="font-semibold">Batch/Sem</TableHead>
                 <TableHead className="font-semibold">Type</TableHead>
                 <TableHead className="font-semibold text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredStudents?.length ? (
-                filteredStudents.map((student: Student) => (
+              {students?.length ? (
+                students.map((student: Student) => (
                   <TableRow 
                     key={student.id} 
                     className="hover:bg-muted/50 transition-colors cursor-pointer"
                     onClick={() => navigate(`/students/${student.id}`)}
                   >
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">
+                          {student.student_detail?.first_name} {student.student_detail?.last_name}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">
+                          {student.student_detail?.email}
+                        </span>
+                      </div>
+                    </TableCell>
                     <TableCell>{student.roll_no || 'N/A'}</TableCell>
-                    <TableCell>{student.dept_detail.dept_name || 'N/A'}</TableCell>
-                    <TableCell>{student.batch}</TableCell>
-                    <TableCell>{student.current_semester}</TableCell>
+                    <TableCell>{student.dept_detail?.dept_name || 'N/A'}</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span>Batch: {student.batch}</span>
+                        <span className="text-xs text-muted-foreground">Sem: {student.current_semester}</span>
+                      </div>
+                    </TableCell>
                     <TableCell>
                       <Badge variant={student.student_type === 'Mgmt' ? 'default' : 'secondary'} className="font-normal">
                         {student.student_type}
@@ -153,6 +203,36 @@ const StudentManagement = () => {
               )}
             </TableBody>
           </Table>
+          
+          {/* Pagination controls */}
+          {totalPages > 1 && (
+            <div className="flex items-center justify-between px-4 py-4 border-t">
+              <div className="text-sm text-muted-foreground">
+                {data?.count ? `Showing ${(page - 1) * pageSize + 1}-${Math.min(page * pageSize, data.count)} of ${data.count}` : 'No results'}
+              </div>
+              <div className="flex items-center space-x-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handlePageChange(page - 1)}
+                  disabled={page === 1}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                <div className="text-sm">
+                  Page {page} of {totalPages}
+                </div>
+                <Button
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => handlePageChange(page + 1)}
+                  disabled={page === totalPages}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>

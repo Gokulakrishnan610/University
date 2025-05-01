@@ -32,6 +32,8 @@ interface ComboboxProps {
   emptyMessage?: string
   className?: string
   disabled?: boolean
+  searchValue?: string
+  onSearchChange?: (value: string) => void
 }
 
 export function Combobox({
@@ -42,10 +44,24 @@ export function Combobox({
   searchPlaceholder = "Search...",
   emptyMessage = "No results found.",
   className,
-  disabled = false
+  disabled = false,
+  searchValue,
+  onSearchChange
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [searchQuery, setSearchQuery] = React.useState("")
+  const [internalSearchQuery, setInternalSearchQuery] = React.useState("")
+  
+  // Use external search value if provided, otherwise use internal state
+  const searchQuery = searchValue !== undefined ? searchValue : internalSearchQuery
+  
+  // Handle search value changes
+  const handleSearchChange = (value: string) => {
+    if (onSearchChange) {
+      onSearchChange(value)
+    } else {
+      setInternalSearchQuery(value)
+    }
+  }
   
   const filteredOptions = React.useMemo(() => {
     if (!searchQuery) return options
@@ -75,7 +91,8 @@ export function Combobox({
         <Command>
           <CommandInput 
             placeholder={searchPlaceholder} 
-            onValueChange={setSearchQuery}
+            onValueChange={handleSearchChange}
+            value={searchQuery}
           />
           <CommandList>
             <CommandEmpty>{emptyMessage}</CommandEmpty>

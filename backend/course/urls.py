@@ -6,7 +6,8 @@ from .views import (
     CourseResourceAllocationDetailView,
     CourseRoomPreferenceListCreateView,
     CourseRoomPreferenceDetailView,
-    CourseAssignmentStatsView
+    CourseAssignmentStatsView,
+    CourseNotification,
 )
 
 urlpatterns = [
@@ -18,4 +19,5 @@ urlpatterns = [
     path('<int:course_id>/room-preferences/<int:id>/', CourseRoomPreferenceDetailView.as_view(), name='course-room-preference-detail'),
     path('stats/', CourseAssignmentStatsView.as_view(), name='course-assignment-stats'),
     path('stats/<int:course_id>/', CourseAssignmentStatsView.as_view(), name='course-assignment-stats-detail'),
+    path('course-notification/', CourseNotification.as_view(), name='course-notification'),
 ]

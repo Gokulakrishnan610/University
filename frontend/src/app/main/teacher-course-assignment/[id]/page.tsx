@@ -201,9 +201,16 @@ export default function TeacherCourseAssignmentDetailsPage() {
                 <Briefcase className="h-4 w-4 mr-2" />
                 Role
               </div>
-              <Badge className="font-normal mt-1">
-                {assignment.teacher_detail?.teacher_role || 'N/A'}
-              </Badge>
+              <div className="flex gap-2 mt-1">
+                <Badge className="font-normal">
+                  {assignment.teacher_detail?.teacher_role || 'N/A'}
+                </Badge>
+                {assignment.is_assistant !== undefined && (
+                  <Badge variant={assignment.is_assistant ? "outline" : "secondary"}>
+                    {assignment.is_assistant ? "Assistant Teacher" : "Primary Teacher"}
+                  </Badge>
+                )}
+              </div>
             </div>
 
             {assignment.teacher_detail?.teacher_specialisation && (

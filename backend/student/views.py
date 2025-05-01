@@ -1,23 +1,43 @@
 from django.shortcuts import render
 from rest_framework import generics, permissions, status, serializers
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from authentication.authentication import IsAuthenticated
 from .models import Student
 from .serializers import StudentSerializer
 from department.models import Department
+from django.db.models import Q
 
 # Create your views here.
+class StudentPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class StudentListCreateView(generics.ListCreateAPIView):
     authentication_classes = [IsAuthenticated]
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = StudentSerializer
+    pagination_class = StudentPagination
 
     def get_queryset(self):
         user = self.request.user
         
         try:
             hod_dept = Department.objects.get(hod_id=user)
-            return Student.objects.filter(dept_id=hod_dept)
+            queryset = Student.objects.filter(dept_id=hod_dept)
+            
+            # Handle search
+            search_query = self.request.query_params.get('search', None)
+            if search_query:
+                queryset = queryset.filter(
+                    Q(student_id__first_name__icontains=search_query) |
+                    Q(student_id__last_name__icontains=search_query) |
+                    Q(student_id__email__icontains=search_query) |
+                    Q(roll_no__icontains=search_query)
+                )
+            
+            return queryset
         except Department.DoesNotExist:
             return Student.objects.none()
 
@@ -25,7 +45,6 @@ class StudentListCreateView(generics.ListCreateAPIView):
         user = self.request.user
         try:
             hod_dept = Department.objects.get(hod_id=user)
-            student_user = serializer.validated_data['student_id']
             
             if serializer.validated_data.get('dept_id') != hod_dept:
                 raise serializers.ValidationError(

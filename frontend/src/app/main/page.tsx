@@ -16,6 +16,7 @@ import StudentManagement from "./students/page";
 import StudentDetails from "./students/[id]/page";
 import StudentCreate from "./students/create/page";
 import StudentEdit from "./students/[id]/edit/page";
+import CreateCoursePage from "./courses/create/page";
 
 
 export default function Dashboard() {
@@ -26,6 +27,7 @@ export default function Dashboard() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/setting" element={<Setting />} />
       <Route path="/courses" element={<CourseManagement />} />
+      <Route path="/courses/create" element={<CreateCoursePage/>} />
       <Route path="/courses/all-courses" element={<AllCoursesPage />} />
       <Route path="/courses/allocations" element={<AllocationManagementPage />} />
       <Route path="/courses/:id" element={<CourseDetails />} />

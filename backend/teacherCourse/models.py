@@ -8,8 +8,8 @@ class TeacherCourse(models.Model):
     academic_year = models.IntegerField("Academic Year", default=0)
     semester = models.IntegerField("Semester", default=0)
     requires_special_scheduling = models.BooleanField("Requires Special Scheduling", default=False)
+    is_assistant = models.BooleanField("Is Assistant Teacher", default=False)
     
-    # For industry professionals/POP, link directly to their availability slots
     preferred_availability_slots = models.ManyToManyField(
         "teacher.TeacherAvailability",
         verbose_name="Preferred Availability Slots",
@@ -24,11 +24,16 @@ class TeacherCourse(models.Model):
     def __str__(self):
         teacher_str = str(self.teacher_id) if self.teacher_id else "Unknown Teacher"
         course_str = str(self.course_id) if self.course_id else "Unknown Course"
-        return f"{teacher_str} - {course_str} (Year: {self.academic_year}, Sem: {self.semester})"
+        role_str = " (Assistant)" if self.is_assistant else ""
+        return f"{teacher_str} - {course_str}{role_str} (Year: {self.academic_year}, Sem: {self.semester})"
 
     def clean(self):
         if not self.teacher_id or not self.course_id:
             return super().clean()
+            
+        # Check if teacher has resigned
+        if self.teacher_id.resignation_status == 'resigned':
+            raise ValidationError("Cannot assign a resigned teacher to courses.")
             
         # Check if this teacher is already assigned to this course
         existing_assignment = TeacherCourse.objects.filter(
@@ -64,14 +69,12 @@ class TeacherCourse(models.Model):
             if not availability_slots.exists():
                 raise ValidationError("Industry professional/POP teachers must have defined availability slots")
         
-        # For POP or industry professionals, check if we're creating a new assignment
-        # If so, ensure the department constraint can be relaxed if needed
         if self.teacher_id.dept_id != self.course_id.teaching_dept_id:
             if self.teacher_id.is_industry_professional or self.teacher_id.teacher_role == 'POP':
-                # Allow cross-department teaching for industry professionals/POPs
+               
                 pass
             else:
-                # For regular teachers, maintain department constraint
+            
                 raise ValidationError(
                     "Teacher and course must belong to the same department"
                 )

@@ -40,38 +40,23 @@ import {
   BookCopy,
   ChartPieIcon,
   PieChart,
-  CircleDot
+  CircleDot,
+  Bell
 } from 'lucide-react';
 import { 
   useGetCurrentDepartmentCourses, 
-  useCreateCourse,
   Course 
 } from '@/action/course';
 import { useGetDepartments, useGetCurrentDepartment } from '@/action/department';
-import { useGetCourseMasters, useCreateCourseMaster } from '@/action/courseMaster'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { toast } from 'sonner';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import CourseForm, { CourseFormValues } from './course-form';
-import CourseMasterForm, { CourseMasterFormValues } from './course-master-form';
 import { getRelationshipBadgeColor, getRelationshipShortName } from '@/lib/utils';
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@/components/ui/radio-group";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { CourseNotifications } from './course-notifications';
+import { useGetCourseNotifications } from '@/action/course';
 
 // Stats card component for the dashboard
 interface StatCardProps {
@@ -103,20 +88,18 @@ const StatCard = ({ title, icon, color, count, total, description }: StatCardPro
 
 export default function CourseManagementPage() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [showAddDialog, setShowAddDialog] = useState(false);
   const [showAddCourseMasterDialog, setShowAddCourseMasterDialog] = useState(false);
-  const [courseCreationOption, setCourseCreationOption] = useState<'select' | 'create'>('select');
   const [defaultDeptId, setDefaultDeptId] = useState<number | undefined>(undefined);
   const navigate = useNavigate();
   
   const { data: departmentData, isPending, refetch } = useGetCurrentDepartmentCourses();
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
-  const { data: courseMastersData, isPending: loadingCourseMasters, refetch: refetchCourseMasters } = useGetCourseMasters();
-  // console.log(courseMastersData)
   const { data: currentDepartment, isPending: loadingCurrentDept } = useGetCurrentDepartment();
+  const { data: courseNotifications } = useGetCourseNotifications();
+  
+  const notificationCount = courseNotifications?.data?.length || 0;
   
   const departments = departmentsData || [];
-  const courseMasters = courseMastersData || [];
   
   // Set default department ID when current department is loaded
   useEffect(() => {
@@ -172,50 +155,14 @@ export default function CourseManagementPage() {
     ).length;
   }, [allOwnedCourses]);
   
-  // Create course mutation
-  const { mutate: createCourse, isPending: isCreating } = useCreateCourse(() => {
-    refetch();
-    toast.success("Course created successfully");
-    setShowAddDialog(false);
-  });
   
-  // For creating new course master
-  const { mutate: createCourseMaster, isPending: isCreatingCourseMaster } = useCreateCourseMaster(() => {
-    refetchCourseMasters();
-    toast.success("Course master created successfully");
-    setShowAddCourseMasterDialog(false);
-    // Open the add course dialog with select option after creating a course master
-    setShowAddDialog(true);
-    setCourseCreationOption('select');
-  });
   
-  const handleCreateCourse = (values: CourseFormValues) => {
-    createCourse(values);
-  };
-  
-  const handleCreateCourseMaster = (values: CourseMasterFormValues) => {
-    createCourseMaster({
-      course_id: values.course_id,
-      course_name: values.course_name,
-      course_dept_id: values.course_dept_id
-    });
-  };
-  
-  const handleOpenCourseDialog = () => {
-    setCourseCreationOption('select');
-    setShowAddDialog(true);
+  const handleNavigateToCreateCourse = () => {
+    navigate('/courses/create');
   };
   
   const handleOpenCreateCourseMasterDialog = () => {
     setShowAddCourseMasterDialog(true);
-  };
-  
-  const handleCourseCreationOptionChange = (option: 'select' | 'create') => {
-    setCourseCreationOption(option);
-    if (option === 'create') {
-      setShowAddDialog(false);
-      setShowAddCourseMasterDialog(true);
-    }
   };
   
   const handleNavigateToDetail = (courseId: number, e?: React.MouseEvent) => {
@@ -459,7 +406,7 @@ export default function CourseManagementPage() {
                     </Button>
                   )}
                 </div>
-                <Button className="flex gap-2 items-center whitespace-nowrap" onClick={handleOpenCourseDialog}>
+                <Button className="flex gap-2 items-center whitespace-nowrap" onClick={handleNavigateToCreateCourse}>
                   <PlusCircle className="h-4 w-4" />
                   <span>Add Course</span>
                 </Button>
@@ -1008,78 +955,6 @@ export default function CourseManagementPage() {
         </CardContent>
       </Card>
       
-      {/* Course Selection Dialog */}
-      <Dialog open={showAddDialog} onOpenChange={setShowAddDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Add Course</DialogTitle>
-            <DialogDescription>
-              Create a new course instance for your curriculum
-            </DialogDescription>
-          </DialogHeader>
-          
-          <ScrollArea className="max-h-[70vh]">
-          <div className="mb-2">
-            <h3 className="text-sm font-medium mb-3">Select an option:</h3>
-            <RadioGroup 
-              defaultValue={courseCreationOption} 
-              value={courseCreationOption} 
-              onValueChange={(value) => handleCourseCreationOptionChange(value as 'select' | 'create')}
-              className="flex flex-col space-y-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="select" id="select-option" />
-                <label htmlFor="select-option" className="text-sm cursor-pointer">
-                  Select from existing course catalog
-                </label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="create" id="create-option" />
-                <label htmlFor="create-option" className="text-sm cursor-pointer">
-                  Create a new course in the catalog
-                </label>
-              </div>
-            </RadioGroup>
-          </div>
-            <CourseForm
-              departments={departments}
-              courseMasters={courseMasters}
-              isLoading={isCreating}
-              onSubmit={handleCreateCourse}
-              onCancel={() => setShowAddDialog(false)}
-              submitLabel="Create Course"
-              defaultValues={{
-                for_dept_id: currentDepartment?.id,
-                teaching_dept_id: currentDepartment?.id
-              }}
-              editableFields={['course_id', 'course_year', 'course_semester', 'lecture_hours', 'tutorial_hours', 'practical_hours', 'credits', 'for_dept_id', 'need_assist_teacher', 'regulation', 'course_type', 'elective_type', 'lab_type', 'no_of_students', 'is_zero_credit_course', 'teaching_status']}
-            />
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
-      
-      {/* Course Master Creation Dialog */}
-      <Dialog open={showAddCourseMasterDialog} onOpenChange={setShowAddCourseMasterDialog}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-xl">Add New Course to Catalog</DialogTitle>
-            <DialogDescription>
-              Create a new course in the course catalog
-            </DialogDescription>
-          </DialogHeader>
-          
-          <ScrollArea className="max-h-[70vh]">
-            <CourseMasterForm
-              departments={departments}
-              defaultValues={defaultDeptId ? { course_dept_id: defaultDeptId } : undefined}
-              isLoading={isCreatingCourseMaster}
-              onSubmit={handleCreateCourseMaster}
-              onCancel={() => setShowAddCourseMasterDialog(false)}
-              submitLabel="Create Course Master"
-            />
-          </ScrollArea>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 } 

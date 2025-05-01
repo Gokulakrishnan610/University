@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useGetTeachers, Teacher, useGetTeacherAvailability, TeacherAvailability } from '@/action/teacher';
 import { useGetCourses, Course } from '@/action/course';
@@ -38,6 +38,7 @@ const teacherCourseFormSchema = z.object({
     teacher_id: z.string().min(1, "Teacher is required"),
     course_id: z.string().min(1, "Course is required"),
     preferred_availability_slots: z.array(z.string()).optional(),
+    is_assistant: z.boolean().default(false),
 });
 
 type TeacherCourseFormValues = z.infer<typeof teacherCourseFormSchema>;
@@ -46,6 +47,7 @@ export default function CreateTeacherCourseAssignment() {
     const navigate = useNavigate();
     const [selectedTeacher, setSelectedTeacher] = useState<string>('');
     const [selectedCourse, setSelectedCourse] = useState<string>('');
+    const [showAssistantOption, setShowAssistantOption] = useState<boolean>(false);
 
     // Fetch data with loading states
     const { data: teachers = [], isPending: teachersLoading } = useGetTeachers();
@@ -63,6 +65,7 @@ export default function CreateTeacherCourseAssignment() {
             teacher_id: "",
             course_id: "",
             preferred_availability_slots: [],
+            is_assistant: false,
         },
     });
 
@@ -126,6 +129,17 @@ export default function CreateTeacherCourseAssignment() {
         };
     }, [selectedTeacher, assignments, selectedTeacherData]);
 
+    // Check if teacher is resigning or has resigned
+    const isTeacherResigning = useMemo(() => {
+        if (!selectedTeacherData) return false;
+        return selectedTeacherData.resignation_status === 'resigning';
+    }, [selectedTeacherData]);
+
+    const isTeacherResigned = useMemo(() => {
+        if (!selectedTeacherData) return false;
+        return selectedTeacherData.resignation_status === 'resigned';
+    }, [selectedTeacherData]);
+
     // Filter available courses based on selected teacher's department
     const availableCourses = useMemo(() => {
         if (!selectedTeacher || !teachers || !courses) return [];
@@ -167,9 +181,40 @@ export default function CreateTeacherCourseAssignment() {
         selectedCourse ? parseInt(selectedCourse) : undefined
     );
 
+    // Find selected course data
+    const selectedCourseData = useMemo(() => {
+        if (!selectedCourse) return null;
+        return courses.find((c: Course) => c.id.toString() === selectedCourse);
+    }, [selectedCourse, courses]);
+
+    // Check if course needs assistant teacher
+    useEffect(() => {
+        if (selectedCourseData && selectedCourseData.need_assist_teacher) {
+            setShowAssistantOption(true);
+        } else {
+            setShowAssistantOption(false);
+            form.setValue("is_assistant", false);
+        }
+    }, [selectedCourseData, form]);
+
     const onSubmit = (data: TeacherCourseFormValues) => {
         const selectedCourseData = courses.find(c => c.id.toString() === data.course_id);
         if (!selectedCourseData) return;
+
+        // Prevent assignment if teacher has resigned
+        if (isTeacherResigned) {
+            toast.error('Cannot assign a resigned teacher', {
+                description: 'This teacher has already resigned and cannot be assigned to new courses.'
+            });
+            return;
+        }
+
+        // Show warning if teacher is in the process of resigning
+        if (isTeacherResigning) {
+            if (!confirm('This teacher is in the process of resigning. Are you sure you want to assign them to this course?')) {
+                return;
+            }
+        }
 
         if (teacherWorkload && (teacherWorkload.availableHours < selectedCourseData.credits)) {
             toast.error('Teacher does not have enough available hours for this course');
@@ -214,6 +259,7 @@ export default function CreateTeacherCourseAssignment() {
             semester: 1, // Default value
             academic_year: new Date().getFullYear(), // Default current year
             student_count: 0, // Default value
+            is_assistant: data.is_assistant,
             // @ts-ignore - API accepts this parameter but type definition hasn't been updated
             preferred_availability_slots: preferred_slots
         }, {
@@ -228,8 +274,8 @@ export default function CreateTeacherCourseAssignment() {
             }
         });
     };
-
-    // Update the selected teacher and course when form values change
+    
+    // Update the selected s and course when form values change
     const handleTeacherChange = (value: string) => {
         setSelectedTeacher(value);
         form.setValue("teacher_id", value);
@@ -273,6 +319,26 @@ export default function CreateTeacherCourseAssignment() {
                                 disabled={teachersLoading}
                             />
                         </div>
+
+                        {isTeacherResigned && (
+                            <Alert className="bg-red-50 border-red-300">
+                                <AlertTriangle className="h-4 w-4 text-red-600" />
+                                <AlertTitle className="text-red-600">Teacher Has Resigned</AlertTitle>
+                                <AlertDescription className="text-red-700">
+                                    This teacher has resigned and cannot be assigned to courses.
+                                </AlertDescription>
+                            </Alert>
+                        )}
+                        
+                        {isTeacherResigning && (
+                            <Alert className="bg-amber-50 border-amber-300">
+                                <AlertTriangle className="h-4 w-4 text-amber-600" />
+                                <AlertTitle className="text-amber-600">Teacher Is Resigning</AlertTitle>
+                                <AlertDescription className="text-amber-700">
+                                    This teacher is in the process of resigning. Assigning them to courses is not recommended.
+                                </AlertDescription>
+                            </Alert>
+                        )}
 
                         {isPOPOrIndustry && (
                             <Alert>
@@ -412,6 +478,34 @@ export default function CreateTeacherCourseAssignment() {
                                         )}
                                     />
 
+                                    {/* Show assistant teacher option when course needs assistant */}
+                                    {showAssistantOption && (
+                                        <FormField
+                                            control={form.control}
+                                            name="is_assistant"
+                                            render={({ field }) => (
+                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                                    <FormControl>
+                                                        <input
+                                                            type="checkbox"
+                                                            checked={field.value}
+                                                            onChange={field.onChange}
+                                                            className="rounded text-primary"
+                                                        />
+                                                    </FormControl>
+                                                    <div className="space-y-1 leading-none">
+                                                        <FormLabel>
+                                                            Assign as Assistant Teacher
+                                                        </FormLabel>
+                                                        <p className="text-sm text-muted-foreground">
+                                                            This course requires or allows assistant teachers
+                                                        </p>
+                                                    </div>
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
+
                                     {/* Availability slots selection for industry professionals */}
                                     {isPOPOrIndustry && hasLimitedAvailability && sortedAvailability.length > 0 && (
                                         <FormField
@@ -507,22 +601,25 @@ export default function CreateTeacherCourseAssignment() {
                                                         <TableHeader className="bg-muted/30">
                                                             <TableRow>
                                                                 <TableHead>Teacher</TableHead>
+                                                                <TableHead>Role</TableHead>
                                                                 <TableHead>Students</TableHead>
                                                             </TableRow>
                                                         </TableHeader>
                                                         <TableBody>
-                                                            {courseStats.teachers.map((teacher: {
-                                                                teacher_id: number;
-                                                                teacher_name: string;
-                                                                student_count: number;
-                                                            }) => (
-                                                                <TableRow key={teacher.teacher_id}>
+                                                            {courseStats.teachers.map((teacher) => (
+                                                                <TableRow key={teacher.assignment_id || teacher.teacher_id || 'unknown'}>
                                                                     <TableCell>
                                                                         <div className="font-medium">
-                                                                            {teacher.teacher_name}
+                                                                            {teacher.teacher_name || 'Unknown Teacher'}
                                                                         </div>
                                                                     </TableCell>
-                                                                    <TableCell>{teacher.student_count}</TableCell>
+                                                                    <TableCell>
+                                                                        {teacher.is_assistant === true ? 
+                                                                            <Badge variant="outline">Assistant</Badge> : 
+                                                                            <Badge>Primary</Badge>
+                                                                        }
+                                                                    </TableCell>
+                                                                    <TableCell>{teacher.student_count || 0}</TableCell>
                                                                 </TableRow>
                                                             ))}
                                                         </TableBody>

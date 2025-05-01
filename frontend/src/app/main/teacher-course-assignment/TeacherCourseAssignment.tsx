@@ -21,6 +21,7 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 
 export function TeacherCourseAssignment() {
@@ -31,8 +32,11 @@ export function TeacherCourseAssignment() {
     const [searchQuery, setSearchQuery] = useState<string>('');
     const [selectedTeacherFilter, setSelectedTeacherFilter] = useState<string[]>([]);
     const [selectedDepartmentFilter, setSelectedDepartmentFilter] = useState<string[]>([]);
+    const [selectedSubjectFilter, setSelectedSubjectFilter] = useState<string[]>([]);
+    const [selectedCourseCodeFilter, setSelectedCourseCodeFilter] = useState<string[]>([]);
     const [showIndustryOnly, setShowIndustryOnly] = useState<boolean>(false);
     const [showPOPOnly, setShowPOPOnly] = useState<boolean>(false);
+    const [teacherRoleFilter, setTeacherRoleFilter] = useState<string | null>(null); // 'primary', 'assistant', or null
 
     const {
         data: assignments = [],
@@ -54,6 +58,28 @@ export function TeacherCourseAssignment() {
                     .filter(name => name !== '')
             )
         );
+    }, [assignments]);
+
+    // Get unique course/subject names for filter
+    const uniqueSubjects = useMemo(() => {
+        return Array.from(
+            new Set(
+                assignments.filter(a => a.course_detail?.course_detail?.course_name)
+                    .map(a => a.course_detail?.course_detail?.course_name?.trim())
+                    .filter(Boolean)
+            )
+        ).sort();
+    }, [assignments]);
+
+    // Get unique course codes for filter
+    const uniqueCourseCodes = useMemo(() => {
+        return Array.from(
+            new Set(
+                assignments.filter(a => a.course_detail?.course_detail?.course_id)
+                    .map(a => a.course_detail?.course_detail?.course_id?.trim())
+                    .filter(Boolean)
+            )
+        ).sort();
     }, [assignments]);
 
     // Filter assignments based on search query and selected filters
@@ -79,16 +105,29 @@ export function TeacherCourseAssignment() {
                     `${assignment.teacher_detail.teacher_id.first_name || ''} ${assignment.teacher_detail.teacher_id.last_name || ''}`.trim()
                 ));
 
+            const matchesSubject = selectedSubjectFilter.length === 0 ||
+                (assignment.course_detail?.course_detail?.course_name &&
+                    selectedSubjectFilter.includes(assignment.course_detail?.course_detail?.course_name));
+
+            const matchesCourseCode = selectedCourseCodeFilter.length === 0 ||
+                (assignment.course_detail?.course_detail?.course_id &&
+                    selectedCourseCodeFilter.includes(assignment.course_detail?.course_detail?.course_id));
+
             const matchesIndustryFilter = !showIndustryOnly ||
                 assignment.teacher_detail?.is_industry_professional === true;
 
             const matchesPOPFilter = !showPOPOnly ||
                 assignment.teacher_detail?.teacher_role === 'POP';
 
-            return matchesSearch && matchesDepartment && matchesTeacher &&
-                matchesIndustryFilter && matchesPOPFilter;
+            const matchesRoleFilter = !teacherRoleFilter ||
+                (teacherRoleFilter === 'assistant' && assignment.is_assistant === true) ||
+                (teacherRoleFilter === 'primary' && (assignment.is_assistant === false || assignment.is_assistant === undefined));
+
+            return matchesSearch && matchesDepartment && matchesTeacher && matchesSubject && matchesCourseCode &&
+                matchesIndustryFilter && matchesPOPFilter && matchesRoleFilter;
         });
-    }, [assignments, searchQuery, selectedDepartmentFilter, selectedTeacherFilter, showIndustryOnly, showPOPOnly]);
+    }, [assignments, searchQuery, selectedDepartmentFilter, selectedTeacherFilter, selectedSubjectFilter,
+        selectedCourseCodeFilter, showIndustryOnly, showPOPOnly, teacherRoleFilter]);
 
     const handleDelete = () => {
         if (!assignmentToDelete) return;
@@ -116,21 +155,26 @@ export function TeacherCourseAssignment() {
         setSearchQuery('');
         setSelectedTeacherFilter([]);
         setSelectedDepartmentFilter([]);
+        setSelectedSubjectFilter([]);
+        setSelectedCourseCodeFilter([]);
         setShowIndustryOnly(false);
         setShowPOPOnly(false);
+        setTeacherRoleFilter(null);
     };
 
     // Function to export assignments as CSV
     const exportToCSV = () => {
-        const headers = ['Teacher', 'Course', 'Course Code', 'Department'];
+        const headers = ['Teacher', 'Course', 'Course Code', 'Department', 'Role', 'Students'];
 
         const csvRows = [
             headers.join(','),
             ...filteredAssignments.map(a => [
-                `"${a.teacher_detail.teacher_id.first_name} ${a.teacher_detail.teacher_id.last_name}"`,
-                `"${a.course_detail.course_detail.course_name}"`,
-                `"${a.course_detail.course_detail.course_id}"`,
-                `"${a.course_detail.teaching_dept_detail.dept_name}"`
+                `"${a.teacher_detail?.teacher_id?.first_name || ''} ${a.teacher_detail?.teacher_id?.last_name || ''}"`,
+                `"${a.course_detail?.course_detail?.course_name || ''}"`,
+                `"${a.course_detail?.course_detail?.course_id || ''}"`,
+                `"${a.course_detail?.teaching_dept_detail?.dept_name || ''}"`,
+                `"${a.is_assistant ? 'Assistant' : 'Primary'}"`,
+                a.student_count || 0
             ].join(','))
         ];
 
@@ -213,6 +257,92 @@ export function TeacherCourseAssignment() {
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline">
                                         <Filter className="mr-2 h-4 w-4" />
+                                        Subjects
+                                        {selectedSubjectFilter.length > 0 && (
+                                            <Badge variant="secondary" className="ml-2">
+                                                {selectedSubjectFilter.length}
+                                            </Badge>
+                                        )}
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-64 max-h-80 overflow-auto">
+                                    {uniqueSubjects.map(subject => (
+                                        subject && (
+                                            <DropdownMenuItem key={subject}>
+                                                <Checkbox
+                                                    id={`subject-${subject}`}
+                                                    checked={selectedSubjectFilter.includes(subject)}
+                                                    onCheckedChange={(checked) => {
+                                                        if (checked) {
+                                                            setSelectedSubjectFilter([...selectedSubjectFilter, subject]);
+                                                        } else {
+                                                            setSelectedSubjectFilter(selectedSubjectFilter.filter(s => s !== subject));
+                                                        }
+                                                    }}
+                                                    className="mr-2"
+                                                />
+                                                <Label htmlFor={`subject-${subject}`} className="line-clamp-1 flex-1">
+                                                    {subject}
+                                                </Label>
+                                            </DropdownMenuItem>
+                                        )
+                                    ))}
+                                    {selectedSubjectFilter.length > 0 && (
+                                        <DropdownMenuItem onClick={() => setSelectedSubjectFilter([])}>
+                                            <X className="mr-2 h-4 w-4" />
+                                            Clear Subject Filters
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline">
+                                        <Filter className="mr-2 h-4 w-4" />
+                                        Course Codes
+                                        {selectedCourseCodeFilter.length > 0 && (
+                                            <Badge variant="secondary" className="ml-2">
+                                                {selectedCourseCodeFilter.length}
+                                            </Badge>
+                                        )}
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56 max-h-80 overflow-auto">
+                                    {uniqueCourseCodes.map(code => (
+                                        code && (
+                                            <DropdownMenuItem key={code}>
+                                                <Checkbox
+                                                    id={`code-${code}`}
+                                                    checked={selectedCourseCodeFilter.includes(code)}
+                                                    onCheckedChange={(checked) => {
+                                                        if (checked) {
+                                                            setSelectedCourseCodeFilter([...selectedCourseCodeFilter, code]);
+                                                        } else {
+                                                            setSelectedCourseCodeFilter(selectedCourseCodeFilter.filter(c => c !== code));
+                                                        }
+                                                    }}
+                                                    className="mr-2"
+                                                />
+                                                <Label htmlFor={`code-${code}`} className="font-mono">
+                                                    {code}
+                                                </Label>
+                                            </DropdownMenuItem>
+                                        )
+                                    ))}
+                                    {selectedCourseCodeFilter.length > 0 && (
+                                        <DropdownMenuItem onClick={() => setSelectedCourseCodeFilter([])}>
+                                            <X className="mr-2 h-4 w-4" />
+                                            Clear Code Filters
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="outline">
+                                        <Filter className="mr-2 h-4 w-4" />
                                         Department
                                     </Button>
                                 </DropdownMenuTrigger>
@@ -239,6 +369,44 @@ export function TeacherCourseAssignment() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant={teacherRoleFilter ? "default" : "outline"}>
+                                        <Filter className="mr-2 h-4 w-4" />
+                                        Role
+                                        {teacherRoleFilter && (
+                                            <Badge variant="secondary" className="ml-2">
+                                                {teacherRoleFilter === 'primary' ? 'Primary' : 'Assistant'}
+                                            </Badge>
+                                        )}
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent className="w-56">
+                                    <DropdownMenuItem onClick={() => setTeacherRoleFilter('primary')}>
+                                        <Checkbox
+                                            id="primary-role"
+                                            checked={teacherRoleFilter === 'primary'}
+                                            className="mr-2"
+                                        />
+                                        <Label htmlFor="primary-role">Primary Teachers</Label>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setTeacherRoleFilter('assistant')}>
+                                        <Checkbox
+                                            id="assistant-role"
+                                            checked={teacherRoleFilter === 'assistant'}
+                                            className="mr-2"
+                                        />
+                                        <Label htmlFor="assistant-role">Assistant Teachers</Label>
+                                    </DropdownMenuItem>
+                                    {teacherRoleFilter && (
+                                        <DropdownMenuItem onClick={() => setTeacherRoleFilter(null)}>
+                                            <X className="mr-2 h-4 w-4" />
+                                            Clear Role Filter
+                                        </DropdownMenuItem>
+                                    )}
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+
                             <Button
                                 variant={showIndustryOnly ? "default" : "outline"}
                                 onClick={() => setShowIndustryOnly(!showIndustryOnly)}
@@ -258,7 +426,8 @@ export function TeacherCourseAssignment() {
                             </Button>
 
                             {(searchQuery || selectedTeacherFilter.length > 0 || selectedDepartmentFilter.length > 0 ||
-                                showIndustryOnly || showPOPOnly) && (
+                                selectedSubjectFilter.length > 0 || selectedCourseCodeFilter.length > 0 ||
+                                showIndustryOnly || showPOPOnly || teacherRoleFilter) && (
                                     <Button variant="ghost" onClick={clearFilters} className="ml-auto">
                                         <X className="mr-2 h-4 w-4" />
                                         Clear Filters
@@ -280,15 +449,27 @@ export function TeacherCourseAssignment() {
                         <Table>
                             <TableHeader>
                                 <TableRow>
-                                    <TableHead>Teacher</TableHead>
+                                    <TableHead>ID</TableHead>
                                     <TableHead>Course</TableHead>
+                                    <TableHead>Teacher</TableHead>
+                                    <TableHead>Role</TableHead>
                                     <TableHead>Department</TableHead>
+                                    <TableHead>Students</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
                                 {filteredAssignments.map((assignment) => (
                                     <TableRow key={assignment.id}>
+                                        <TableCell className="font-medium">{assignment.id}</TableCell>
+                                        <TableCell>
+                                            <div>
+                                                <div className="font-medium">{assignment.course_detail?.course_detail?.course_name}</div>
+                                                <div className="text-xs text-muted-foreground">
+                                                    {assignment.course_detail?.course_detail?.course_id}
+                                                </div>
+                                            </div>
+                                        </TableCell>
                                         <TableCell>
                                             <div className="font-medium flex items-center gap-1">
                                                 {assignment.teacher_detail?.teacher_id?.first_name} {assignment.teacher_detail?.teacher_id?.last_name}
@@ -304,18 +485,18 @@ export function TeacherCourseAssignment() {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="font-medium">
-                                                {assignment.course_detail?.course_detail?.course_name}
-                                            </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                {assignment.course_detail?.course_detail?.course_id}
-                                            </div>
+                                            {assignment.is_assistant ? (
+                                                <Badge variant="outline">Assistant</Badge>
+                                            ) : (
+                                                <Badge>Primary</Badge>
+                                            )}
                                         </TableCell>
                                         <TableCell>
                                             <Badge variant="outline">
                                                 {assignment.course_detail?.teaching_dept_detail?.dept_name}
                                             </Badge>
                                         </TableCell>
+                                        <TableCell>{assignment.student_count || 0}</TableCell>
                                         <TableCell className="text-right">
                                             <div className="flex justify-end gap-2">
                                                 <Button

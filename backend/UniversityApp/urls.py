@@ -17,7 +17,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, include
 from django.http import JsonResponse
-
+from utlis.views import ImportDataView
+from django.conf import settings
 # Simple health check view
 def health_check(request):
     return JsonResponse({"status": "ok", "message": "API is running"})
@@ -35,12 +36,15 @@ api_urlpatterns = [
     path("slots/", include('slot.urls')),
     path('rooms/', include('rooms.urls')),
     path('dashboard/', include('dashboard.urls')),
+    path('import/<str:resource_name>/', ImportDataView.as_view(), name="import-resource"),
     # Health check endpoint
     path('health/', health_check, name='health_check'),
 ]
 
+API_PATH = '/' if settings.ENVIRONMENT == 'production' else 'api/'
+
 urlpatterns = [
     path('admin/', admin.site.urls),
     # Include all API endpoints under 'api/' prefix
-    path('api/', include(api_urlpatterns)),
+    path(API_PATH, include(api_urlpatterns)),
 ]
