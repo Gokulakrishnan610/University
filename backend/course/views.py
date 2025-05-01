@@ -10,6 +10,8 @@ from rest_framework.views import APIView
 from django.core.exceptions import PermissionDenied
 from .serializers import CourseSerializer, CreateCourseSerializer, UpdateCourseSerializer, CourseResourceAllocationSerializer, CourseRoomPreferenceSerializer
 from rest_framework import serializers
+from teacher.models import Teacher
+from course.models import Course
 
 class AddNewCourse(generics.CreateAPIView):
     authentication_classes = [IsAuthenticated]
@@ -950,41 +952,105 @@ class CourseAssignmentStatsView(APIView):
                     'course_name': course.course_id.course_name,
                     'course_code': course.course_id.course_id,
                     'total_teachers': assignments.count(),
-                    'teachers': [
-                        {
-                            'teacher_id': assignment.teacher_id.id,
-                            'teacher_name': f"{assignment.teacher_id.teacher_id.first_name} {assignment.teacher_id.teacher_id.last_name}",
-                            'semester': assignment.semester,
-                            'academic_year': assignment.academic_year,
-                            'student_count': assignment.student_count
-                        }
-                        for assignment in assignments
-                    ]
+                    'teachers': []
                 }
+                
+                # Safely create teacher list with null checks
+                for assignment in assignments:
+                    teacher_name = "Unknown Teacher"
+                    # Safely get teacher name with null checks
+                    if assignment.teacher_id and assignment.teacher_id.teacher_id:
+                        first_name = assignment.teacher_id.teacher_id.first_name or ''
+                        last_name = assignment.teacher_id.teacher_id.last_name or ''
+                        teacher_name = f"{first_name} {last_name}".strip()
+                        if not teacher_name:
+                            teacher_name = "Unnamed Teacher"
+                    
+                    stats['teachers'].append({
+                        'assignment_id': assignment.id,
+                        'teacher_id': assignment.teacher_id.id if assignment.teacher_id else None,
+                        'teacher_name': teacher_name,
+                        'semester': assignment.semester,
+                        'academic_year': assignment.academic_year,
+                        'student_count': assignment.student_count,
+                        'is_assistant': assignment.is_assistant
+                    })
             else:
                 # Get stats for all courses
                 courses = Course.objects.all()
                 stats = []
                 for course in courses:
                     assignments = TeacherCourse.objects.filter(course_id=course)
-                    stats.append({
+                    course_stats = {
                         'course_id': course.id,
                         'course_name': course.course_id.course_name,
                         'course_code': course.course_id.course_id,
                         'total_teachers': assignments.count(),
-                        'teachers': [
-                            {
-                                'teacher_id': assignment.teacher_id.id,
-                                'teacher_name': f"{assignment.teacher_id.teacher_id.first_name} {assignment.teacher_id.teacher_id.last_name}",
-                                'semester': assignment.semester,
-                                'academic_year': assignment.academic_year,
-                                'student_count': assignment.student_count
-                            }
-                            for assignment in assignments
-                        ]
-                    })
+                        'teachers': []
+                    }
+                    
+                    # Safely create teacher list with null checks
+                    for assignment in assignments:
+                        teacher_name = "Unknown Teacher"
+                        # Safely get teacher name with null checks
+                        if assignment.teacher_id and assignment.teacher_id.teacher_id:
+                            first_name = assignment.teacher_id.teacher_id.first_name or ''
+                            last_name = assignment.teacher_id.teacher_id.last_name or ''
+                            teacher_name = f"{first_name} {last_name}".strip()
+                            if not teacher_name:
+                                teacher_name = "Unnamed Teacher"
+                        
+                        course_stats['teachers'].append({
+                            'assignment_id': assignment.id,
+                            'teacher_id': assignment.teacher_id.id if assignment.teacher_id else None,
+                            'teacher_name': teacher_name,
+                            'semester': assignment.semester,
+                            'academic_year': assignment.academic_year,
+                            'student_count': assignment.student_count,
+                            'is_assistant': assignment.is_assistant
+                        })
+                    
+                    stats.append(course_stats)
+            
             return Response(stats)
         except Course.DoesNotExist:
             return Response({'error': 'Course not found'}, status=404)
         except Exception as e:
+            import traceback
+            print(f"Error in CourseAssignmentStatsView: {str(e)}")
+            print(traceback.format_exc())
             return Response({'error': str(e)}, status=500)
+
+        
+class CourseNotification(APIView):
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, req):
+        try:
+            teacher = Teacher.objects.get(teacher_id=req.user)
+            teacher_dept = teacher.dept_id.dept_name
+            
+            other_dept_using_my_course = Course.objects.filter(
+                course_id__course_dept_id__dept_name=teacher_dept
+            ).exclude(
+                for_dept_id__dept_name=teacher_dept
+            ).exclude(
+                teaching_dept_id__dept_name=teacher_dept
+            )  
+            
+            serializer = CourseSerializer(other_dept_using_my_course, many=True)
+            
+            return Response({
+                "detail": "Success",
+                "data": serializer.data
+            })
+            
+        except Teacher.DoesNotExist:
+            return Response(
+                {
+                    "detail": "No data found",
+                    "error": "no_data_found"
+                },
+                status=404
+            )

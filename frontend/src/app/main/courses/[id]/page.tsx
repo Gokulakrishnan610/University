@@ -33,10 +33,14 @@ import {
   Calendar,
   Loader2,
   Trash,
-  LayoutGrid
+  LayoutGrid,
+  HelpCircle,
+  GraduationCap,
+  Info,
+  CircleDot
 } from 'lucide-react';
-import { useGetDepartments } from '@/action/department';
-import { useGetCourseMasters } from '@/action/courseMaster';
+import { useGetDepartments, useGetCurrentDepartment } from '@/action/department';
+import { useGetCourseMasters, useCreateCourseMaster } from '@/action/courseMaster';
 import ReassignDialog from '../reassign-dialog';
 import {
   Dialog,
@@ -60,6 +64,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { getRelationshipBadgeColor, getRelationshipDisplayName } from '@/lib/utils';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+
 // Stat item component
 interface StatItemProps {
   icon: LucideIcon;
@@ -78,6 +89,41 @@ const StatItem = ({ icon: Icon, label, value, iconColor = 'text-primary' }: Stat
   </div>
 );
 
+// Role Card Component
+interface RoleCardProps {
+  icon: LucideIcon;
+  title: string;
+  department: string;
+  description: string;
+  colorClass: string;
+  tooltipContent: string;
+  isCurrent?: boolean;
+}
+
+const RoleCard = ({ icon: Icon, title, department, description, colorClass, tooltipContent, isCurrent = false }: RoleCardProps) => (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <div className={`p-4 rounded-lg border ${colorClass} cursor-help`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Icon className={`h-5 w-5 ${colorClass.includes('blue') ? 'text-blue-500' : colorClass.includes('orange') ? 'text-orange-500' : colorClass.includes('purple') ? 'text-purple-500' : 'text-primary'}`} />
+              <h3 className="font-medium">{title}</h3>
+            </div>
+            {isCurrent && (
+              <Badge variant="outline" className="bg-primary/10 text-primary">Your Department</Badge>
+            )}
+          </div>
+          <p className="text-base font-medium mt-2">{department}</p>
+          <p className="text-sm text-muted-foreground mt-1">{description}</p>
+        </div>
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">
+        <p>{tooltipContent}</p>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
 
 // Function to get a contextual description based on user's department roles
 const getRelationshipContext = (relationshipCode: string, userRoles: string[], course: any) => {
@@ -92,27 +138,27 @@ const getRelationshipContext = (relationshipCode: string, userRoles: string[], c
   switch (relationshipCode) {
     case 'SELF_OWNED_SELF_TAUGHT':
       return isOwner
-        ? `This is our course and we teach it.`
+        ? `Your department is both the Course Owner and Teaching Department for this course.`
         : `This course is owned and taught by ${ownerDept}.`;
     case 'SELF_OWNED_OTHER_TAUGHT':
       return isOwner
-        ? `This is our course, but taught by ${teachingDept}.`
+        ? `Your department is the Course Owner, but ${teachingDept} is the Teaching Department.`
         : `This course is owned by ${ownerDept} and taught by ${teachingDept}.`;
     case 'OTHER_OWNED_SELF_TAUGHT':
       return isTeacher
-        ? `We teach this course for ${ownerDept}.`
+        ? `Your department is the Teaching Department for this course owned by ${ownerDept}.`
         : `This course is owned by ${ownerDept} and taught by ${teachingDept}.`;
     case 'OTHER_OWNED_OTHER_TAUGHT':
       return isLearner
-        ? `Our students take this external course from ${ownerDept}, taught by ${teachingDept}.`
+        ? `Your department's students take this course, which is owned by ${ownerDept} and taught by ${teachingDept}.`
         : `This course is owned by ${ownerDept} and taught by ${teachingDept} for ${forDept}.`;
     case 'SELF_OWNED_FOR_OTHER_SELF_TAUGHT':
       return isOwner
-        ? `We created and teach this course for ${forDept}.`
+        ? `Your department both owns and teaches this course for ${forDept} students.`
         : `This course is provided and taught by ${ownerDept} for ${forDept}.`;
     case 'SELF_OWNED_FOR_OTHER_OTHER_TAUGHT':
       return isOwner
-        ? `We created this course for ${forDept}, taught by ${teachingDept}.`
+        ? `Your department owns this course for ${forDept}, but it is taught by ${teachingDept}.`
         : `This course is provided by ${ownerDept} for ${forDept}, taught by ${teachingDept}.`;
     default:
       return 'This course has an undefined relationship between departments.';
@@ -133,7 +179,7 @@ export default function CourseDetails() {
   const { data: courseMastersData, isPending: loadingCourseMasters } = useGetCourseMasters();
 
   const departments = departmentsData || [];
-  const courseMasters = courseMastersData || [];
+  const courseMasters = courseMastersData?.results || [];
 
   // Extract course data from the response
   const course = courseResponse?.status === "success" ? courseResponse.data : null;
@@ -352,51 +398,57 @@ export default function CourseDetails() {
               </TabsList>
 
               <TabsContent value="teaching" className="mt-4 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <Card>
-                    <CardHeader className="py-4">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Building className="h-5 w-5 text-primary" />
-                        Department Roles
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="pb-6">
-                      <div className="space-y-4">
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground">Course Owner</h3>
-                          <p className="text-base font-medium mt-1 flex items-center gap-1.5">
-                            <Building className="h-4 w-4 text-blue-500" />
-                            {course.course_detail.course_dept_detail.dept_name}
-                          </p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground">Teaching Department</h3>
-                          <p className="text-base font-medium mt-1 flex items-center gap-1.5">
-                            <School className="h-4 w-4 text-orange-500" />
-                            {course.teaching_dept_detail.dept_name}
-                            {isOwnCourse && (
-                              <Badge
-                                variant="outline"
-                                className="ml-2 bg-blue-500/5 text-blue-500 border-blue-500/20"
-                              >
-                                Self-Taught
-                              </Badge>
-                            )}
-                          </p>
-                        </div>
-
-                        <div>
-                          <h3 className="text-sm font-medium text-muted-foreground">For Department</h3>
-                          <p className="text-base font-medium mt-1 flex items-center gap-1.5">
-                            <Users className="h-4 w-4 text-green-500" />
-                            {course.for_dept_detail.dept_name}
-                          </p>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-
+                <div className="grid grid-cols-1 md:grid-cols-1 gap-6">
+                  <div>
+                    <h3 className="text-base font-medium mb-3 flex items-center gap-2">
+                      <Info className="h-4 w-4 text-primary" />
+                      Department Roles
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 p-0 rounded-full">
+                              <HelpCircle className="h-4 w-4 text-muted-foreground" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p>Each course involves three key department roles: The Course Owner who creates and maintains it, the Teaching Department who provides faculty, and the For Department whose students take it.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </h3>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <RoleCard
+                        icon={BookOpen}
+                        title="Course Owner"
+                        department={course.course_detail.course_dept_detail.dept_name}
+                        description="Creates and controls course content"
+                        colorClass="bg-blue-50/50 border-blue-200 dark:bg-blue-950/20 dark:border-blue-800"
+                        tooltipContent="The Course Owner department creates the course, defines its content and curriculum, and maintains academic standards."
+                        isCurrent={userRoles.includes('owner')}
+                      />
+                      
+                      <RoleCard
+                        icon={School}
+                        title="Teaching Department"
+                        department={course.teaching_dept_detail.dept_name}
+                        description="Responsible for course delivery"
+                        colorClass="bg-orange-50/50 border-orange-200 dark:bg-orange-950/20 dark:border-orange-800"
+                        tooltipContent="The Teaching Department provides faculty to teach the course, handles the course delivery, and is responsible for instruction."
+                        isCurrent={userRoles.includes('teacher')}
+                      />
+                      
+                      <RoleCard
+                        icon={GraduationCap}
+                        title="For Students"
+                        department={course.for_dept_detail.dept_name}
+                        description="Students taking this course"
+                        colorClass="bg-purple-50/50 border-purple-200 dark:bg-purple-950/20 dark:border-purple-800"
+                        tooltipContent="The For Students department has students enrolled in this course as part of their curriculum or program requirements."
+                        isCurrent={userRoles.includes('learner')}
+                      />
+                    </div>
+                  </div>
+                  
                   <Card>
                     <CardHeader className="py-4">
                       <CardTitle className="text-lg flex items-center gap-2">
@@ -549,101 +601,67 @@ export default function CourseDetails() {
                         </p>
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="p-4 rounded-lg border">
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Owning Department</h3>
-                          <p className="text-base font-medium flex items-center gap-1.5">
-                            <Building className="h-4 w-4 text-blue-500" />
-                            {course.course_detail.course_dept_detail.dept_name}
-                          </p>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Responsible for curriculum design, course content, and maintaining academic standards
-                          </p>
-                        </div>
-
-                        <div className="p-4 rounded-lg border">
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">For Department</h3>
-                          <p className="text-base font-medium flex items-center gap-1.5">
-                            <Users className="h-4 w-4 text-green-500" />
-                            {course.for_dept_detail.dept_name}
-                          </p>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Department whose students will take this course as part of their academic program
-                          </p>
-                        </div>
-
-                        <div className="p-4 rounded-lg border">
-                          <h3 className="text-sm font-medium text-muted-foreground mb-1">Teaching Department</h3>
-                          <p className="text-base font-medium flex items-center gap-1.5">
-                            <School className="h-4 w-4 text-orange-500" />
-                            {course.teaching_dept_detail.dept_name}
-                          </p>
-                          <p className="mt-2 text-xs text-muted-foreground">
-                            Department that provides faculty to teach the course and handle course delivery
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="p-4 rounded-lg border">
-                        <h3 className="text-base font-medium mb-3">Department Roles</h3>
-                        <div className="space-y-3">
-                          <div>
-                            <strong className="flex items-center gap-1.5 text-blue-600">
-                              <Building className="h-4 w-4" />
-                              Course Owner:
-                            </strong>
-                            <p className="ml-6 mt-1 text-sm text-muted-foreground">
-                              The department that created the course and controls its content
-                            </p>
-                          </div>
-
-                          <div>
-                            <strong className="flex items-center gap-1.5 text-green-600">
-                              <Users className="h-4 w-4" />
-                              For Students:
-                            </strong>
-                            <p className="ml-6 mt-1 text-sm text-muted-foreground">
-                              The department whose students take this course
-                            </p>
-                          </div>
-
-                          <div>
-                            <strong className="flex items-center gap-1.5 text-orange-600">
-                              <School className="h-4 w-4" />
-                              Teaching Department:
-                            </strong>
-                            <p className="ml-6 mt-1 text-sm text-muted-foreground">
-                              The department responsible for teaching this course
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-
                       <div className="mt-4">
                         <h3 className="text-base font-medium mb-3">Relationship Diagram</h3>
                         <div className="p-6 bg-muted/20 rounded-lg flex items-center justify-center">
                           <div className="flex flex-col md:flex-row items-center gap-4 md:gap-6">
                             <div className="p-3 bg-blue-500/10 rounded-lg border border-blue-500/20 text-center">
-                              <div className="text-sm font-medium">Owning Department</div>
-                              <div className="font-bold mt-1">{course.course_detail.course_dept_detail.dept_name}</div>
+                              <div className="flex items-center justify-center gap-1 mb-2">
+                                <BookOpen className="h-4 w-4 text-blue-500" />
+                                <div className="text-sm font-medium">Course Owner</div>
+                              </div>
+                              <div className="font-bold">{course.course_detail.course_dept_detail.dept_name}</div>
+                              {userRoles.includes('owner') && (
+                                <Badge variant="outline" className="mt-2 bg-primary/10 text-primary border-primary/20">
+                                  Your Department
+                                </Badge>
+                              )}
                             </div>
 
                             <ArrowLeftRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
 
-                            <div className="p-3 bg-green-500/10 rounded-lg border border-green-500/20 text-center">
-                              <div className="text-sm font-medium">For Department</div>
-                              <div className="font-bold mt-1">{course.for_dept_detail.dept_name}</div>
+                            <div className="p-3 bg-purple-500/10 rounded-lg border border-purple-500/20 text-center">
+                              <div className="flex items-center justify-center gap-1 mb-2">
+                                <GraduationCap className="h-4 w-4 text-purple-500" />
+                                <div className="text-sm font-medium">For Students</div>
+                              </div>
+                              <div className="font-bold">{course.for_dept_detail.dept_name}</div>
+                              {userRoles.includes('learner') && (
+                                <Badge variant="outline" className="mt-2 bg-primary/10 text-primary border-primary/20">
+                                  Your Department
+                                </Badge>
+                              )}
                             </div>
 
                             <ArrowLeftRight className="h-6 w-6 text-muted-foreground rotate-90 md:rotate-0" />
 
                             <div className="p-3 bg-orange-500/10 rounded-lg border border-orange-500/20 text-center">
-                              <div className="text-sm font-medium">Teaching Department</div>
-                              <div className="font-bold mt-1">{course.teaching_dept_detail.dept_name}</div>
+                              <div className="flex items-center justify-center gap-1 mb-2">
+                                <School className="h-4 w-4 text-orange-500" />
+                                <div className="text-sm font-medium">Teaching Department</div>
+                              </div>
+                              <div className="font-bold">{course.teaching_dept_detail.dept_name}</div>
+                              {userRoles.includes('teacher') && (
+                                <Badge variant="outline" className="mt-2 bg-primary/10 text-primary border-primary/20">
+                                  Your Department
+                                </Badge>
+                              )}
                             </div>
                           </div>
                         </div>
                       </div>
+                      
+                      {course.course_detail.course_dept_detail.id === course.teaching_dept_id && (
+                        <div className="p-4 rounded-lg border border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-900/30">
+                          <div className="flex items-center gap-2">
+                            <CircleDot className="h-5 w-5 text-green-500" />
+                            <h3 className="font-medium">Self-Taught Course</h3>
+                          </div>
+                          <p className="mt-2 text-sm">
+                            This course has a <strong>combined role</strong> where the same department ({course.course_detail.course_dept_detail.dept_name}) is both the Course Owner and Teaching Department.
+                          </p>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

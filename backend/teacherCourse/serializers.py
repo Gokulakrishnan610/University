@@ -17,7 +17,10 @@ class TeacherCourseSerializer(serializers.ModelSerializer):
             'course_detail',
             'student_count',
             'academic_year',
-            'semester'
+            'semester',
+            'is_assistant',
+            'requires_special_scheduling',
+            'preferred_availability_slots'
         ]
         extra_kwargs = {
             'teacher_id': {'write_only': True},

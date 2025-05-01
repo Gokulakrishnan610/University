@@ -1,8 +1,10 @@
 from django.contrib import admin
 from .models import Course, CourseResourceAllocation, CourseSlotPreference, CourseRoomPreference
 from unfold.admin import ModelAdmin
+from import_export.admin import ImportExportModelAdmin
+from .resources import CourseResource
 
-class CourseAdmin(ModelAdmin):
+class CourseAdmin(ModelAdmin, ImportExportModelAdmin):
     list_display = (
         'get_course_id', 
         'get_course_name',
@@ -13,6 +15,7 @@ class CourseAdmin(ModelAdmin):
         'get_credits',
         'teaching_dept_id'
     )
+    resource_classes = [CourseResource]
     search_fields = ('course_id__course_id', 'course_id__course_name')
     list_filter = (
         'course_id__course_dept_id', 

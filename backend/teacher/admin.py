@@ -2,7 +2,8 @@ from django.contrib import admin
 from unfold.admin import ModelAdmin
 from import_export.admin import ImportExportModelAdmin
 from import_export import resources
-from .models import Teacher
+from .models import Teacher, TeacherAvailability
+from unfold.admin import StackedInline
 
 class TeacherResource(resources.ModelResource):
     class Meta:
@@ -16,15 +17,105 @@ class TeacherResource(resources.ModelResource):
             'staff_code',
             'teacher_specialisation',
             'teacher_working_hours',
+            'teacher_role',
+            'availability_type',
+            'is_industry_professional',
+            'is_placeholder',
+            'placeholder_description',
         )
         export_order = fields
 
+class TeacherAvailabilityInline(admin.TabularInline):
+    model = TeacherAvailability
+    extra = 0
+    fields = ('day_of_week', 'start_time', 'end_time')
+
 class TeacherAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = TeacherResource
+    inlines = [TeacherAvailabilityInline]
 
-    list_display = ('teacher_id', 'dept_id', 'staff_code', 'teacher_specialisation', 'teacher_working_hours')
+    list_display = ('id','teacher_id', 'dept_id', 'staff_code', 'teacher_role', 'teacher_specialisation', 
+                    'teacher_working_hours', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
     search_fields = ('teacher_id__email', 'teacher_id__first_name', 'teacher_id__last_name', 'staff_code', 'teacher_specialisation')
-    list_filter = ('dept_id', 'teacher_working_hours')
+    list_filter = ('dept_id', 'teacher_working_hours', 'teacher_role', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
     ordering = ('staff_code',)
+    
+    # Group fields in fieldsets
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('teacher_id', 'dept_id', 'staff_code', 'teacher_role')
+        }),
+        ('Teaching Details', {
+            'fields': ('teacher_specialisation', 'teacher_working_hours')
+        }),
+        ('Availability', {
+            'fields': ('availability_type', 'is_industry_professional'),
+            'classes': ('collapse',),
+            'description': 'Industry professionals/POPs need specific availability slots defined'
+        }),
+        ('Status', {
+            'fields': ('resignation_status', 'resignation_date', 'is_placeholder', 'placeholder_description'),
+            'description': 'Manage teacher status including placeholders for future positions'
+        }),
+    )
+    
+    def get_readonly_fields(self, request, obj=None):
+        """Make is_industry_professional readonly as it's set automatically based on role"""
+        return ('is_industry_professional',)
+
+    def save_model(self, request, obj, form, change):
+        """Additional validation before saving"""
+        # Make sure industry professionals have limited availability
+        if obj.is_industry_professional:
+            obj.availability_type = 'limited'
+        super().save_model(request, obj, form, change)
+
+
+class TeacherResigingProxy(Teacher):
+    class Meta:
+        proxy = True
+        verbose_name = "Resigning Teacher"
+
+@admin.register(TeacherResigingProxy)
+class ResigingTeachers(ModelAdmin):
+    list_display = ('teacher_id', 'dept_id', 'staff_code', 'teacher_role', 'teacher_specialisation', 
+                    'teacher_working_hours', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
+    
+    def get_queryset(self, request):
+        queryset = Teacher.objects.filter(resignation_status__in=['resigning', 'resigned'])
+        return queryset
+    
+class PlaceholderProxy(Teacher):
+    class Meta:
+        proxy = True
+        verbose_name = "Placeholders"
+
+@admin.register(PlaceholderProxy)
+class PlaceholderAdmin(ModelAdmin):
+    list_display = ('teacher_id', 'dept_id', 'staff_code', 'teacher_role', 'teacher_specialisation', 
+                    'teacher_working_hours', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
+    
+    def get_queryset(self, request):
+        queryset = Teacher.objects.filter(is_placeholder=True)
+        return queryset
+
+class TeacherInline(StackedInline):
+    model = Teacher
+    extra = 1
+    max_num = 1
+    can_delete = False
+    verbose_name_plural = 'Teacher Details'
+    fieldsets = (
+        ('Basic Information', {
+            'fields': ('dept_id', 'staff_code', 'teacher_role')
+        }),
+        ('Teaching Details', {
+            'fields': ('teacher_specialisation', 'teacher_working_hours')
+        }),
+        ('Status', {
+            'fields': ('resignation_status', 'is_placeholder')
+        }),
+    )
 
 admin.site.register(Teacher, TeacherAdmin)
+admin.site.register(TeacherAvailability)

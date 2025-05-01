@@ -5,12 +5,14 @@ from authentication.authentication import IsAuthenticated
 from .models import StudentCourse
 from .serializers import StudentCourseSerializer
 from department.models import Department
+from utlis.pagination import PagePagination
 
 # Create your views here.
 class StudentCourseListCreateView(generics.ListCreateAPIView):
     authentication_classes = [IsAuthenticated]
     permission_classes = [permissions.IsAuthenticated]
     serializer_class = StudentCourseSerializer
+    pagination_class = PagePagination
 
     def get_queryset(self):
         user = self.request.user

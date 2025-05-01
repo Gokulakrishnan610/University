@@ -30,6 +30,11 @@ import {
   GraduationCap,
   CalendarIcon,
   SlidersHorizontal,
+  InfoIcon,
+  HelpCircle,
+  ArrowLeftRight,
+  Building,
+  CircleDot
 } from 'lucide-react';
 import { useGetCurrentDepartmentCourses, Course } from '@/action/course';
 import { getRelationshipBadgeColor, getRelationshipShortName } from '@/lib/utils';
@@ -45,6 +50,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 export default function AllCoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,29 +81,36 @@ export default function AllCoursesPage() {
     const owned = allOwnedCourses.map(course => ({ 
       ...course, 
       userRole: 'owner',
-      roleDescription: 'We own this course' 
+      roleDescription: 'We Own' 
     }));
     
     const teaching = allTeachingCourses.map(course => ({ 
       ...course, 
       userRole: 'teacher',
-      roleDescription: 'We teach for other departments' 
+      roleDescription: 'We Teach for Others' 
     }));
     
     const receiving = allReceivingCourses.map(course => ({ 
       ...course, 
       userRole: 'owner_not_teacher',
-      roleDescription: 'Others teach our course' 
+      roleDescription: 'Others Teach Ours' 
     }));
     
     const forDept = allForDeptCourses.map(course => ({ 
       ...course, 
       userRole: 'learner',
-      roleDescription: 'Our students take this course' 
+      roleDescription: 'For Our Students' 
     }));
     
     return [...owned, ...teaching, ...receiving, ...forDept];
   }, [allOwnedCourses, allTeachingCourses, allReceivingCourses, allForDeptCourses]);
+  
+  // Count courses that are both owned and taught by the department
+  const selfOwnedSelfTaughtCount = useMemo(() => {
+    return allOwnedCourses.filter(course => 
+      course.course_detail.course_dept_detail.id === course.teaching_dept_id
+    ).length;
+  }, [allOwnedCourses]);
   
   // Get unique years, semesters and relationship types for filters
   const uniqueYears = useMemo(() => {
@@ -204,11 +222,41 @@ export default function AllCoursesPage() {
       case 'teacher':
         return <School className="h-4 w-4 text-orange-500" />;
       case 'owner_not_teacher':
-        return <Users className="h-4 w-4 text-green-500" />;
+        return <ArrowLeftRight className="h-4 w-4 text-green-500" />;
       case 'learner':
         return <GraduationCap className="h-4 w-4 text-purple-500" />;
       default:
         return <BookOpen className="h-4 w-4" />;
+    }
+  };
+
+  const getRoleClass = (role: string) => {
+    switch (role) {
+      case 'owner':
+        return 'text-blue-600 bg-blue-50 dark:bg-blue-950/30';
+      case 'teacher':
+        return 'text-orange-600 bg-orange-50 dark:bg-orange-950/30';
+      case 'owner_not_teacher':
+        return 'text-green-600 bg-green-50 dark:bg-green-950/30';
+      case 'learner':
+        return 'text-purple-600 bg-purple-50 dark:bg-purple-950/30';
+      default:
+        return '';
+    }
+  };
+
+  const getRoleFullDescription = (role: string) => {
+    switch (role) {
+      case 'owner':
+        return 'Your department created this course and controls its curriculum.';
+      case 'teacher':
+        return 'Your department teaches this course for students from other departments.';
+      case 'owner_not_teacher':
+        return 'Your department created this course, but another department teaches it.';
+      case 'learner':
+        return 'Your department\'s students take this course taught and owned by another department.';
+      default:
+        return '';
     }
   };
   
@@ -218,9 +266,9 @@ export default function AllCoursesPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-              <CardTitle className="text-2xl">All Department Courses</CardTitle>
+              <CardTitle className="text-2xl">Departmental Course Relationships</CardTitle>
               <CardDescription className="mt-1">
-                View all courses where your department is involved
+                View all courses where your department has a role as Course Owner, Teaching Department, or For Students
               </CardDescription>
             </div>
             
@@ -248,21 +296,52 @@ export default function AllCoursesPage() {
               </div>
               
               <div className="flex gap-2">
-                <Select 
-                  value={roleFilter} 
-                  onValueChange={(value) => setRoleFilter(value)}
-                >
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Filter by role" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Roles</SelectItem>
-                    <SelectItem value="owner">Owner</SelectItem>
-                    <SelectItem value="teacher">Teacher</SelectItem>
-                    <SelectItem value="owner_not_teacher">Owner (Others Teach)</SelectItem>
-                    <SelectItem value="learner">For Our Students</SelectItem>
-                  </SelectContent>
-                </Select>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Select 
+                          value={roleFilter} 
+                          onValueChange={(value) => setRoleFilter(value)}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Filter by department role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Department Roles</SelectItem>
+                            <SelectItem value="owner" className="flex items-center">
+                              <div className="flex items-center gap-2">
+                                <BookOpen className="h-4 w-4 text-blue-500" /> 
+                                <span>We Own</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="teacher">
+                              <div className="flex items-center gap-2">
+                                <School className="h-4 w-4 text-orange-500" /> 
+                                <span>We Teach for Others</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="owner_not_teacher">
+                              <div className="flex items-center gap-2">
+                                <ArrowLeftRight className="h-4 w-4 text-green-500" /> 
+                                <span>Others Teach Ours</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="learner">
+                              <div className="flex items-center gap-2">
+                                <GraduationCap className="h-4 w-4 text-purple-500" /> 
+                                <span>For Our Students</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Filter courses by your department's role in each course.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
                 
                 <Popover open={showFilterMenu} onOpenChange={setShowFilterMenu}>
                   <PopoverTrigger asChild>
@@ -387,6 +466,83 @@ export default function AllCoursesPage() {
         </CardHeader>
         
         <CardContent>
+          {/* Role Summary Cards */}
+          <div className="mb-6 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="p-3 rounded-lg border border-blue-200 bg-blue-50/50 dark:bg-blue-950/20 dark:border-blue-900/30 cursor-help">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <BookOpen className="h-5 w-5 text-blue-500" />
+                        <h3 className="font-medium">We Own</h3>
+                      </div>
+                      <Badge variant="outline" className="bg-background">{allOwnedCourses.length}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Courses created and maintained by our department</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p>As <strong>Course Owner</strong>, your department creates the course, defines its content and curriculum, and maintains academic standards.</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="p-3 rounded-lg border border-orange-200 bg-orange-50/50 dark:bg-orange-950/20 dark:border-orange-900/30 cursor-help">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <School className="h-5 w-5 text-orange-500" />
+                        <h3 className="font-medium">We Teach for Others</h3>
+                      </div>
+                      <Badge variant="outline" className="bg-background">{allTeachingCourses.length}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Courses we teach but don't own</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p>As <strong>Teaching Department</strong>, your faculty are responsible for delivering courses that are owned by other departments.</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="p-3 rounded-lg border border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-900/30 cursor-help">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <ArrowLeftRight className="h-5 w-5 text-green-500" />
+                        <h3 className="font-medium">Others Teach Ours</h3>
+                      </div>
+                      <Badge variant="outline" className="bg-background">{allReceivingCourses.length}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">Our courses taught by other departments</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p>These are courses <strong>owned by your department</strong> but <strong>taught by faculty from other departments</strong>.</p>
+                </TooltipContent>
+              </Tooltip>
+
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div className="p-3 rounded-lg border border-purple-200 bg-purple-50/50 dark:bg-purple-950/20 dark:border-purple-900/30 cursor-help">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <GraduationCap className="h-5 w-5 text-purple-500" />
+                        <h3 className="font-medium">For Our Students</h3>
+                      </div>
+                      <Badge variant="outline" className="bg-background">{allForDeptCourses.length}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">External courses taken by our students</p>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs">
+                  <p>These are courses that your students take, but are both <strong>owned and taught by other departments</strong>.</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+
           {isPending ? (
             <div className="flex justify-center items-center py-12">
               <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -437,10 +593,19 @@ export default function AllCoursesPage() {
                       <TableCell className="font-medium">{course.course_detail.course_id}</TableCell>
                       <TableCell>{course.course_detail.course_name}</TableCell>
                       <TableCell>
-                        <div className="flex items-center gap-1.5">
-                          {getRoleIcon(course.userRole)}
-                          <span>{course.roleDescription}</span>
-                        </div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className={`flex items-center gap-1.5 py-0.5 px-1.5 rounded ${getRoleClass(course.userRole)}`}>
+                                {getRoleIcon(course.userRole)}
+                                <span>{course.roleDescription}</span>
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent side="right" className="max-w-xs">
+                              <p>{getRoleFullDescription(course.userRole)}</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
@@ -456,7 +621,7 @@ export default function AllCoursesPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5 text-green-500" />
+                          <GraduationCap className="h-3.5 w-3.5 text-purple-500" />
                           <span>{course.for_dept_detail.dept_name}</span>
                         </div>
                       </TableCell>
