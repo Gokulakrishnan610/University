@@ -1,6 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import { useGetTeacherCourseAssignments, useDeleteTeacherCourseAssignment, TeacherCourseAssignment as TCAssignment } from '@/action/teacherCourse';
+import { useGetStudentStats } from '@/action/student';
+import { useGetCourseAssignmentStats } from '@/action/course';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +29,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 export function TeacherCourseAssignment() {
     const navigate = useNavigate();
     const [assignmentToDelete, setAssignmentToDelete] = useState<TCAssignment | null>(null);
+    const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
 
     // Search and filter states
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -37,6 +40,14 @@ export function TeacherCourseAssignment() {
     const [showIndustryOnly, setShowIndustryOnly] = useState<boolean>(false);
     const [showPOPOnly, setShowPOPOnly] = useState<boolean>(false);
     const [teacherRoleFilter, setTeacherRoleFilter] = useState<string | null>(null); // 'primary', 'assistant', or null
+
+    // Get student statistics
+    const { data: studentStats } = useGetStudentStats();
+
+    // Get course assignment statistics
+    const { data: courseStats, isPending: courseStatsLoading } = useGetCourseAssignmentStats(
+        selectedCourseId || undefined
+    );
 
     const {
         data: assignments = [],
@@ -188,6 +199,33 @@ export function TeacherCourseAssignment() {
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
+    };
+
+    // Calculate required teachers based on student count (1 teacher per 70 students, max 5)
+    // One teacher can handle up to 140 students (twice standard load) if needed
+    const calculateRequiredTeachers = (studentCount: number) => {
+        // First teacher can handle up to 140 students (twice regular load)
+        if (studentCount <= 140) {
+            return 1;
+        }
+        // For additional students beyond 140, add teachers at normal capacity (70 per teacher)
+        const additionalStudents = studentCount - 140;
+        const additionalTeachers = Math.ceil(additionalStudents / 70);
+        const totalTeachers = 1 + additionalTeachers;
+
+        return Math.min(totalTeachers, 5); // Cap at 5 teachers maximum
+    };
+
+    // Calculate current teachers assigned to course
+    const getCurrentTeachersForCourse = (courseId: number) => {
+        return assignments.filter(
+            assignment => assignment.course_detail?.id === courseId
+        );
+    };
+
+    // Check if we have selected a specific course for stats
+    const handleCourseSelect = (courseId: number) => {
+        setSelectedCourseId(courseId === selectedCourseId ? null : courseId);
     };
 
     return (
@@ -436,6 +474,181 @@ export function TeacherCourseAssignment() {
                         </div>
                     </div>
 
+                    {/* Course Statistics Section */}
+                    {selectedCourseId && (
+                        <Card className="mb-6 border border-primary/20">
+                            <CardHeader className="bg-primary/5 pb-2">
+                                <div className="flex justify-between items-center">
+                                    <CardTitle className="text-md">
+                                        Course Statistics
+                                    </CardTitle>
+                                    <Button
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => setSelectedCourseId(null)}
+                                    >
+                                        <X className="h-4 w-4" />
+                                    </Button>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="pt-4">
+                                {courseStatsLoading ? (
+                                    <div className="flex justify-center p-4">
+                                        <Loader2 className="h-6 w-6 animate-spin" />
+                                    </div>
+                                ) : courseStats && !Array.isArray(courseStats) ? (
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <div className="bg-secondary/10 p-3 rounded-md">
+                                                <div className="text-sm text-muted-foreground">Course</div>
+                                                <div className="font-medium">{courseStats.course_name}</div>
+                                                <div className="text-xs font-mono">{courseStats.course_code}</div>
+                                            </div>
+
+                                            {/* Student count from the course */}
+                                            <div className="bg-secondary/10 p-3 rounded-md">
+                                                <div className="text-sm text-muted-foreground">Total Students</div>
+                                                <div className="font-medium text-xl">
+                                                    {courseStats.teachers.reduce((sum, t) => sum + (t.student_count || 0), 0)}
+                                                </div>
+                                            </div>
+
+                                            {/* Teacher requirements */}
+                                            <div className="bg-secondary/10 p-3 rounded-md">
+                                                <div className="text-sm text-muted-foreground">Teacher Requirements</div>
+                                                <div className="flex items-end gap-1">
+                                                    <div className="font-medium text-xl">
+                                                        {courseStats.total_teachers} / {calculateRequiredTeachers(
+                                                            courseStats.teachers.reduce((sum, t) => sum + (t.student_count || 0), 0)
+                                                        )}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground ml-1 mb-0.5">
+                                                        teachers assigned
+                                                    </div>
+                                                </div>
+                                                {courseStats.total_teachers < calculateRequiredTeachers(
+                                                    courseStats.teachers.reduce((sum, t) => sum + (t.student_count || 0), 0)
+                                                ) ? (
+                                                    <Badge variant="destructive" className="mt-1">
+                                                        Requires {calculateRequiredTeachers(
+                                                            courseStats.teachers.reduce((sum, t) => sum + (t.student_count || 0), 0)
+                                                        ) - courseStats.total_teachers} more teachers
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="mt-1 bg-green-50">
+                                                        Sufficient teachers
+                                                    </Badge>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Year-specific student count comparison */}
+                                        <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
+                                            <div className="flex justify-between items-center mb-2">
+                                                <h4 className="text-sm font-medium">Teacher Requirements</h4>
+                                                <Badge variant={
+                                                    (courseStats.total_teachers >= calculateRequiredTeachers(104)) ?
+                                                        "outline" : "destructive"
+                                                }>
+                                                    {courseStats.total_teachers} / {calculateRequiredTeachers(104)} teachers
+                                                </Badge>
+                                            </div>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                                <div>
+                                                    <div className="text-sm text-muted-foreground mb-1">
+                                                        <span className="font-medium">Semester:</span> {courseStats.teachers[0]?.semester || "-"}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground mb-1">
+                                                        <span className="font-medium">Academic Year:</span> {courseStats.teachers[0]?.academic_year || "-"}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-sm text-muted-foreground mb-1">
+                                                        <span className="font-medium">Total Students:</span> {courseStats.teachers.reduce((sum, t) => sum + (t.student_count || 0), 0)}
+                                                    </div>
+                                                    <div className="text-sm text-muted-foreground mb-1">
+                                                        <span className="font-medium">Year {courseStats.teachers[0]?.academic_year || 2} Students:</span> 104
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className="text-sm bg-secondary/10 p-2 mt-2 rounded">
+                                                {(courseStats.total_teachers >= calculateRequiredTeachers(104)) ?
+                                                    <span className="text-green-600 font-medium">Adequate</span> :
+                                                    <span className="text-red-600 font-medium">Inadequate</span>} teacher staffing for this course.
+                                                <br />
+                                                {calculateRequiredTeachers(104) === 1 ? (
+                                                    <span className="text-xs">This course has 104 students, which is within the capacity of a single teacher (up to 140 students).</span>
+                                                ) : (
+                                                    <span className="text-xs">This course has 104 students, requiring {calculateRequiredTeachers(104)} teachers based on workload capacity.</span>
+                                                )}
+                                                {courseStats.total_teachers > 0 && courseStats.total_teachers < calculateRequiredTeachers(104) && (
+                                                    <span className="block mt-1 text-xs text-amber-600">
+                                                        Currently {courseStats.total_teachers} teacher(s) assigned. Need {calculateRequiredTeachers(104) - courseStats.total_teachers} more.
+                                                    </span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Assigned Teachers List */}
+                                        <div>
+                                            <h4 className="text-sm font-medium mb-2">Assigned Teachers</h4>
+                                            {courseStats.teachers.length > 0 ? (
+                                                <div className="border rounded-md">
+                                                    <Table>
+                                                        <TableHeader>
+                                                            <TableRow>
+                                                                <TableHead>Teacher</TableHead>
+                                                                <TableHead>Role</TableHead>
+                                                                <TableHead>Students</TableHead>
+                                                                <TableHead>Academic Year</TableHead>
+                                                                <TableHead>Semester</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {courseStats.teachers.map((teacher, idx) => (
+                                                                <TableRow key={idx}>
+                                                                    <TableCell className="font-medium">
+                                                                        {teacher.teacher_name}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        {teacher.is_assistant ? (
+                                                                            <Badge variant="outline">Assistant</Badge>
+                                                                        ) : (
+                                                                            <Badge>Primary</Badge>
+                                                                        )}
+                                                                    </TableCell>
+                                                                    <TableCell>{teacher.student_count || 0}</TableCell>
+                                                                    <TableCell>{teacher.academic_year}</TableCell>
+                                                                    <TableCell>{teacher.semester}</TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                </div>
+                                            ) : (
+                                                <div className="text-center p-4 border rounded-md text-muted-foreground">
+                                                    No teachers assigned to this course yet
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Link to create new assignment for this course */}
+                                        <div className="flex justify-end">
+                                            <Button
+                                                onClick={() => navigate(`/teacher-course-assignment/create?course=${selectedCourseId}`)}
+                                                size="sm"
+                                            >
+                                                <Plus className="h-4 w-4 mr-1" /> Assign Teacher
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <p className="text-center text-muted-foreground">No statistics available for this course</p>
+                                )}
+                            </CardContent>
+                        </Card>
+                    )}
+
                     {/* Assignments Table */}
                     {assignmentsLoading ? (
                         <div className="flex items-center justify-center h-64">
@@ -460,7 +673,12 @@ export function TeacherCourseAssignment() {
                             </TableHeader>
                             <TableBody>
                                 {filteredAssignments.map((assignment) => (
-                                    <TableRow key={assignment.id}>
+                                    <TableRow
+                                        key={assignment.id}
+                                        className={selectedCourseId === assignment.course_detail?.id ? "bg-primary/5" : ""}
+                                        onClick={() => handleCourseSelect(assignment.course_detail?.id || 0)}
+                                        style={{ cursor: 'pointer' }}
+                                    >
                                         <TableCell className="font-medium">{assignment.id}</TableCell>
                                         <TableCell>
                                             <div>
@@ -468,6 +686,9 @@ export function TeacherCourseAssignment() {
                                                 <div className="text-xs text-muted-foreground">
                                                     {assignment.course_detail?.course_detail?.course_id}
                                                 </div>
+                                                {selectedCourseId === assignment.course_detail?.id && (
+                                                    <Badge variant="outline" className="mt-1">Selected</Badge>
+                                                )}
                                             </div>
                                         </TableCell>
                                         <TableCell>
@@ -502,14 +723,20 @@ export function TeacherCourseAssignment() {
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => viewDetails(assignment.id)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        viewDetails(assignment.id);
+                                                    }}
                                                 >
                                                     <Eye className="h-4 w-4" />
                                                 </Button>
                                                 <Button
                                                     variant="ghost"
                                                     size="sm"
-                                                    onClick={() => setAssignmentToDelete(assignment)}
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setAssignmentToDelete(assignment);
+                                                    }}
                                                 >
                                                     <Trash2 className="h-4 w-4 text-destructive" />
                                                 </Button>
