@@ -20,7 +20,7 @@ function getCookie(name: string) {
 
 // Create axios instance with default config
 export const api = axios.create({
-  baseURL: 'http://localhost:8000/',
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -42,9 +42,9 @@ api.interceptors.response.use(
     return response;
   },
   (error) => {
-
+    // Log unauthorized errors (401)
     if (error.response && error.response.status === 401) {
-      console.log("Hi to whoever seeing this :)");
+      console.log("Authentication error - user may need to log in");
     }
     return Promise.reject(error);
   }

@@ -43,9 +43,14 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/teachers",
     },
     {
-      title: "Teacher Allocation",
+      title: "Teacher Course Allocation",
       icon: <GraduationCap className="h-5 w-5" />,
       href: "/teacher-course-assignment",
+    },
+    {
+      title: "Teachers Slot Allocation",
+      icon: <GraduationCap className="h-5 w-5" />,
+      href: "/teachers/slot-allocation",
     },
     {
       title: "Students",
@@ -100,7 +105,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         <div className="flex h-16 items-center justify-center border-b px-4">
           <Link to="/" className="flex items-center justify-center gap-2">
-           <img src="/images/rec_logo.png" alt="Logo" width={160} height={32} />
+            <img src="/images/rec_logo.png" alt="Logo" width={160} height={32} />
           </Link>
           <Button variant="ghost" size="icon" onClick={onClose} className="md:hidden">
             <X className="h-5 w-5" />
