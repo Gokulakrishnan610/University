@@ -78,15 +78,15 @@ export function TeacherCourseAssignment() {
                 (assignment.teacher_detail?.teacher_id && selectedTeacherFilter.includes(
                     `${assignment.teacher_detail.teacher_id.first_name || ''} ${assignment.teacher_detail.teacher_id.last_name || ''}`.trim()
                 ));
-                
-            const matchesIndustryFilter = !showIndustryOnly || 
+
+            const matchesIndustryFilter = !showIndustryOnly ||
                 assignment.teacher_detail?.is_industry_professional === true;
-                
-            const matchesPOPFilter = !showPOPOnly || 
+
+            const matchesPOPFilter = !showPOPOnly ||
                 assignment.teacher_detail?.teacher_role === 'POP';
 
-            return matchesSearch && matchesDepartment && matchesTeacher && 
-                   matchesIndustryFilter && matchesPOPFilter;
+            return matchesSearch && matchesDepartment && matchesTeacher &&
+                matchesIndustryFilter && matchesPOPFilter;
         });
     }, [assignments, searchQuery, selectedDepartmentFilter, selectedTeacherFilter, showIndustryOnly, showPOPOnly]);
 
@@ -147,7 +147,7 @@ export function TeacherCourseAssignment() {
     };
 
     return (
-        <div className="container mx-auto px-4 space-y-8">
+        <div className="mx-auto space-y-8">
             <Card>
                 <CardHeader>
                     <div className="flex items-center justify-between">
@@ -239,16 +239,16 @@ export function TeacherCourseAssignment() {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            <Button 
+                            <Button
                                 variant={showIndustryOnly ? "default" : "outline"}
                                 onClick={() => setShowIndustryOnly(!showIndustryOnly)}
                                 className="gap-2"
                             >
-                                <span>🏢</span> Industry Professionals 
+                                <span>🏢</span> Industry Professionals
                                 {showIndustryOnly && <Badge variant="secondary" className="ml-1">Active</Badge>}
                             </Button>
 
-                            <Button 
+                            <Button
                                 variant={showPOPOnly ? "default" : "outline"}
                                 onClick={() => setShowPOPOnly(!showPOPOnly)}
                                 className="gap-2"
@@ -257,13 +257,13 @@ export function TeacherCourseAssignment() {
                                 {showPOPOnly && <Badge variant="secondary" className="ml-1">Active</Badge>}
                             </Button>
 
-                            {(searchQuery || selectedTeacherFilter.length > 0 || selectedDepartmentFilter.length > 0 || 
-                              showIndustryOnly || showPOPOnly) && (
-                                <Button variant="ghost" onClick={clearFilters} className="ml-auto">
-                                    <X className="mr-2 h-4 w-4" />
-                                    Clear Filters
-                                </Button>
-                            )}
+                            {(searchQuery || selectedTeacherFilter.length > 0 || selectedDepartmentFilter.length > 0 ||
+                                showIndustryOnly || showPOPOnly) && (
+                                    <Button variant="ghost" onClick={clearFilters} className="ml-auto">
+                                        <X className="mr-2 h-4 w-4" />
+                                        Clear Filters
+                                    </Button>
+                                )}
                         </div>
                     </div>
 
