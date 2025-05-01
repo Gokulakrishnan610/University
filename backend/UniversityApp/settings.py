@@ -13,7 +13,7 @@ from pathlib import Path
 from decouple import config
 import os
 
-ENVIRONMENT = config("ENVIRONMENT", default="production")
+ENVIRONMENT = config("ENVIRONMENT", default="development")
 
 is_dev = ENVIRONMENT == "development"
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
