@@ -24,12 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-u2vgw=@#o06f1^xs0n_)np$bu8^c+)=kg6wo9eq0er$cak+a9p'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = is_dev
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost']
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development, set to False in production
