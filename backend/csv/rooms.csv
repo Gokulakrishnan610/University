@@ -1,6 +1,4 @@
-room_number,"block
-",description,is_lab,room_type,room_min_cap,room_max_cap,has_projector,has_ac,tech_level,"maintained_by_id
-"
+room_number,"block",description,is_lab,room_type,room_min_cap,room_max_cap,has_projector,has_ac,tech_level,"maintained_by_id"
 A102,A Block,Classroom,FALSE,Room,50.0,60.0,FALSE,FALSE,Medium,Administration
 A103,A Block,Classroom,FALSE,Room,50.0,60.0,FALSE,FALSE,Low,Administration
 A104/105,A Block,Classroom,FALSE,Room,110.0,120.0,FALSE,FALSE,High,Administration
