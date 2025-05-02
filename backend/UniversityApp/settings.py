@@ -27,9 +27,9 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = is_dev
+DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '46.202.160.179']
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development, set to False in production
@@ -39,6 +39,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React default
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
+    'http://46.202.160.179'
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https?://localhost:\d+$",
@@ -75,7 +76,7 @@ CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
-
+CSRF_COOKIE_DOMAIN= config('COOKIE_DOMAIN')
 
 # Application definition
 
@@ -89,6 +90,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
     'import_export',
@@ -108,6 +110,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # Add CORS middleware before CommonMiddleware
     'django.middleware.common.CommonMiddleware',
@@ -205,8 +208,15 @@ USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
+if not is_dev:
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-STATIC_URL = 'static/'
+
+STATIC_URL = '/uv-static/'
+if DEBUG:
+    STATICFILES_DIRS=[os.path.join(BASE_DIR, "static"),]
+else:
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -281,7 +291,7 @@ UNFOLD = {
 #     'PAGE_SIZE': 100
 # }
 if not is_dev:
-    FORCE_SCRIPT_NAME = '/api'
+    FORCE_SCRIPT_NAME = '/uv-api'
 
 LOGGING = {
     'version': 1,
