@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router'
+import { Route, Routes, Navigate } from 'react-router'
 import { MainLayout } from './components/global/main-layout'
 import Landing from './app/landing/page'
 import Login from './app/auth/login/login'
@@ -23,30 +23,30 @@ function App() {
               <Login />
             </PublicOnlyRoute>
           } />
-            <Route path="forgot-password" element={
+          <Route path="forgot-password" element={
             <PublicOnlyRoute>
               <ForgotPassword />
             </PublicOnlyRoute>
           } />
         </Route>
         
-        {/* Protected routes (require authentication) */}
-        <Route element={<DashboardLayout/>}>
-        <Route path="/*" element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        } />
-        </Route>
-      
+        {/* 404 route - explicitly defined paths */}
+        <Route path="/404" element={<PageNotFound />} />
         
-        {/* 404 route */}
-        <Route path="*" element={<PageNotFound/>} />
+        {/* Protected routes (require authentication) */}
+        <Route element={<DashboardLayout />}>
+          <Route path="/*" element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          } />
+        </Route>
+        
+        {/* Catch-all redirect to 404 */}
+        <Route path="*" element={<Navigate to="/404" replace />} />
       </Routes>
     </MainLayout>
   )
 }
 
 export default App
- 
- 

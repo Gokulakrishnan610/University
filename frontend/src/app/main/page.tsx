@@ -1,4 +1,4 @@
-import { Route, Routes } from "react-router";
+import { Route, Routes, Navigate } from "react-router";
 import Profile from "./profile/page";
 import Setting from "./setting/page";
 import HomePage from './dashboard/page'
@@ -18,11 +18,13 @@ import StudentCreate from "./students/create/page";
 import StudentEdit from "./students/[id]/edit/page";
 import CreateCoursePage from "./courses/create/page";
 import TeacherSlotAssignmentPage from "./teachers/slot-allocation/page";
+import PageNotFound from "../page-not-found/page"
 
 export default function Dashboard() {
 
   return (
     <Routes>
+      <Route path="/404" element={<PageNotFound />} />
       <Route path='/' element={<HomePage />} index />
       <Route path="/profile" element={<Profile />} />
       <Route path="/setting" element={<Setting />} />
@@ -43,6 +45,7 @@ export default function Dashboard() {
       <Route path="/students/create" element={<StudentCreate />} />
       <Route path="/students/:id" element={<StudentDetails />} />
       <Route path="/students/:id/edit" element={<StudentEdit />} />
+      <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
   );
 } 
