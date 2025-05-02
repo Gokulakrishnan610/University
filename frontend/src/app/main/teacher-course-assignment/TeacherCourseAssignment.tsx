@@ -23,7 +23,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
 
 export function TeacherCourseAssignment() {
@@ -201,14 +200,10 @@ export function TeacherCourseAssignment() {
         document.body.removeChild(link);
     };
 
-    // Calculate required teachers based on student count (1 teacher per 70 students, max 5)
-    // One teacher can handle up to 140 students (twice standard load) if needed
     const calculateRequiredTeachers = (studentCount: number) => {
-        // First teacher can handle up to 140 students (twice regular load)
         if (studentCount <= 140) {
-            return 1;
+            return 1; // One teacher can handle up to 140 students
         }
-        // For additional students beyond 140, add teachers at normal capacity (70 per teacher)
         const additionalStudents = studentCount - 140;
         const additionalTeachers = Math.ceil(additionalStudents / 70);
         const totalTeachers = 1 + additionalTeachers;
@@ -216,15 +211,7 @@ export function TeacherCourseAssignment() {
         return Math.min(totalTeachers, 5); // Cap at 5 teachers maximum
     };
 
-    // Calculate current teachers assigned to course
-    const getCurrentTeachersForCourse = (courseId: number) => {
-        return assignments.filter(
-            assignment => assignment.course_detail?.id === courseId
-        );
-    };
-
-    // Check if we have selected a specific course for stats
-    const handleCourseSelect = (courseId: number) => {
+        const handleCourseSelect = (courseId: number) => {
         setSelectedCourseId(courseId === selectedCourseId ? null : courseId);
     };
 
