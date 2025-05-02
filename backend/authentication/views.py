@@ -1,8 +1,11 @@
 from django.shortcuts import render, get_object_or_404
 from django.conf import settings
 from django.contrib.auth import authenticate
+from django.utils.decorators import method_decorator
+from django.views.decorators.csrf import ensure_csrf_cookie
 from rest_framework.views import APIView
 from rest_framework import generics, permissions, status
+from rest_framework.permissions import AllowAny
 from rest_framework.response import Response
 from rest_framework import serializers
 from .models import *
@@ -273,3 +276,9 @@ class LogoutAPIView(APIView):
         response = Response({'detail': 'Successfully logged out.'}, status=status.HTTP_200_OK)
         response.delete_cookie('token', domain=settings.COOKIE_DOMAIN)
         return response
+
+@method_decorator(ensure_csrf_cookie, name='dispatch')
+class CsrfTokenAPIView(APIView):
+    permission_classes = [AllowAny]
+    def get(self, request):
+        return Response({"success": "CSRF cookie set"})

@@ -39,12 +39,22 @@ import { Loader2, Building, User, BookOpen, Clock, Calendar } from 'lucide-react
 
 const TEACHER_ROLES = [
   'Professor',
+  'Associate Professor',
+  'Assistant Professor',
   'Asst. Professor',
   'HOD',
   'DC',
   'POP',
-  'Industry Professional'
+  'Industry Professional',
+  'Dean',
+  'Admin',
+  'Vice Principal',
+  'Principal',
+  'Physical Director'
 ];
+
+// Special roles that typically have unique institution-wide positions
+const UNIQUE_ROLES = ['Dean', 'Principal', 'Vice Principal', 'Physical Director'];
 
 const AVAILABILITY_TYPES = [
   { value: 'regular', label: 'Regular (All Working Days)' },
@@ -79,6 +89,9 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
   const departments = departmentsData || [];
 
+  // New state to track if a unique role warning should be shown
+  const [showUniqueRoleWarning, setShowUniqueRoleWarning] = useState(false);
+
   // @ts-ignore - Ensure we can access ID regardless of structure
   const teacherId = teacher.id;
 
@@ -90,17 +103,17 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
   // Get department data safely
   // @ts-ignore - Safely access properties that might have different names
   const departmentData = teacher.dept || teacher.dept_id;
-  
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     // Create a submission data object with the correct type structure
     const submissionData: any = { ...values };
-    
+
     // Rename field to match what the API expects
     if ('dept' in submissionData) {
       submissionData.dept_id = submissionData.dept;
       delete submissionData.dept;
     }
-    
+
     if (disableDepartmentEdit) {
       // @ts-ignore - Access department ID safely
       submissionData.dept_id = departmentData?.id || null;
@@ -113,7 +126,7 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
     const dept = (teacher as any).dept || (teacher as any).dept_id;
     return dept?.dept_name || 'No department assigned';
   };
-  
+
   // Extract department id for the form default value
   const getDepartmentId = () => {
     const dept = (teacher as any).dept || (teacher as any).dept_id;
@@ -137,12 +150,15 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
   });
 
   const teacherRole = form.watch('teacher_role');
-  
+
   useEffect(() => {
     if (teacherRole === 'POP' || teacherRole === 'Industry Professional') {
       form.setValue('availability_type', 'limited');
     }
-  }, [teacherRole, form]);
+
+    // Show warning for unique roles
+    setShowUniqueRoleWarning(UNIQUE_ROLES.includes(teacherRole) && teacherRole !== teacher.teacher_role);
+  }, [teacherRole, form, teacher.teacher_role]);
 
   return (
     <Dialog open onOpenChange={onClose}>
@@ -158,124 +174,131 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
         </DialogHeader>
 
         <Separator />
-    <ScrollArea className='h-[calc(100vh-200px)]'>
-    <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <User className="h-4 w-4 text-primary" />
-                <h3 className="text-md font-medium">Basic Information</h3>
-              </div>
-
-              <FormField
-                control={form.control}
-                name="staff_code"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Staff Code</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. TCH001" {...field} className="focus-visible:ring-primary" />
-                    </FormControl>
-                    <FormDescription>
-                      Unique identifier for the teacher within the institution
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Building className="h-4 w-4 text-primary" />
-                <h3 className="text-md font-medium">Department & Role</h3>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {disableDepartmentEdit ? (
-                  <FormItem>
-                    <FormLabel>Department</FormLabel>
-                    <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/20">
-                      <Building className="h-4 w-4 text-muted-foreground" />
-                      {/* @ts-ignore - Access department name safely */}
-                      <span>{departmentData?.dept_name || 'No department assigned'}</span>
-                    </div>
-                    <FormDescription>
-                      Department cannot be changed directly. Use the Remove from Department option if needed.
-                    </FormDescription>
-                  </FormItem>
-                ) : (
-                  <FormField
-                    control={form.control}
-                    name="dept"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Department</FormLabel>
-                        <Select
-                          onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
-                          defaultValue={field.value ? String(field.value) : undefined}
-                          value={field.value ? String(field.value) : undefined}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="focus-visible:ring-primary">
-                              <SelectValue placeholder="Select department" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {loadingDepartments ? (
-                              <div className="flex items-center justify-center p-2">
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              </div>
-                            ) : departments.length > 0 ? (
-                              departments.map((dept: any) => (
-                              <SelectItem key={dept.id} value={String(dept.id)}>
-                                {dept.dept_name}
-                              </SelectItem>
-                              ))
-                            ) : (
-                              <div className="p-2 text-sm text-muted-foreground">No departments found</div>
-                            )}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
+        <ScrollArea className='h-[calc(100vh-200px)]'>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-primary" />
+                  <h3 className="text-md font-medium">Basic Information</h3>
+                </div>
 
                 <FormField
                   control={form.control}
-                  name="teacher_role"
+                  name="staff_code"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger className="focus-visible:ring-primary">
-                            <SelectValue placeholder="Select role" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {TEACHER_ROLES.map((role) => (
-                            <SelectItem key={role} value={role}>
-                              {role}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <FormLabel>Staff Code</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. TCH001" {...field} className="focus-visible:ring-primary" />
+                      </FormControl>
                       <FormDescription>
-                        {field.value === 'POP' || field.value === 'Industry Professional' 
-                          ? 'This role will automatically set limited availability' 
-                          : 'Academic role within the institution'}
+                        Unique identifier for the teacher within the institution
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
+
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Building className="h-4 w-4 text-primary" />
+                  <h3 className="text-md font-medium">Department & Role</h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {disableDepartmentEdit ? (
+                    <FormItem>
+                      <FormLabel>Department</FormLabel>
+                      <div className="flex items-center gap-2 p-2 border rounded-md bg-muted/20">
+                        <Building className="h-4 w-4 text-muted-foreground" />
+                        {/* @ts-ignore - Access department name safely */}
+                        <span>{departmentData?.dept_name || 'No department assigned'}</span>
+                      </div>
+                      <FormDescription>
+                        Department cannot be changed directly. Use the Remove from Department option if needed.
+                      </FormDescription>
+                    </FormItem>
+                  ) : (
+                    <FormField
+                      control={form.control}
+                      name="dept"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Department</FormLabel>
+                          <Select
+                            onValueChange={(value) => field.onChange(value ? parseInt(value) : null)}
+                            defaultValue={field.value ? String(field.value) : undefined}
+                            value={field.value ? String(field.value) : undefined}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="focus-visible:ring-primary">
+                                <SelectValue placeholder="Select department" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {loadingDepartments ? (
+                                <div className="flex items-center justify-center p-2">
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                </div>
+                              ) : departments.length > 0 ? (
+                                departments.map((dept: any) => (
+                                  <SelectItem key={dept.id} value={String(dept.id)}>
+                                    {dept.dept_name}
+                                  </SelectItem>
+                                ))
+                              ) : (
+                                <div className="p-2 text-sm text-muted-foreground">No departments found</div>
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+
+                  <FormField
+                    control={form.control}
+                    name="teacher_role"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Role</FormLabel>
+                        <Select
+                          onValueChange={field.onChange}
+                          defaultValue={field.value}
+                        >
+                          <FormControl>
+                            <SelectTrigger className="focus-visible:ring-primary">
+                              <SelectValue placeholder="Select role" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {TEACHER_ROLES.map((role) => (
+                              <SelectItem key={role} value={role}>
+                                {role}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormDescription>
+                          {field.value === 'POP' || field.value === 'Industry Professional'
+                            ? 'This role will automatically set limited availability'
+                            : UNIQUE_ROLES.includes(field.value)
+                              ? 'This role is typically unique within the institution'
+                              : 'Academic role within the institution'}
+                        </FormDescription>
+                        {showUniqueRoleWarning && UNIQUE_ROLES.includes(field.value) && (
+                          <div className="mt-2 text-xs text-amber-600">
+                            Note: {field.value} is typically a unique role. The system may prevent saving if another teacher with this role already exists.
+                          </div>
+                        )}
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <FormField
                   control={form.control}
@@ -301,12 +324,12 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
                     <FormItem>
                       <FormLabel>Working Hours</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          placeholder="21" 
-                          {...field} 
+                        <Input
+                          type="number"
+                          placeholder="21"
+                          {...field}
                           onChange={(e) => field.onChange(parseInt(e.target.value))}
-                          className="focus-visible:ring-primary" 
+                          className="focus-visible:ring-primary"
                         />
                       </FormControl>
                       <FormDescription>
@@ -316,75 +339,31 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
                     </FormItem>
                   )}
                 />
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-primary" />
-                <h3 className="text-md font-medium">Availability Settings</h3>
               </div>
 
-              <FormField
-                control={form.control}
-                name="availability_type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Availability Type</FormLabel>
-                    <FormControl>
-                      <Select
-                        value={field.value}
-                        onValueChange={field.onChange}
-                        disabled={teacherRole === 'POP' || teacherRole === 'Industry Professional'}
-                      >
-                        <SelectTrigger className="focus-visible:ring-primary">
-                          <SelectValue placeholder="Select availability type" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {AVAILABILITY_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </FormControl>
-                    <FormDescription>
-                      {teacherRole === 'POP' || teacherRole === 'Industry Professional' 
-                        ? 'Industry professionals and POPs must have limited availability' 
-                        : 'Select whether the teacher is available all week or on specific days only'}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <div className="pt-4 space-y-4">
+              <div className="space-y-4">
                 <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-primary" />
-                  <h3 className="text-md font-medium">Resignation Status</h3>
+                  <Calendar className="h-4 w-4 text-primary" />
+                  <h3 className="text-md font-medium">Availability Settings</h3>
                 </div>
-                
+
                 <FormField
                   control={form.control}
-                  name="resignation_status"
+                  name="availability_type"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Status</FormLabel>
+                      <FormLabel>Availability Type</FormLabel>
                       <FormControl>
                         <Select
                           value={field.value}
-                          onValueChange={(value) => {
-                            field.onChange(value);
-                            if (value === 'active') {
-                              form.setValue('resignation_date', null);
-                            }
-                          }}
+                          onValueChange={field.onChange}
+                          disabled={teacherRole === 'POP' || teacherRole === 'Industry Professional'}
                         >
                           <SelectTrigger className="focus-visible:ring-primary">
-                            <SelectValue placeholder="Select status" />
+                            <SelectValue placeholder="Select availability type" />
                           </SelectTrigger>
                           <SelectContent>
-                            {RESIGNATION_STATUS.map((type) => (
+                            {AVAILABILITY_TYPES.map((type) => (
                               <SelectItem key={type.value} value={type.value}>
                                 {type.label}
                               </SelectItem>
@@ -393,51 +372,95 @@ export default function TeacherForm({ teacher, onClose, onSuccess, disableDepart
                         </Select>
                       </FormControl>
                       <FormDescription>
-                        Current employment status of the teacher
+                        {teacherRole === 'POP' || teacherRole === 'Industry Professional'
+                          ? 'Industry professionals and POPs must have limited availability'
+                          : 'Select whether the teacher is available all week or on specific days only'}
                       </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
-                {form.watch('resignation_status') !== 'active' && (
+
+                <div className="pt-4 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-primary" />
+                    <h3 className="text-md font-medium">Resignation Status</h3>
+                  </div>
+
                   <FormField
                     control={form.control}
-                    name="resignation_date"
+                    name="resignation_status"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Resignation Date</FormLabel>
+                        <FormLabel>Status</FormLabel>
                         <FormControl>
-                          <Input
-                            type="date"
-                            {...field}
-                            value={field.value || ''}
-                            className="focus-visible:ring-primary"
-                          />
+                          <Select
+                            value={field.value}
+                            onValueChange={(value) => {
+                              field.onChange(value);
+                              if (value === 'active') {
+                                form.setValue('resignation_date', null);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="focus-visible:ring-primary">
+                              <SelectValue placeholder="Select status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {RESIGNATION_STATUS.map((type) => (
+                                <SelectItem key={type.value} value={type.value}>
+                                  {type.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         </FormControl>
                         <FormDescription>
-                          When the teacher will leave/left the position
+                          Current employment status of the teacher
                         </FormDescription>
                         <FormMessage />
                       </FormItem>
                     )}
                   />
-                )}
-              </div>
-            </div>
 
-            <DialogFooter>
-              <Button variant="outline" type="button" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={isUpdating}>
-                {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                Save Changes
-              </Button>
-            </DialogFooter>
-          </form>
-        </Form>
-    </ScrollArea>
+                  {form.watch('resignation_status') !== 'active' && (
+                    <FormField
+                      control={form.control}
+                      name="resignation_date"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Resignation Date</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="date"
+                              {...field}
+                              value={field.value || ''}
+                              className="focus-visible:ring-primary"
+                            />
+                          </FormControl>
+                          <FormDescription>
+                            When the teacher will leave/left the position
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter>
+                <Button variant="outline" type="button" onClick={onClose}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isUpdating}>
+                  {isUpdating && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </ScrollArea>
 
       </DialogContent>
     </Dialog>

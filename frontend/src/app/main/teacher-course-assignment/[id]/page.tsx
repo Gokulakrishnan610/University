@@ -58,7 +58,7 @@ export default function TeacherCourseAssignmentDetailsPage() {
   }
 
   return (
-    <div className="container mx-auto px-2">
+    <div className=" mx-auto px-2">
       <div className="grid md:grid-cols-3 gap-2">
         <Card className="md:col-span-2 shadow-sm hover:shadow transition-shadow">
           <CardHeader className="bg-muted/30">

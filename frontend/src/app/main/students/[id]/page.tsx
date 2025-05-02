@@ -1,12 +1,10 @@
-import React from 'react';
 import { useParams, useNavigate } from 'react-router';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Pencil, User, Book, GraduationCap, School, Mail, Phone, Calendar, Info, Award, UserCircle, Building, Hash } from 'lucide-react';
+import { Pencil, User, Book, GraduationCap, School, Mail, Phone, Calendar, Info, Award, UserCircle, Building, Hash } from 'lucide-react';
 import { useGetStudent } from '@/action/student';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
+import { Badge } from '@/components/ui/badge'
 
 const StudentDetails = () => {
   const { id } = useParams<{ id: string }>();
@@ -17,7 +15,7 @@ const StudentDetails = () => {
   const { data: student, isPending: isLoading } = useGetStudent(studentId);
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
+    <div className="p-6 mx-auto">
       {isLoading ? (
         <div className="space-y-6">
           <div className="flex justify-between items-center">
@@ -48,7 +46,7 @@ const StudentDetails = () => {
                   <Badge variant="outline" className="font-normal">
                     {student?.roll_no || 'No Roll Number'}
                   </Badge>
-                  <Badge 
+                  <Badge
                     variant={student?.student_type === 'Mgmt' ? 'default' : 'secondary'}
                     className="font-normal"
                   >
@@ -75,31 +73,31 @@ const StudentDetails = () => {
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="grid grid-cols-[20px_1fr] gap-3 items-start">
-                    <Mail className="h-5 w-5 text-muted-foreground mt-0.5" /> 
+                    <Mail className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Email Address</p>
                       <p className="font-medium break-all">{student?.student_detail?.email}</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-[20px_1fr] gap-3 items-start">
-                    <Phone className="h-5 w-5 text-muted-foreground mt-0.5" /> 
+                    <Phone className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Phone Number</p>
                       <p className="font-medium">{student?.student_detail?.phone_number}</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-[20px_1fr] gap-3 items-start">
-                    <User className="h-5 w-5 text-muted-foreground mt-0.5" /> 
+                    <User className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Gender</p>
                       <p className="font-medium">{student?.student_detail?.gender === 'M' ? 'Male' : 'Female'}</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-[20px_1fr] gap-3 items-start">
-                    <Building className="h-5 w-5 text-muted-foreground mt-0.5" /> 
+                    <Building className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Department</p>
                       <p className="font-medium">{student?.dept_detail?.dept_name || 'Not assigned'}</p>
@@ -119,15 +117,15 @@ const StudentDetails = () => {
               <CardContent className="p-6">
                 <div className="space-y-4">
                   <div className="grid grid-cols-[20px_1fr] gap-3 items-start">
-                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" /> 
+                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Batch</p>
                       <p className="font-medium">{student?.batch}</p>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-[20px_1fr] gap-3 items-start">
-                    <Hash className="h-5 w-5 text-muted-foreground mt-0.5" /> 
+                    <Hash className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Current Semester</p>
                       <div className="mt-1">
@@ -137,15 +135,15 @@ const StudentDetails = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-[20px_1fr] gap-3 items-start">
-                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" /> 
+                    <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Academic Year</p>
                       <p className="font-medium">{student?.year}</p>
                     </div>
                   </div>
-                  
+
                   <div className="mt-4 pt-4 border-t">
                     <div className="flex items-center justify-between">
                       <p className="text-sm font-medium">Current Progress</p>
@@ -154,8 +152,8 @@ const StudentDetails = () => {
                       </p>
                     </div>
                     <div className="w-full h-2 bg-muted rounded-full mt-2 overflow-hidden">
-                      <div 
-                        className="h-full bg-blue-500 rounded-full" 
+                      <div
+                        className="h-full bg-blue-500 rounded-full"
                         style={{ width: `${(student?.current_semester / 8) * 100}%` }}
                       />
                     </div>
@@ -174,7 +172,7 @@ const StudentDetails = () => {
               <CardContent className="p-6">
                 <div className="space-y-6">
                   <div className="grid grid-cols-[20px_1fr] gap-3 items-start">
-                    <Award className="h-5 w-5 text-muted-foreground mt-0.5" /> 
+                    <Award className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Degree Type</p>
                       <div className="mt-1">
@@ -184,9 +182,9 @@ const StudentDetails = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="grid grid-cols-[20px_1fr] gap-3 items-start">
-                    <Info className="h-5 w-5 text-muted-foreground mt-0.5" /> 
+                    <Info className="h-5 w-5 text-muted-foreground mt-0.5" />
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Admission Type</p>
                       <div className="mt-1">
@@ -196,14 +194,14 @@ const StudentDetails = () => {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="p-4 bg-muted/20 rounded-lg mt-4">
                     <h4 className="font-medium mb-1 flex items-center">
-                      <School className="h-4 w-4 mr-2 text-muted-foreground" /> 
+                      <School className="h-4 w-4 mr-2 text-muted-foreground" />
                       Academic Status
                     </h4>
                     <p className="text-sm text-muted-foreground">
-                      Currently enrolled as a {student?.degree_type === 'UG' ? 'Undergraduate' : 'Postgraduate'} student 
+                      Currently enrolled as a {student?.degree_type === 'UG' ? 'Undergraduate' : 'Postgraduate'} student
                       in {student?.dept_detail?.dept_name || 'their department'}, batch of {student?.batch}.
                     </p>
                   </div>

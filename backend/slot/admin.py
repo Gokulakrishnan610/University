@@ -1,63 +1,94 @@
 from django.contrib import admin
-from unfold.admin import ModelAdmin
 from .models import Slot, TeacherSlotAssignment
-from teacher.models import Teacher
-from django.core.exceptions import ValidationError
+from django.db.models import Count, Q
+from django.utils.html import format_html
 
 @admin.register(Slot)
-class SlotAdmin(ModelAdmin):
-    list_display = ['id','slot_name', 'slot_start_time', 'slot_end_time']
-    list_filter = list_display
-    search_fields = list_display
+class SlotAdmin(admin.ModelAdmin):
+    list_display = ('id','slot_name', 'slot_type', 'slot_time_range', 'total_assignments')
+    list_filter = ('slot_type',)
+    search_fields = ('slot_name',)
+    
+    def slot_time_range(self, obj):
+        return f"{obj.slot_start_time.strftime('%H:%M')} - {obj.slot_end_time.strftime('%H:%M')}"
+    slot_time_range.short_description = "Time Range"
+    
+    def total_assignments(self, obj):
+        return obj.teacher_assignments.count()
+    total_assignments.short_description = "Total Assignments"
+
+class DayOfWeekFilter(admin.SimpleListFilter):
+    title = 'Day of Week'
+    parameter_name = 'day_of_week'
+    
+    def lookups(self, request, model_admin):
+        return TeacherSlotAssignment.DAYS_OF_WEEK
+    
+    def queryset(self, request, queryset):
+        if self.value() is not None:
+            return queryset.filter(day_of_week=self.value())
+        return queryset
+
+class SlotTypeFilter(admin.SimpleListFilter):
+    title = 'Slot Type'
+    parameter_name = 'slot_type'
+    
+    def lookups(self, request, model_admin):
+        return Slot.SLOT_TYPES
+    
+    def queryset(self, request, queryset):
+        if self.value() is not None:
+            return queryset.filter(slot__slot_type=self.value())
+        return queryset
 
 @admin.register(TeacherSlotAssignment)
-class TeacherSlotAssignmentAdmin(ModelAdmin):
-    list_display = ['teacher', 'slot', 'day_of_week', 'get_day_name']
-    list_filter = ['day_of_week', 'slot', 'teacher']
-    search_fields = ['teacher__teacher_id__first_name', 'teacher__teacher_id__last_name', 'slot__slot_name']
-    autocomplete_fields = ['teacher', 'slot']
-    ordering = ['day_of_week', 'slot__slot_start_time']
-
-    def get_readonly_fields(self, request, obj=None):
-        """Make fields readonly when editing to prevent day/slot changes"""
-        if obj:  # Editing an existing object
-            return ['teacher', 'day_of_week']
-        return super().get_readonly_fields(request, obj)
+class TeacherSlotAssignmentAdmin(admin.ModelAdmin):
+    list_display = ('teacher', 'department', 'day_name', 'slot_info', 'assignment_status')
+    list_filter = (DayOfWeekFilter, SlotTypeFilter, 'teacher__dept_id')
+    search_fields = ('teacher__teacher_id__first_name', 'teacher__teacher_id__last_name', 'teacher__staff_code')
+    autocomplete_fields = ('teacher', 'slot')
     
-    def get_form(self, request, obj=None, **kwargs):
-        form = super().get_form(request, obj, **kwargs)
+    def department(self, obj):
+        if obj.teacher.dept_id:
+            return obj.teacher.dept_id.dept_name
+        return "-"
+    department.short_description = "Department"
+    
+    def day_name(self, obj):
+        return dict(TeacherSlotAssignment.DAYS_OF_WEEK)[obj.day_of_week]
+    day_name.short_description = "Day"
+    
+    def slot_info(self, obj):
+        return f"{obj.slot.slot_name} ({obj.slot.get_slot_type_display()}: {obj.slot.slot_start_time.strftime('%H:%M')} - {obj.slot.slot_end_time.strftime('%H:%M')})"
+    slot_info.short_description = "Slot"
+    
+    def assignment_status(self, obj):
+        # Check for issues
+        teacher = obj.teacher
+        dept_id = teacher.dept_id.id if teacher.dept_id else None
         
-        # Custom clean method for the form
-        def clean_form(form):
-            cleaned_data = super(form.__class__, form).clean()
+        if dept_id:
+            # Calculate department distribution
+            total_dept_teachers = teacher.dept_id.department_teachers.count()
+            day_assignments = TeacherSlotAssignment.objects.filter(
+                teacher__dept_id=dept_id,
+                day_of_week=obj.day_of_week,
+                slot__slot_type=obj.slot.slot_type
+            ).count()
             
-            # For new assignments, check day availability
-            if not obj and 'teacher' in cleaned_data and 'day_of_week' in cleaned_data:
-                if TeacherSlotAssignment.objects.filter(
-                    teacher=cleaned_data['teacher'],
-                    day_of_week=cleaned_data['day_of_week']
-                ).exists():
-                    raise ValidationError(
-                        "This teacher already has an assignment on the selected day"
-                    )
-            return cleaned_data
+            if day_assignments > int(total_dept_teachers * 0.33 + 0.5) and total_dept_teachers > 0:
+                return format_html('<span style="color: red; font-weight: bold">⚠️ Exceeds 33% Dept. Allocation</span>')
         
-        form.clean = clean_form
-        return form
-
-    def get_day_name(self, obj):
-        return dict(TeacherSlotAssignment.DAYS_OF_WEEK).get(obj.day_of_week, '')
-    get_day_name.short_description = 'Day'
-    get_day_name.admin_order_field = 'day_of_week'
-
-    def formfield_for_foreignkey(self, db_field, request, **kwargs):
-        if db_field.name == 'teacher':
-            kwargs['queryset'] = Teacher.objects.filter(resignation_status='active').select_related(
-                'teacher_id', 'dept_id'
-            ).order_by('teacher_id__last_name')
-        return super().formfield_for_foreignkey(db_field, request, **kwargs)
-
+        # Check if teacher exceeds 5 days
+        days_assigned = TeacherSlotAssignment.objects.filter(
+            teacher=teacher
+        ).values('day_of_week').distinct().count()
+        
+        if days_assigned > 5:
+            return format_html('<span style="color: red; font-weight: bold">⚠️ Exceeds 5 days limit</span>')
+            
+        return format_html('<span style="color: green">✓ Valid</span>')
+    assignment_status.short_description = "Status"
+    
     def get_queryset(self, request):
-        return super().get_queryset(request).select_related(
-            'teacher', 'teacher__teacher_id', 'teacher__dept_id', 'slot'
-        )
+        return super().get_queryset(request).select_related('teacher', 'teacher__dept_id', 'slot')
