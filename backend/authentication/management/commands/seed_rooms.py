@@ -3,6 +3,8 @@ from django.core.management.base import BaseCommand
 from rooms.models import Room
 from department.models import Department
 from django.db import transaction
+import os
+from django.conf import settings
 
 # Mapping from CSV to Room model fields
 type_map = {
@@ -23,7 +25,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **kwargs):
-        file_path = '/csv/updated_rooms.csv'  
+        file_path = os.path.join(settings.BASE_DIR, 'csv', 'updated_rooms.csv') 
         try:
             with open(file_path, newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)

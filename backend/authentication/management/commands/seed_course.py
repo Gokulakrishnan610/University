@@ -5,6 +5,8 @@ from pathlib import Path
 from courseMaster.models import CourseMaster
 from course.models import Course
 from department.models import Department
+import os
+from django.conf import settings
 
 # Mappings for course type
 COURSE_TYPE_MAPPING = {
@@ -32,7 +34,7 @@ class Command(BaseCommand):
             Department.objects.get_or_create(dept_name=name)
 
         # Path to your CSV file
-        csv_path = Path('/csv/updated_courses.csv')
+        csv_path = os.path.join(settings.BASE_DIR, 'csv', 'updated_courses.csv') 
 
         # Set to track skipped departments
         skipped_departments = set()
