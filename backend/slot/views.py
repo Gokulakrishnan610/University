@@ -462,20 +462,12 @@ class InitializeDefaultSlotsView(APIView):
         existing_slots = []
         
         for slot_data in default_slots:
-            slot, created = Slot.objects.get_or_create(
-                slot_type=slot_data['slot_type'],
-                defaults=slot_data
-            )
+            # Check if slots with this type already exist
+            existing = Slot.objects.filter(slot_type=slot_data['slot_type']).order_by('id')
             
-            if created:
-                created_slots.append({
-                    'id': slot.id,
-                    'slot_name': slot.slot_name,
-                    'slot_type': slot.slot_type,
-                    'slot_start_time': slot.slot_start_time,
-                    'slot_end_time': slot.slot_end_time
-                })
-            else:
+            if existing.exists():
+                # If multiple slots exist with this type, use the first one
+                slot = existing.first()
                 existing_slots.append({
                     'id': slot.id,
                     'slot_name': slot.slot_name,
@@ -483,6 +475,25 @@ class InitializeDefaultSlotsView(APIView):
                     'slot_start_time': slot.slot_start_time,
                     'slot_end_time': slot.slot_end_time
                 })
+            else:
+                # Create new slot if none exists
+                slot = Slot.objects.create(**slot_data)
+                created_slots.append({
+                    'id': slot.id,
+                    'slot_name': slot.slot_name,
+                    'slot_type': slot.slot_type,
+                    'slot_start_time': slot.slot_start_time,
+                    'slot_end_time': slot.slot_end_time
+                })
+        
+        # Handle duplicate slots - clean up extras if needed
+        for slot_type in ['A', 'B', 'C']:
+            duplicates = Slot.objects.filter(slot_type=slot_type)[1:]  # Get all but first
+            if duplicates.exists():
+                # Check if any of these duplicates are referenced by assignments
+                for duplicate in duplicates:
+                    if not duplicate.teacher_assignments.exists():
+                        duplicate.delete()
         
         return Response({
             'created_slots': created_slots,
