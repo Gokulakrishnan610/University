@@ -10,7 +10,7 @@ class Command(BaseCommand):
     help = 'Import teachers from a CSV file.'
 
     def handle(self, *args, **options):
-        csv_path = '/Users/kirthika/Desktop/uapp/backend/csv/updated_data/updated_teachers.csv'
+        csv_path = '/csv/updated_data/updated_teachers.csv'
 
         try:
             with open(csv_path, newline='', encoding='utf-8') as csvfile:

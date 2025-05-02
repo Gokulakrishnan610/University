@@ -32,7 +32,7 @@ class Command(BaseCommand):
             Department.objects.get_or_create(dept_name=name)
 
         # Path to your CSV file
-        csv_path = Path('/Users/kirthika/Desktop/uniapp/university-app/backend/csv/updated_courses.csv')
+        csv_path = Path('/csv/updated_courses.csv')
 
         # Set to track skipped departments
         skipped_departments = set()

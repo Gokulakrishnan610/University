@@ -23,7 +23,7 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **kwargs):
-        file_path = '/Users/kirthika/Desktop/uniapp/university-app/backend/csv/updated_rooms.csv'  # ✅ Update to your absolute CSV path
+        file_path = '/csv/updated_rooms.csv'  
         try:
             with open(file_path, newline='', encoding='utf-8') as csvfile:
                 reader = csv.DictReader(csvfile)
