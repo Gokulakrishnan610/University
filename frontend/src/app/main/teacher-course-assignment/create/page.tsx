@@ -212,21 +212,16 @@ export default function CreateTeacherCourseAssignment() {
         });
     }, [teacherAvailability]);
 
-    // Calculate required teachers based on student count (1 teacher per 70 students, max 5)
-    // One teacher can handle up to 140 students (twice standard load) if needed
+    // Calculate required teachers based on student count (1 teacher per 70 students)
     const calculateRequiredTeachers = (studentCount: number) => {
-        // For up to 140 students, 1 teacher is adequate
-        // For 70 students, 1 teacher is required
-        // For 140 students, either 1 or 2 teachers is acceptable
-        if (studentCount <= 140) {
-            return 1; // One teacher can handle up to 140 students
+        // For up to 70 students, 1 teacher is required
+        // For 140 students, 2 teachers are required
+        if (studentCount <= 70) {
+            return 1; // One teacher can handle up to 70 students
         }
-        // For additional students beyond 140, add teachers at normal capacity (70 per teacher)
-        const additionalStudents = studentCount - 140;
-        const additionalTeachers = Math.ceil(additionalStudents / 70);
-        const totalTeachers = 1 + additionalTeachers;
-
-        return Math.min(totalTeachers, 5); // Cap at 5 teachers maximum
+        
+        // Each 70 students (or fraction) requires one teacher
+        return Math.ceil(studentCount / 70);
     };
 
     // Get course assignment stats
@@ -712,7 +707,7 @@ export default function CreateTeacherCourseAssignment() {
                                                                 <span className="text-red-600 font-medium">Inadequate</span>} teacher staffing for this course.
                                                             <br />
                                                             {calculateRequiredTeachers(104) === 1 ? (
-                                                                <span className="text-xs">This course has 104 students, which is within the capacity of a single teacher (up to 140 students).</span>
+                                                                <span className="text-xs">This course has 104 students, which is within the capacity of a single teacher (up to 70 students).</span>
                                                             ) : (
                                                                 <span className="text-xs">This course has 104 students, requiring {calculateRequiredTeachers(104)} teachers at standard capacity.</span>
                                                             )}

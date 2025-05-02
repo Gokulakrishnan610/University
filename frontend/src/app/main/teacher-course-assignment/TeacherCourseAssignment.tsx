@@ -201,14 +201,12 @@ export function TeacherCourseAssignment() {
     };
 
     const calculateRequiredTeachers = (studentCount: number) => {
-        if (studentCount <= 140) {
-            return 1; // One teacher can handle up to 140 students
+        if (studentCount <= 70) {
+            return 1; // One teacher can handle up to 70 students
         }
-        const additionalStudents = studentCount - 140;
-        const additionalTeachers = Math.ceil(additionalStudents / 70);
-        const totalTeachers = 1 + additionalTeachers;
-
-        return Math.min(totalTeachers, 5); // Cap at 5 teachers maximum
+        
+        // Each 70 students (or fraction) requires one teacher
+        return Math.ceil(studentCount / 70);
     };
 
         const handleCourseSelect = (courseId: number) => {
@@ -564,7 +562,7 @@ export function TeacherCourseAssignment() {
                                                     <span className="text-red-600 font-medium">Inadequate</span>} teacher staffing for this course.
                                                 <br />
                                                 {calculateRequiredTeachers(104) === 1 ? (
-                                                    <span className="text-xs">This course has 104 students, which is within the capacity of a single teacher (up to 140 students).</span>
+                                                    <span className="text-xs">This course has 104 students, which is within the capacity of a single teacher (up to 70 students).</span>
                                                 ) : (
                                                     <span className="text-xs">This course has 104 students, requiring {calculateRequiredTeachers(104)} teachers based on workload capacity.</span>
                                                 )}

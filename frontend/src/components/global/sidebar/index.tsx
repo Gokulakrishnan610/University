@@ -149,10 +149,10 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </Avatar>
                 <div className="flex flex-col">
                   <p className="text-sm font-medium leading-none">
-                    {`${profile.user.first_name} ${profile.user.last_name}`}
+                    {`${profile.user.first_name} ${profile.user.last_name.length > 15 ? profile.user.last_name.slice(0, 15) + "..." : profile.user.last_name}`}
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    {profile.user.email}
+                    {profile.user.email.length > 22 ? profile.user.email.slice(0, 22) + "..." : profile.user.email}
                   </p>
                 </div>
               </div>
