@@ -22,6 +22,14 @@ export interface Student {
   degree_type: string;
 }
 
+export interface StudentStats {
+  total: number;
+  by_year: { year: number; count: number }[];
+  by_semester: { current_semester: number; count: number }[];
+  by_student_type: { student_type: string; count: number }[];
+  by_degree_type: { degree_type: string; count: number }[];
+}
+
 export interface CreateStudentRequest {
   email: string;
   first_name: string;
@@ -40,22 +48,50 @@ export interface CreateStudentRequest {
 export type UpdateStudentRequest = Partial<CreateStudentRequest>;
 
 // Get all students
-export const useGetStudents = (page: number = 1, pageSize: number = 10, searchQuery: string = '') => {
+export const useGetStudents = (
+  page: number = 1,
+  pageSize: number = 10,
+  searchQuery: string = '',
+  year?: number,
+  semester?: number,
+  studentType?: string
+) => {
   return useQueryData(
-    ['students', page, pageSize, searchQuery],
+    ['students', page, pageSize, searchQuery, year, semester, studentType],
     async () => {
       try {
         const response = await api.get('/api/students/', {
           params: {
             page,
             page_size: pageSize,
-            search: searchQuery || undefined
+            search: searchQuery || undefined,
+            year: year || undefined,
+            current_semester: semester || undefined,
+            student_type: studentType || undefined
           }
         });
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
           throw new Error(error.response.data.message || 'Failed to fetch students');
+        }
+        throw error;
+      }
+    }
+  );
+};
+
+// Get student statistics
+export const useGetStudentStats = () => {
+  return useQueryData(
+    ['studentStats'],
+    async () => {
+      try {
+        const response = await api.get('/api/students/stats/');
+        return response.data as StudentStats;
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          throw new Error(error.response.data.message || 'Failed to fetch student statistics');
         }
         throw error;
       }

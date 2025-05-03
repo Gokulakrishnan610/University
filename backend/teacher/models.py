@@ -4,12 +4,19 @@ from django.core.exceptions import ValidationError
 class Teacher(models.Model):
     TEACHER_ROLES = [
         ('Professor', 'Professor'),
+        ('Associate Professor', 'Associate Professor'),
+        ('Assistant Professor', 'Assistant Professor'),
         ('Asst. Professor', 'Asst. Professor'),
-        ('HOD', 'HOD'),
+        ('HOD', 'Head of Department'),
         ('DC', 'DC'),
         ('POP', 'Professor of Practice'),
-        ('Industry Professional', 'Industry Professional')
-                ]
+        ('Industry Professional', 'Industry Professional'),
+        ('Dean', 'Dean'),
+        ('Admin', 'Admin'),
+        ('Vice Principal', 'Vice Principal'),
+        ('Principal', 'Principal'),
+        ('Physical Director', 'Physical Director'),
+    ]
 
     AVAILABILITY_TYPE = [
         ('regular', 'Regular (All Working Days)'),
@@ -55,11 +62,23 @@ class Teacher(models.Model):
                     {'teacher_role': 'There is already an HOD for this department.'}
                 )
         
+        # Only allow one Dean, Principal, Vice Principal, and Physical Director per institution
+        unique_roles = ['Dean', 'Principal', 'Vice Principal', 'Physical Director']
+        if self.teacher_role in unique_roles:
+            existing_role = Teacher.objects.filter(
+                teacher_role=self.teacher_role
+            ).exclude(pk=self.pk if self.pk else None)
+            
+            if existing_role.exists():
+                role_display = dict(Teacher.TEACHER_ROLES).get(self.teacher_role, self.teacher_role)
+                raise ValidationError(
+                    {'teacher_role': f'There is already a {role_display} in the institution.'}
+                )
+        
         # Automatically set is_industry_professional and availability flags for POP/industry roles
         if self.teacher_role in ['POP', 'Industry Professional']:
             self.is_industry_professional = True
             self.availability_type = 'limited'
-
         
         return super().clean()
 

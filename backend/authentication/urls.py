@@ -7,5 +7,5 @@ urlpatterns = [
     path("profile/", ProfileAPIView.as_view(), name="profile"),
     path('forgot_password/', ForgotPasswordAPI.as_view(), name='forget-password'),
     path('logout/', LogoutAPIView.as_view(), name="logout"),
+    path('csrf_token/', CsrfTokenAPIView.as_view(), name="csrf-token"),
 ]
-

@@ -4,6 +4,8 @@ from import_export.admin import ImportExportModelAdmin
 from import_export import resources
 from .models import Teacher, TeacherAvailability
 from unfold.admin import StackedInline
+from django.db.models import Q
+from django.contrib import messages
 
 class TeacherResource(resources.ModelResource):
     class Meta:
@@ -66,8 +68,22 @@ class TeacherAdmin(ImportExportModelAdmin, ModelAdmin):
     def save_model(self, request, obj, form, change):
         """Additional validation before saving"""
         # Make sure industry professionals have limited availability
-        if obj.is_industry_professional:
+        if obj.is_industry_professional or obj.teacher_role in ['POP', 'Industry Professional']:
             obj.availability_type = 'limited'
+            obj.is_industry_professional = True
+            
+        # Check for unique roles
+        unique_roles = ['Dean', 'Principal', 'Vice Principal', 'Physical Director']
+        if obj.teacher_role in unique_roles:
+            existing = Teacher.objects.filter(teacher_role=obj.teacher_role).exclude(pk=obj.pk if obj.pk else None)
+            if existing.exists():
+                role_display = dict(Teacher.TEACHER_ROLES).get(obj.teacher_role, obj.teacher_role)
+                self.message_user(
+                    request, 
+                    f"Warning: There is already a {role_display} in the institution.",
+                    level=messages.WARNING
+                )
+        
         super().save_model(request, obj, form, change)
 
 

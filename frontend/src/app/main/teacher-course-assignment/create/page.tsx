@@ -25,7 +25,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
-import { 
+import {
     Select,
     SelectContent,
     SelectItem,
@@ -35,10 +35,15 @@ import {
 
 // Define the Zod schema for teacher course assignment
 const teacherCourseFormSchema = z.object({
-    teacher_id: z.string().min(1, "Teacher is required"),
-    course_id: z.string().min(1, "Course is required"),
-    preferred_availability_slots: z.array(z.string()).optional(),
-    is_assistant: z.boolean().default(false),
+  teacher_id: z.string().min(1, "Teacher is required"),
+  assignments: z.array(
+    z.object({
+      course_id: z.string().min(1, "Course is required"),
+      no_of_students: z.number().min(1, "Number of students is required"),
+      preferred_availability_slots: z.array(z.string()).optional(),
+      is_assistant: z.boolean().default(false),
+    })
+  ).min(1, "At least one course assignment is required"),
 });
 
 type TeacherCourseFormValues = z.infer<typeof teacherCourseFormSchema>;
@@ -53,21 +58,52 @@ export default function CreateTeacherCourseAssignment() {
     const { data: teachers = [], isPending: teachersLoading } = useGetTeachers();
     const { data: courses = [], isPending: coursesLoading } = useGetCourses();
     const { data: assignments = [], isPending: assignmentsLoading } = useGetTeacherCourseAssignments();
-    
+
     // Fetch teacher availability if a teacher is selected
-    const { data: teacherAvailability = [], isPending: availabilityLoading } = 
+    const { data: teacherAvailability = [], isPending: availabilityLoading } =
         useGetTeacherAvailability(selectedTeacher ? parseInt(selectedTeacher) : 0);
-    
+
+    const STUDENT_COUNT_OPTIONS = [
+        { value: 70, label: "70 students" },
+        { value: 140, label: "140 students" },
+        { value: 210, label: "210 students" },
+        { value: 280, label: "280 students" }
+    ];
+
     // Setup form with Zod  
     const form = useForm<TeacherCourseFormValues>({
         resolver: zodResolver(teacherCourseFormSchema),
         defaultValues: {
-            teacher_id: "",
+          teacher_id: "",
+          assignments: [{
             course_id: "",
+            no_of_students: 70,
             preferred_availability_slots: [],
             is_assistant: false,
+          }],
         },
     });
+
+    const addAssignmentCard = () => {
+        form.setValue("assignments", [
+          ...form.watch("assignments"),
+          {
+            course_id: "",
+            no_of_students: 70,
+            preferred_availability_slots: [],
+            is_assistant: false,
+          }
+        ]);
+      };
+
+    const removeAssignmentCard = (index: number) => {
+        const assignments = form.watch("assignments");
+        if (assignments.length <= 1) return; // Don't remove the last one
+        
+        const newAssignments = [...assignments];
+        newAssignments.splice(index, 1);
+        form.setValue("assignments", newAssignments);
+      };
 
     // Create assignment mutation
     const createAssignment = useCreateTeacherCourseAssignment(() => {
@@ -79,7 +115,7 @@ export default function CreateTeacherCourseAssignment() {
     const teacherOptions: ComboboxOption[] = useMemo(() => {
         return teachers.map((teacher: Teacher) => ({
             value: teacher.id.toString(),
-            label: teacher.is_placeholder 
+            label: teacher.is_placeholder
                 ? `[Placeholder] ${teacher.placeholder_description || 'Unnamed'} (${teacher.staff_code || 'No Code'} - ${teacher.dept_id?.dept_name || 'No Department'})`
                 : `${teacher.teacher_id?.first_name} ${teacher.teacher_id?.last_name} (${teacher.staff_code} - ${teacher.dept_id?.dept_name || 'No Department'})${teacher.is_industry_professional ? ' 🏢' : ''}`
         }));
@@ -94,9 +130,9 @@ export default function CreateTeacherCourseAssignment() {
     // Check if selected teacher is a POP/industry professional
     const isPOPOrIndustry = useMemo(() => {
         if (!selectedTeacherData) return false;
-        return selectedTeacherData.is_industry_professional || 
-               selectedTeacherData.teacher_role === 'POP' || 
-               selectedTeacherData.teacher_role === 'Industry Professional';
+        return selectedTeacherData.is_industry_professional ||
+            selectedTeacherData.teacher_role === 'POP' ||
+            selectedTeacherData.teacher_role === 'Industry Professional';
     }, [selectedTeacherData]);
 
     // Check if teacher has limited availability
@@ -176,6 +212,21 @@ export default function CreateTeacherCourseAssignment() {
         });
     }, [teacherAvailability]);
 
+    // Calculate required teachers based on student count (1 teacher per 70 students, max 5)
+    // One teacher can handle up to 140 students (twice standard load) if needed
+    const calculateRequiredTeachers = (studentCount: number) => {
+        // First teacher can handle up to 140 students (twice regular load)
+        if (studentCount <= 140) {
+            return 1;
+        }
+        // For additional students beyond 140, add teachers at normal capacity (70 per teacher)
+        const additionalStudents = studentCount - 140;
+        const additionalTeachers = Math.ceil(additionalStudents / 70);
+        const totalTeachers = 1 + additionalTeachers;
+
+        return Math.min(totalTeachers, 5); // Cap at 5 teachers maximum
+    };
+
     // Get course assignment stats
     const { data: courseStats, isPending: courseStatsLoading } = useGetCourseAssignmentStats(
         selectedCourse ? parseInt(selectedCourse) : undefined
@@ -193,104 +244,108 @@ export default function CreateTeacherCourseAssignment() {
             setShowAssistantOption(true);
         } else {
             setShowAssistantOption(false);
-            form.setValue("is_assistant", false);
+            // Update all assignments to set is_assistant to false
+            const assignments = form.getValues("assignments");
+            const updatedAssignments = assignments.map(assignment => ({
+            ...assignment,
+            is_assistant: false
+            }));
+            form.setValue("assignments", updatedAssignments);
         }
     }, [selectedCourseData, form]);
 
     const onSubmit = (data: TeacherCourseFormValues) => {
-        const selectedCourseData = courses.find(c => c.id.toString() === data.course_id);
-        if (!selectedCourseData) return;
-
-        // Prevent assignment if teacher has resigned
-        if (isTeacherResigned) {
-            toast.error('Cannot assign a resigned teacher', {
-                description: 'This teacher has already resigned and cannot be assigned to new courses.'
-            });
+        // Validate all assignments before submitting
+        const errors: string[] = [];
+        
+        data.assignments.forEach((assignment, index) => {
+          const selectedCourseData = courses.find(c => c.id.toString() === assignment.course_id);
+          if (!selectedCourseData) {
+            errors.push(`Assignment ${index + 1}: Invalid course selected`);
             return;
+          }
+      
+          // Check teacher workload for each assignment
+          if (teacherWorkload && (teacherWorkload.availableHours < selectedCourseData.credits * data.assignments.length)) {
+            errors.push(`Teacher does not have enough available hours for all assignments`);
+          }
+      
+          // Check for duplicate course assignments
+          const duplicate = data.assignments.find((a, i) => 
+            a.course_id === assignment.course_id && i !== index
+          );
+          if (duplicate) {
+            errors.push(`Course ${selectedCourseData.course_detail?.course_name} is assigned multiple times`);
+          }
+        });
+      
+        if (errors.length > 0) {
+          toast.error('Validation errors', {
+            description: errors.join('\n')
+          });
+          return;
         }
-
-        // Show warning if teacher is in the process of resigning
-        if (isTeacherResigning) {
-            if (!confirm('This teacher is in the process of resigning. Are you sure you want to assign them to this course?')) {
-                return;
-            }
-        }
-
-        if (teacherWorkload && (teacherWorkload.availableHours < selectedCourseData.credits)) {
-            toast.error('Teacher does not have enough available hours for this course');
-            return;
-        }
-
-        // Check if this teacher is already assigned to this course
-        const existingAssignment = assignments.find(a => 
-            a.teacher_detail?.id?.toString() === data.teacher_id && 
-            a.course_detail?.id?.toString() === data.course_id
-        );
-
-        if (existingAssignment) {
-            toast.error('This teacher is already assigned to this course', {
-                description: 'A teacher cannot be assigned to the same course multiple times'
-            });
-            return;
-        }
-
-        // Error for industry professional/POP teacher without ANY defined availability slots
-        if (isPOPOrIndustry && hasLimitedAvailability && sortedAvailability.length === 0) {
-            toast.error('Industry professional/POP teachers must have defined availability slots', {
-                description: 'Please define availability slots for this teacher before creating an assignment'
-            });
-            return;
-        }
-
-        // Warning for POP/industry professional without selected availability slots
-        if (isPOPOrIndustry && hasLimitedAvailability && sortedAvailability.length > 0 && 
-            (!data.preferred_availability_slots || data.preferred_availability_slots.length === 0)) {
-            if (!confirm('This industry professional has availability slots defined but none selected. Continue anyway?')) {
-                return;
-            }
-        }
-
-        // Convert preferred_availability_slots to array of numbers for the API
-        const preferred_slots = data.preferred_availability_slots?.map(id => parseInt(id)) || [];
-
-        createAssignment.mutate({
+      
+        // Create all assignments
+        const promises = data.assignments.map(assignment => {
+          const selectedCourseData = courses.find(c => c.id.toString() === assignment.course_id);
+          if (!selectedCourseData) return Promise.reject("Invalid course");
+      
+          const preferred_slots = assignment.preferred_availability_slots?.map(id => parseInt(id)) || [];
+      
+          return createAssignment.mutateAsync({
             teacher_id: parseInt(data.teacher_id),
-            course_id: parseInt(data.course_id),
-            semester: 1, // Default value
-            academic_year: new Date().getFullYear(), // Default current year
-            student_count: 0, // Default value
-            is_assistant: data.is_assistant,
-            // @ts-ignore - API accepts this parameter but type definition hasn't been updated
+            course_id: parseInt(assignment.course_id),
+            semester: 1,
+            academic_year: new Date().getFullYear(),
+            student_count: assignment.no_of_students,
+            is_assistant: assignment.is_assistant,
             preferred_availability_slots: preferred_slots
-        }, {
-            onError: (error: any) => {
-                const errorMessage = error.response?.data?.non_field_errors?.[0] || 
-                                    error.response?.data?.detail || 
-                                    'An error occurred';
-                
-                toast.error('Failed to create assignment', {
-                    description: errorMessage
-                });
-            }
+          });
+        });
+      
+        Promise.all(promises)
+          .then(() => {
+            toast.success('All assignments created successfully');
+            navigate('/teacher-course-assignment');
+          })
+          .catch(error => {
+            toast.error('Failed to create some assignments', {
+              description: error.message || 'An error occurred'
+            });
         });
     };
-    
+
     // Update the selected s and course when form values change
     const handleTeacherChange = (value: string) => {
         setSelectedTeacher(value);
         form.setValue("teacher_id", value);
-        // Clear course selection when teacher changes
-        if (selectedCourse) {
-            setSelectedCourse('');
-            form.setValue("course_id", '');
-        }
-        // Clear preferred availability slots
-        form.setValue("preferred_availability_slots", []);
-    };
+        
+        // Clear all course selections when teacher changes
+        const assignments = form.getValues("assignments");
+        const clearedAssignments = assignments.map(assignment => ({
+          ...assignment,
+          course_id: "",
+          preferred_availability_slots: [],
+          is_assistant: false
+        }));
+        form.setValue("assignments", clearedAssignments);
+        
+        // Reset the selected course state
+        setSelectedCourse('');
+        setShowAssistantOption(false);
+      };
 
-    const handleCourseChange = (value: string) => {
-        setSelectedCourse(value);
-        form.setValue("course_id", value);
+    const handleCourseChange = (value: string, index: number) => {
+        const assignments = form.watch("assignments");
+        const newAssignments = [...assignments];
+        newAssignments[index].course_id = value;
+        form.setValue("assignments", newAssignments);
+        
+        // Update the selected course for stats display (show stats for the first course)
+        if (index === 0) {
+          setSelectedCourse(value);
+        }
     };
 
     return (
@@ -298,7 +353,7 @@ export default function CreateTeacherCourseAssignment() {
             <div className="flex items-center space-x-2 mb-6">
                 <h1 className="text-xl font-bold">Create New Course Assignment</h1>
             </div>
-            
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Teacher Workload Information */}
                 <Card>
@@ -329,7 +384,7 @@ export default function CreateTeacherCourseAssignment() {
                                 </AlertDescription>
                             </Alert>
                         )}
-                        
+
                         {isTeacherResigning && (
                             <Alert className="bg-amber-50 border-amber-300">
                                 <AlertTriangle className="h-4 w-4 text-amber-600" />
@@ -392,7 +447,7 @@ export default function CreateTeacherCourseAssignment() {
                                     <Calendar className="h-4 w-4 text-primary" />
                                     <h4 className="font-medium">Availability Schedule</h4>
                                 </div>
-                                
+
                                 {availabilityLoading ? (
                                     <div className="flex justify-center my-4">
                                         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -443,116 +498,170 @@ export default function CreateTeacherCourseAssignment() {
                 <div className="space-y-8">
                     <Card>
                         <CardHeader>
-                            <CardTitle>Create Assignment</CardTitle>
-                            <CardDescription>Assign the selected teacher to a course</CardDescription>
+                            <CardTitle>Create Assignments</CardTitle>
+                            <CardDescription>Assign the selected teacher to one or more courses</CardDescription>
                         </CardHeader>
                         <CardContent>
                             <Form {...form}>
-                                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                                {form.watch("assignments").map((assignment, index) => (
+                                <div key={index} className="space-y-4 border p-4 rounded-lg mb-4 relative">
+                                    {index > 0 && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="absolute top-2 right-2 text-red-500 hover:text-red-600"
+                                        onClick={() => removeAssignmentCard(index)}
+                                    >
+                                        Remove
+                                    </Button>
+                                    )}
+                                    
                                     <FormField
-                                        control={form.control}
-                                        name="course_id"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Course</FormLabel>
-                                                <FormControl>
-                                                    <Combobox
-                                                        options={courseOptions}
-                                                        value={field.value}
-                                                        onValueChange={handleCourseChange}
-                                                        placeholder={
-                                                            !selectedTeacher
-                                                                ? "Select a teacher first"
-                                                                : coursesLoading
-                                                                ? "Loading courses..."
-                                                                : courseOptions.length === 0
-                                                                ? "No available courses"
-                                                                : "Select a course"
-                                                        }
-                                                        disabled={!selectedTeacher || coursesLoading || courseOptions.length === 0}
-                                                        emptyMessage="No courses found for this teacher's department"
-                                                    />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
+                                    control={form.control}
+                                    name={`assignments.${index}.course_id`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Course {index + 1}</FormLabel>
+                                        <FormControl>
+                                            <Combobox
+                                            options={courseOptions}
+                                            value={field.value}
+                                            onValueChange={(value) => handleCourseChange(value, index)}
+                                            placeholder={
+                                                !selectedTeacher
+                                                ? "Select a teacher first"
+                                                : coursesLoading
+                                                    ? "Loading courses..."
+                                                    : courseOptions.length === 0
+                                                    ? "No available courses"
+                                                    : "Select a course"
+                                            }
+                                            disabled={!selectedTeacher || coursesLoading || courseOptions.length === 0}
+                                            emptyMessage="No courses found for this teacher's department"
+                                            />
+                                        </FormControl>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
+                                    />
+
+                                    <FormField
+                                    control={form.control}
+                                    name={`assignments.${index}.no_of_students`}
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Number of Students</FormLabel>
+                                        <Select 
+                                            onValueChange={(value) => field.onChange(parseInt(value))}
+                                            value={field.value?.toString()}
+                                        >
+                                            <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select number of students" />
+                                            </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                            {STUDENT_COUNT_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value.toString()}>
+                                                {option.label}
+                                                </SelectItem>
+                                            ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
                                     />
 
                                     {/* Show assistant teacher option when course needs assistant */}
                                     {showAssistantOption && (
-                                        <FormField
-                                            control={form.control}
-                                            name="is_assistant"
-                                            render={({ field }) => (
-                                                <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
-                                                    <FormControl>
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={field.value}
-                                                            onChange={field.onChange}
-                                                            className="rounded text-primary"
-                                                        />
-                                                    </FormControl>
-                                                    <div className="space-y-1 leading-none">
-                                                        <FormLabel>
-                                                            Assign as Assistant Teacher
-                                                        </FormLabel>
-                                                        <p className="text-sm text-muted-foreground">
-                                                            This course requires or allows assistant teachers
-                                                        </p>
-                                                    </div>
-                                                </FormItem>
-                                            )}
-                                        />
+                                    <FormField
+                                        control={form.control}
+                                        name={`assignments.${index}.is_assistant`}
+                                        render={({ field }) => (
+                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-4">
+                                            <FormControl>
+                                            <input
+                                                type="checkbox"
+                                                checked={field.value}
+                                                onChange={field.onChange}
+                                                className="rounded text-primary"
+                                            />
+                                            </FormControl>
+                                            <div className="space-y-1 leading-none">
+                                            <FormLabel>
+                                                Assign as Assistant Teacher
+                                            </FormLabel>
+                                            <p className="text-sm text-muted-foreground">
+                                                This course requires or allows assistant teachers
+                                            </p>
+                                            </div>
+                                        </FormItem>
+                                        )}
+                                    />
                                     )}
 
                                     {/* Availability slots selection for industry professionals */}
                                     {isPOPOrIndustry && hasLimitedAvailability && sortedAvailability.length > 0 && (
-                                        <FormField
-                                            control={form.control}
-                                            name="preferred_availability_slots"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Preferred Availability Slots</FormLabel>
-                                                    <div className="space-y-2">
-                                                        {sortedAvailability.map((slot) => (
-                                                            <div key={slot.id} className="flex items-center space-x-2">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    id={`slot-${slot.id}`}
-                                                                    value={slot.id}
-                                                                    checked={field.value?.includes(slot.id.toString())}
-                                                                    onChange={(e) => {
-                                                                        const value = e.target.value;
-                                                                        const currentValues = field.value || [];
-                                                                        const newValues = e.target.checked
-                                                                            ? [...currentValues, value]
-                                                                            : currentValues.filter(v => v !== value);
-                                                                        field.onChange(newValues);
-                                                                    }}
-                                                                    className="rounded text-primary"
-                                                                />
-                                                                <label htmlFor={`slot-${slot.id}`} className="text-sm">
-                                                                    {slot.day_name} ({slot.start_time} - {slot.end_time})
-                                                                </label>
-                                                            </div>
-                                                        ))}
-                                                    </div>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
+                                    <FormField
+                                        control={form.control}
+                                        name={`assignments.${index}.preferred_availability_slots`}
+                                        render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Preferred Availability Slots</FormLabel>
+                                            <div className="space-y-2">
+                                            {sortedAvailability.map((slot) => (
+                                                <div key={slot.id} className="flex items-center space-x-2">
+                                                <input
+                                                    type="checkbox"
+                                                    id={`slot-${slot.id}-${index}`}
+                                                    value={slot.id}
+                                                    checked={field.value?.includes(slot.id.toString())}
+                                                    onChange={(e) => {
+                                                    const value = e.target.value;
+                                                    const currentValues = field.value || [];
+                                                    const newValues = e.target.checked
+                                                        ? [...currentValues, value]
+                                                        : currentValues.filter(v => v !== value);
+                                                    field.onChange(newValues);
+                                                    }}
+                                                    className="rounded text-primary"
+                                                />
+                                                <label htmlFor={`slot-${slot.id}-${index}`} className="text-sm">
+                                                    {slot.day_name} ({slot.start_time} - {slot.end_time})
+                                                </label>
+                                                </div>
+                                            ))}
+                                            </div>
+                                            <FormMessage />
+                                        </FormItem>
+                                        )}
+                                    />
                                     )}
+                                </div>
+                                ))}
 
-                                    <Button
-                                        type="submit"
-                                        disabled={!selectedTeacher || !selectedCourse || createAssignment.isPending}
-                                        className="w-full mt-4"
-                                    >
-                                        {createAssignment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                        Create Assignment
-                                    </Button>
-                                </form>
+                                <div className="flex justify-between">
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    onClick={addAssignmentCard}
+                                    disabled={!selectedTeacher}
+                                >
+                                    Add Another Course
+                                </Button>
+
+                                <Button
+                                    type="submit"
+                                    disabled={!selectedTeacher || createAssignment.isPending}
+                                >
+                                    {createAssignment.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Create Assignments
+                                </Button>
+                                </div>
+                            </form>
                             </Form>
                         </CardContent>
                     </Card>
@@ -575,22 +684,81 @@ export default function CreateTeacherCourseAssignment() {
                                             <div className="p-4 bg-muted/20 rounded-lg">
                                                 <p className="text-sm text-muted-foreground">Assigned Teachers</p>
                                                 <p className="text-2xl font-bold">
-                                                    {Array.isArray(courseStats) 
-                                                        ? 0 
+                                                    {Array.isArray(courseStats)
+                                                        ? 0
                                                         : courseStats.total_teachers || 0}
                                                 </p>
                                             </div>
                                             <div className="p-4 bg-muted/20 rounded-lg">
                                                 <p className="text-sm text-muted-foreground">Total Students</p>
                                                 <p className="text-2xl font-bold">
-                                                    {Array.isArray(courseStats) 
-                                                        ? 0 
-                                                        : courseStats.teachers?.reduce((total: number, teacher: {student_count: number}) => 
+                                                    {Array.isArray(courseStats)
+                                                        ? 0
+                                                        : courseStats.teachers?.reduce((total: number, teacher: { student_count: number }) =>
                                                             total + (teacher.student_count || 0), 0) || 0}
                                                 </p>
                                             </div>
                                         </div>
-                                        
+
+                                        {/* Teacher requirements based on student count */}
+                                        {!Array.isArray(courseStats) && courseStats?.teachers && (
+                                            <div className="p-4 bg-primary/5 rounded-lg border border-primary/20">
+                                                <div className="flex justify-between items-center">
+                                                    <p className="font-medium">Teacher Requirements</p>
+                                                    <Badge variant={
+                                                        (courseStats.total_teachers || 0) >= calculateRequiredTeachers(104)
+                                                            ? "outline" : "destructive"
+                                                    }>
+                                                        {courseStats.total_teachers || 0} / {calculateRequiredTeachers(104)} teachers
+                                                    </Badge>
+                                                </div>
+
+                                                {selectedCourseData && (
+                                                    <div className="mt-3 space-y-2">
+                                                        <div className="grid grid-cols-2 gap-2">
+                                                            <div>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-sm font-medium">Semester:</span>
+                                                                    <Badge variant="secondary">{selectedCourseData.course_semester}</Badge>
+                                                                </div>
+                                                                <div className="flex items-center gap-2 mt-1">
+                                                                    <span className="text-sm font-medium">Academic Year:</span>
+                                                                    <Badge variant="secondary">{selectedCourseData.course_year}</Badge>
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-sm text-muted-foreground">
+                                                                    <span className="font-medium">Total Students:</span> {courseStats.teachers?.reduce(
+                                                                        (total: number, teacher: { student_count: number }) =>
+                                                                            total + (teacher.student_count || 0), 0) || 0}
+                                                                </div>
+                                                                <div className="text-sm text-muted-foreground mt-1">
+                                                                    <span className="font-medium">Year {selectedCourseData.course_year} Students:</span> 104
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="text-sm bg-secondary/10 p-2 rounded">
+                                                            {(courseStats.total_teachers || 0) >= calculateRequiredTeachers(104) ?
+                                                                <span className="text-green-600 font-medium">Adequate</span> :
+                                                                <span className="text-red-600 font-medium">Inadequate</span>} teacher staffing for this course.
+                                                            <br />
+                                                            {calculateRequiredTeachers(104) === 1 ? (
+                                                                <span className="text-xs">This course has 104 students, which is within the capacity of a single teacher (up to 140 students).</span>
+                                                            ) : (
+                                                                <span className="text-xs">This course has 104 students, requiring {calculateRequiredTeachers(104)} teachers at standard capacity.</span>
+                                                            )}
+                                                            {courseStats.total_teachers > 0 && courseStats.total_teachers < calculateRequiredTeachers(104) && (
+                                                                <span className="block mt-1 text-xs text-amber-600">
+                                                                    Currently {courseStats.total_teachers} teacher(s) assigned. Need {calculateRequiredTeachers(104) - courseStats.total_teachers} more.
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
                                         <div className="mt-4">
                                             <h4 className="text-sm font-medium mb-2">Current Assignments</h4>
                                             {Array.isArray(courseStats) || !courseStats.teachers || courseStats.teachers.length === 0 ? (
@@ -614,8 +782,8 @@ export default function CreateTeacherCourseAssignment() {
                                                                         </div>
                                                                     </TableCell>
                                                                     <TableCell>
-                                                                        {teacher.is_assistant === true ? 
-                                                                            <Badge variant="outline">Assistant</Badge> : 
+                                                                        {teacher.is_assistant === true ?
+                                                                            <Badge variant="outline">Assistant</Badge> :
                                                                             <Badge>Primary</Badge>
                                                                         }
                                                                     </TableCell>

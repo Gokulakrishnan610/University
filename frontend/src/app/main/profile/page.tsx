@@ -230,7 +230,7 @@ export default function ProfilePage() {
                                 <Button 
                                     className="w-full justify-start" 
                                     variant="outline"
-                                    onClick={() => navigate("/dashboard")}
+                                    onClick={() => navigate("/")}
                                 >
                                     Dashboard
                                 </Button>

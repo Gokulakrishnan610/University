@@ -1,9 +1,9 @@
 import React from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card'
-import { 
-  AlertCircle, BookOpen, CheckCircle2, Clock, MapPin, Users, Building, 
-  ChevronUp, ChevronDown, Briefcase, GraduationCap, PieChart, BarChart, 
-  Award, User, UserCheck, UserX, LucideIcon, Bell 
+import {
+  AlertCircle, BookOpen, CheckCircle2, Clock, MapPin, Users, Building,
+  ChevronUp, ChevronDown, Briefcase, GraduationCap, PieChart, BarChart,
+  Award, User, UserCheck, UserX, LucideIcon, Bell, Calendar
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Link } from 'react-router'
@@ -30,16 +30,16 @@ interface StatCardProps {
 }
 
 // Component for stat cards with progress indicator
-const StatCard: React.FC<StatCardProps> = ({ 
-  title, 
-  value, 
-  icon: Icon, 
-  description, 
-  progress = null, 
-  trend = null, 
+const StatCard: React.FC<StatCardProps> = ({
+  title,
+  value,
+  icon: Icon,
+  description,
+  progress = null,
+  trend = null,
   className = "",
   iconClassName = "",
-  isLoading = false 
+  isLoading = false
 }) => {
   return (
     <Card className={`h-full ${className}`}>
@@ -53,10 +53,9 @@ const StatCard: React.FC<StatCardProps> = ({
         <div className="text-2xl font-bold">
           {isLoading ? '...' : value}
           {trend && (
-            <span 
-              className={`ml-2 text-xs font-normal ${
-                trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-500' : 'text-muted-foreground'
-              }`}
+            <span
+              className={`ml-2 text-xs font-normal ${trend > 0 ? 'text-green-500' : trend < 0 ? 'text-red-500' : 'text-muted-foreground'
+                }`}
             >
               {trend > 0 ? <ChevronUp className="inline h-3 w-3" /> : <ChevronDown className="inline h-3 w-3" />}
               {Math.abs(trend)}%
@@ -79,10 +78,129 @@ const StatCard: React.FC<StatCardProps> = ({
   )
 }
 
+// Component for distribution card that shows percentages
+interface DistributionCardProps {
+  title: string;
+  icon: LucideIcon;
+  description: string;
+  distribution: {
+    [key: string]: {
+      name?: string;
+      teacher_count: number;
+      percentage: number;
+    }
+  };
+  total: number;
+  isLoading?: boolean;
+}
+
+const DistributionCard: React.FC<DistributionCardProps> = ({
+  title,
+  icon: Icon,
+  description,
+  distribution,
+  total,
+  isLoading = false
+}) => {
+  return (
+    <Card className="h-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">{title}</CardTitle>
+        <div className="h-4 w-4 text-muted-foreground">
+          {Icon && <Icon className="h-4 w-4" />}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-sm text-muted-foreground mb-3">
+          {description}
+        </div>
+        {isLoading ? (
+          <div className="text-center py-4">Loading...</div>
+        ) : (
+          <div className="space-y-3">
+            {Object.entries(distribution).map(([key, data]) => (
+              <div key={key} className="space-y-1">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-medium">
+                    {data.name || key}
+                  </span>
+                  <div className="flex gap-2 items-center">
+                    <Badge variant="outline" className="text-xs">
+                      {data.teacher_count}/{total}
+                    </Badge>
+                    <span className="text-xs font-semibold text-primary">
+                      {data.percentage}%
+                    </span>
+                  </div>
+                </div>
+                <Progress value={data.percentage} className="h-1" />
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// Component for days assigned distribution
+interface DaysAssignedCardProps {
+  distribution: { [key: string]: number };
+  totalTeachers: number;
+  isLoading?: boolean;
+}
+
+const DaysAssignedCard: React.FC<DaysAssignedCardProps> = ({
+  distribution,
+  totalTeachers,
+  isLoading = false
+}) => {
+  return (
+    <Card className="h-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="text-sm font-medium">Days Distribution</CardTitle>
+        <div className="h-4 w-4 text-muted-foreground">
+          <Calendar className="h-4 w-4" />
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="text-sm text-muted-foreground mb-3">
+          Number of teaching days per teacher
+        </div>
+        {isLoading ? (
+          <div className="text-center py-4">Loading...</div>
+        ) : (
+          <div className="space-y-3">
+            {Object.entries(distribution).map(([key, count]) => {
+              const percentage = totalTeachers > 0 ? (count / totalTeachers) * 100 : 0;
+              return (
+                <div key={key} className="space-y-1">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">{key}</span>
+                    <div className="flex gap-2 items-center">
+                      <Badge variant="outline" className="text-xs">
+                        {count} teachers
+                      </Badge>
+                      <span className="text-xs font-semibold text-primary">
+                        {percentage.toFixed(1)}%
+                      </span>
+                    </div>
+                  </div>
+                  <Progress value={percentage} className="h-1" />
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 const Page = () => {
   const { data: stats, isPending: isLoading } = useGetDashboardStats()
   const { data: courseNotifications } = useGetCourseNotifications()
-  
+
   const notificationCount = courseNotifications?.data?.length || 0
 
   return (
@@ -115,8 +233,8 @@ const Page = () => {
                 Course Setup Progress
               </h2>
               <p className="text-sm text-muted-foreground mt-1">
-                {stats?.is_department_filtered 
-                  ? `Overall setup progress for ${stats.department_name} courses` 
+                {stats?.is_department_filtered
+                  ? `Overall setup progress for ${stats.department_name} courses`
                   : 'Overall course setup progress'}
               </p>
             </div>
@@ -143,7 +261,7 @@ const Page = () => {
               </div>
               <Progress className="h-2" value={stats?.teacher_assignment_percentage || 0} />
             </div>
-            
+
             <div>
               <div className="flex justify-between text-sm mb-1.5">
                 <div className="flex items-center gap-2">
@@ -164,12 +282,13 @@ const Page = () => {
 
       {/* Tabbed Dashboard */}
       <Tabs defaultValue="overview" className="w-full">
-        <TabsList className="grid grid-cols-3 w-full md:w-[400px]">
+        <TabsList className="grid grid-cols-4 w-full md:w-[500px]">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="faculty">Faculty</TabsTrigger>
           <TabsTrigger value="courses">Courses</TabsTrigger>
+          <TabsTrigger value="slots">Slot Allocation</TabsTrigger>
         </TabsList>
-        
+
         {/* Overview Tab */}
         <TabsContent value="overview" className="pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -177,67 +296,67 @@ const Page = () => {
               title="Total Courses"
               value={stats?.total_courses || 0}
               icon={BookOpen}
-              description={stats?.is_department_filtered 
-                ? `Courses in ${stats.department_name} department` 
+              description={stats?.is_department_filtered
+                ? `Courses in ${stats.department_name} department`
                 : 'Courses registered in the system'}
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Total Teachers"
               value={stats?.total_teachers || 0}
               icon={Users}
-              description={stats?.is_department_filtered 
-                ? `Faculty members in ${stats.department_name}` 
+              description={stats?.is_department_filtered
+                ? `Faculty members in ${stats.department_name}`
                 : 'Faculty members available'}
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Total Students"
               value={stats?.total_students || 0}
               icon={GraduationCap}
-              description={stats?.is_department_filtered 
-                ? `Students enrolled in ${stats.department_name} courses` 
+              description={stats?.is_department_filtered
+                ? `Students enrolled in ${stats.department_name} courses`
                 : 'Students enrolled in courses'}
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Teacher Assignments"
               value={stats?.courses_with_teachers || 0}
               icon={CheckCircle2}
               progress={stats?.teacher_assignment_percentage || 0}
-              description={stats?.is_department_filtered 
-                ? `${stats.department_name} courses with assigned teachers` 
+              description={stats?.is_department_filtered
+                ? `${stats.department_name} courses with assigned teachers`
                 : 'Courses with assigned teachers'}
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Room Assignments"
               value={stats?.courses_with_rooms || 0}
               icon={MapPin}
               progress={stats?.room_assignment_percentage || 0}
-              description={stats?.is_department_filtered 
-                ? `${stats.department_name} courses with room preferences` 
+              description={stats?.is_department_filtered
+                ? `${stats.department_name} courses with room preferences`
                 : 'Courses with room preferences'}
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Pending Assignments"
               value={stats?.pending_assignments || 0}
               icon={AlertCircle}
               iconClassName="text-amber-500"
-              description={stats?.is_department_filtered 
-                ? `${stats.department_name} courses requiring attention` 
+              description={stats?.is_department_filtered
+                ? `${stats.department_name} courses requiring attention`
                 : 'Courses requiring attention'}
               isLoading={isLoading}
             />
           </div>
         </TabsContent>
-        
+
         {/* Faculty Tab */}
         <TabsContent value="faculty" className="pt-4">
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -248,7 +367,7 @@ const Page = () => {
               description="POPs and industry experts teaching courses"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Senior Faculty"
               value={stats?.senior_staff || 0}
@@ -256,7 +375,7 @@ const Page = () => {
               description="HODs and Professors in the department"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Teacher Utilization"
               value={`${stats?.teacher_utilization || 0}%`}
@@ -264,7 +383,7 @@ const Page = () => {
               description={`${stats?.teachers_with_courses || 0} out of ${stats?.total_teachers || 0} teachers assigned courses`}
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Avg. Working Hours"
               value={stats?.avg_working_hours || 0}
@@ -272,7 +391,7 @@ const Page = () => {
               description="Average teaching hours per faculty member"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Fully Loaded Teachers"
               value={stats?.fully_loaded_teachers || 0}
@@ -280,7 +399,7 @@ const Page = () => {
               description="Teachers with maximum teaching load"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Resigning Teachers"
               value={stats?.resigning_teachers || 0}
@@ -291,7 +410,7 @@ const Page = () => {
             />
           </div>
         </TabsContent>
-        
+
         {/* Courses Tab */}
         <TabsContent value="courses" className="pt-4">
           <div className="mb-6">
@@ -311,8 +430,8 @@ const Page = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm text-muted-foreground">
-                      {notificationCount > 0 
-                        ? `${notificationCount} of your department's courses are being used by other departments` 
+                      {notificationCount > 0
+                        ? `${notificationCount} of your department's courses are being used by other departments`
                         : "None of your department's courses are currently being used by other departments"}
                     </p>
                     <p className="text-sm text-muted-foreground mt-1">
@@ -328,7 +447,7 @@ const Page = () => {
               </CardContent>
             </Card>
           </div>
-          
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <StatCard
               title="Active Courses"
@@ -337,7 +456,7 @@ const Page = () => {
               description="Courses currently active in the system"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Course Notifications"
               value={notificationCount}
@@ -346,7 +465,7 @@ const Page = () => {
               description="Courses from your department used by others"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Total Enrollments"
               value={stats?.total_enrollments || 0}
@@ -354,7 +473,7 @@ const Page = () => {
               description="Total student enrollments across all courses"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Avg. Students Per Course"
               value={stats?.avg_students_per_course || 0}
@@ -362,7 +481,7 @@ const Page = () => {
               description="Average class size across all courses"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Workload Balance"
               value={`${stats?.workload_balance || 0}%`}
@@ -370,7 +489,7 @@ const Page = () => {
               description="Distribution of teaching load across faculty"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Pending Assignments"
               value={stats?.pending_assignments || 0}
@@ -379,24 +498,107 @@ const Page = () => {
               description="Courses that need to be assigned teachers"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Teaching Capacity"
               value={
-                isLoading 
-                  ? '...' 
+                isLoading
+                  ? '...'
                   : ((stats?.teachers_with_courses || 0) * (stats?.avg_working_hours || 0))
               }
               icon={Clock}
               description="Total available teaching hours from faculty"
               isLoading={isLoading}
             />
-            
+
             <StatCard
               title="Underutilized Teachers"
               value={stats?.underutilized_teachers || 0}
               icon={User}
               description="Teachers with remaining teaching capacity"
+              isLoading={isLoading}
+            />
+          </div>
+        </TabsContent>
+
+        {/* Slot Allocation Tab */}
+        <TabsContent value="slots" className="pt-4">
+          <div className="mb-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Calendar className="h-5 w-5 text-primary" />
+                    Slot Assignment Overview
+                  </CardTitle>
+                  <CardDescription>
+                    Summary of teacher slot assignments and scheduling
+                  </CardDescription>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col md:flex-row justify-between gap-4">
+                  <div className="flex-1 space-y-2">
+                    <h3 className="text-sm font-semibold">Slot Coverage</h3>
+                    <div className="flex justify-between text-sm mb-1">
+                      <span className="text-muted-foreground">
+                        {isLoading ? '...' : stats?.slot_allocation?.teachers_with_slots || 0} of {isLoading ? '...' : stats?.total_teachers || 0} teachers have assigned slots
+                      </span>
+                      <span className="font-medium text-primary">
+                        {isLoading ? '...' : stats?.slot_allocation?.slot_coverage_percentage || 0}%
+                      </span>
+                    </div>
+                    <Progress
+                      value={stats?.slot_allocation?.slot_coverage_percentage || 0}
+                      className="h-2"
+                    />
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <h3 className="text-sm font-semibold">Total Assignments</h3>
+                    <div className="flex items-end gap-1">
+                      <span className="text-2xl font-bold">
+                        {isLoading ? '...' : stats?.slot_allocation?.total_slot_assignments || 0}
+                      </span>
+                      <span className="text-sm text-muted-foreground mb-0.5">
+                        slot assignments
+                      </span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Average {isLoading ? '...' : (stats?.slot_allocation?.total_slot_assignments || 0) / (stats?.slot_allocation?.teachers_with_slots || 1) || 0} days per teacher with assignments
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4">
+                  <Button asChild variant="outline" size="sm">
+                    <Link to="/teachers/slot-allocation">Manage Slot Assignments</Link>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <DistributionCard
+              title="Slot Type Distribution"
+              icon={Clock}
+              description="Distribution of teachers across different slot types"
+              distribution={stats?.slot_allocation?.slot_type_distribution || {}}
+              total={stats?.total_teachers || 0}
+              isLoading={isLoading}
+            />
+
+            <DistributionCard
+              title="Day of Week Distribution"
+              icon={Calendar}
+              description="Distribution of teachers across different days"
+              distribution={stats?.slot_allocation?.day_distribution || {}}
+              total={stats?.total_teachers || 0}
+              isLoading={isLoading}
+            />
+
+            <DaysAssignedCard
+              distribution={stats?.slot_allocation?.days_assigned_distribution || {}}
+              totalTeachers={stats?.total_teachers || 0}
               isLoading={isLoading}
             />
           </div>
@@ -411,8 +613,8 @@ const Page = () => {
             Quick Actions
           </CardTitle>
           <CardDescription>
-            {stats?.is_department_filtered 
-              ? `Steps to complete your ${stats.department_name} department course setup` 
+            {stats?.is_department_filtered
+              ? `Steps to complete your ${stats.department_name} department course setup`
               : 'Steps to complete your course setup'}
           </CardDescription>
         </CardHeader>
@@ -424,8 +626,8 @@ const Page = () => {
             <div className="flex-1">
               <h3 className="font-semibold">Assign Teachers to Courses</h3>
               <p className="text-sm text-muted-foreground">
-                {stats?.is_department_filtered 
-                  ? `Allocate ${stats.department_name} faculty members to courses` 
+                {stats?.is_department_filtered
+                  ? `Allocate ${stats.department_name} faculty members to courses`
                   : 'Allocate faculty members to each course based on specialization and availability'}
               </p>
               <div className="mt-2">
@@ -438,7 +640,7 @@ const Page = () => {
               <Link to="/teacher-course-assignment">Assign Now</Link>
             </Button>
           </div>
-          
+
           <div className="flex items-center p-4 border rounded-lg hover:bg-muted/40 transition-colors">
             <div className="mr-4 bg-primary/10 p-2 rounded-full">
               <MapPin className="h-5 w-5 text-primary" />
@@ -446,8 +648,8 @@ const Page = () => {
             <div className="flex-1">
               <h3 className="font-semibold">Add Room Preferences</h3>
               <p className="text-sm text-muted-foreground">
-                {stats?.is_department_filtered 
-                  ? `Set classroom preferences for ${stats.department_name} courses` 
+                {stats?.is_department_filtered
+                  ? `Set classroom preferences for ${stats.department_name} courses`
                   : 'Set classroom preferences for each course based on capacity and equipment needs'}
               </p>
               <div className="mt-2">
@@ -460,7 +662,29 @@ const Page = () => {
               <Link to="/courses">Set Preferences</Link>
             </Button>
           </div>
-          
+
+          <div className="flex items-center p-4 border rounded-lg hover:bg-muted/40 transition-colors">
+            <div className="mr-4 bg-primary/10 p-2 rounded-full">
+              <Calendar className="h-5 w-5 text-primary" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold">Manage Slot Assignments</h3>
+              <p className="text-sm text-muted-foreground">
+                {stats?.is_department_filtered
+                  ? `Assign teachers to time slots for ${stats.department_name}`
+                  : 'Assign teachers to appropriate time slots based on availability'}
+              </p>
+              <div className="mt-2">
+                <Badge variant="outline" className="bg-primary/20 text-primary">
+                  {isLoading ? '...' : stats?.slot_allocation?.slot_coverage_percentage || 0}% Complete
+                </Badge>
+              </div>
+            </div>
+            <Button asChild size="sm" variant="outline">
+              <Link to="/teachers/slot-allocation">Manage Slots</Link>
+            </Button>
+          </div>
+
           <div className="flex items-center p-4 border rounded-lg hover:bg-muted/40 transition-colors">
             <div className="mr-4 bg-primary/10 p-2 rounded-full">
               <Clock className="h-5 w-5 text-primary" />
@@ -468,8 +692,8 @@ const Page = () => {
             <div className="flex-1">
               <h3 className="font-semibold">Review Schedule</h3>
               <p className="text-sm text-muted-foreground">
-                {stats?.is_department_filtered 
-                  ? `Review the generated schedule for ${stats.department_name} courses` 
+                {stats?.is_department_filtered
+                  ? `Review the generated schedule for ${stats.department_name} courses`
                   : 'Review the generated schedule and make necessary adjustments'}
               </p>
               <div className="mt-2">

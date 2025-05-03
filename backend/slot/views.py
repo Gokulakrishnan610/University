@@ -1,17 +1,18 @@
 from django.shortcuts import render
 from rest_framework.generics import ListAPIView, CreateAPIView
+from rest_framework.views import APIView
 from authentication.authentication import JWTCookieAuthentication
 from rest_framework.permissions import IsAuthenticated
 from .serializers import SlotSerializer, TeacherSlotAssignmentSerializer
-from .models import Slot
+from .models import Slot, TeacherSlotAssignment
 from teacher.models import Teacher
-from rest_framework.exceptions import ValidationError as DRFValidationError
+from department.models import Department
 from rest_framework.exceptions import ValidationError as DRFValidationError
 from django.core.exceptions import ValidationError
 from django.db import transaction
 from rest_framework.response import Response
 from rest_framework import status
-from .models import TeacherSlotAssignment
+from django.db.models import Count, Q
 
 # Create your views here.
 class SlotListView(ListAPIView):
@@ -20,26 +21,9 @@ class SlotListView(ListAPIView):
     serializer_class = SlotSerializer
 
     def get_queryset(self):
-        slots = Slot.objects.filter()
-
+        slots = Slot.objects.all().order_by('slot_type', 'slot_start_time')
         return slots
 
-'''
-Request should be like:
-{
-    "teacher_id": 1,
-    "slots": [
-        {
-            "slot_id": 1,
-            "day_of_week": 0
-        },
-        {
-            "slot_id": 1,
-            "day_of_week": 0
-        },
-    ]
-}
-'''
 class TeacherSlotPreferenceView(CreateAPIView):
     authentication_classes = [JWTCookieAuthentication]
     permission_classes = [IsAuthenticated]
@@ -47,7 +31,7 @@ class TeacherSlotPreferenceView(CreateAPIView):
 
     def post(self, request, *args, **kwargs):
         try:
-            teacher = Teacher.objects.get(teacher_id=request.data.get('teacher_id'))
+            teacher = Teacher.objects.get(id=request.data.get('teacher_id'))
         except Teacher.DoesNotExist:
             return Response({"error": "Teacher not found."}, status=status.HTTP_404_NOT_FOUND)
         
@@ -115,6 +99,36 @@ class TeacherSlotPreferenceView(CreateAPIView):
         except Slot.DoesNotExist:
             raise DRFValidationError(f"Slot with id {slot_id} does not exist.")
         
+        # Check 5-day week constraint
+        current_days = TeacherSlotAssignment.objects.filter(
+            teacher=teacher
+        ).values_list('day_of_week', flat=True).distinct()
+        
+        if len(current_days) >= 5 and day_of_week not in current_days:
+            raise DRFValidationError("Teacher already has assignments for 5 days. Maximum is 5 days per week.")
+        
+        # Check department distribution constraint (33% per slot type)
+        if teacher.dept_id:
+            dept_id = teacher.dept_id.id
+            total_dept_teachers = Teacher.objects.filter(dept_id=dept_id).count()
+            
+            if total_dept_teachers > 0:
+                # Get count of teachers in this department assigned to this slot type on this day
+                teachers_in_slot = TeacherSlotAssignment.objects.filter(
+                    teacher__dept_id=dept_id,
+                    day_of_week=day_of_week,
+                    slot__slot_type=slot.slot_type
+                ).values('teacher').distinct().count()
+                
+                # Calculate max teachers allowed (33% of department + 1 extra teacher)
+                max_teachers_per_slot = int((total_dept_teachers * 0.33) + 0.5) + 1  # Adding 1 to allow one extra teacher
+                
+                if teachers_in_slot >= max_teachers_per_slot:
+                    raise DRFValidationError(
+                        f"Maximum number of teachers (33% + 1) from department {teacher.dept_id.dept_name} "
+                        f"already assigned to slot type {slot.slot_type} on {dict(TeacherSlotAssignment.DAYS_OF_WEEK)[day_of_week]}."
+                    )
+        
         assignment, created = TeacherSlotAssignment.objects.get_or_create(
             teacher=teacher,
             day_of_week=day_of_week,
@@ -151,124 +165,6 @@ class TeacherSlotPreferenceView(CreateAPIView):
             return {"message": "Slot assignment deleted successfully."}
         except TeacherSlotAssignment.DoesNotExist:
             raise DRFValidationError("Slot assignment not found.")
-    authentication_classes = [JWTCookieAuthentication]
-    permission_classes = [IsAuthenticated]
-    serializer_class = SlotSerializer
-
-    def post(self, request, *args, **kwargs):
-        try:
-            teacher = Teacher.objects.get(teacher_id=request.data['teacher_id'])
-        except Teacher.DoesNotExist:
-            return Response({"error": "Teacher not found."}, status=status.HTTP_404_NOT_FOUND)
-        if not teacher:
-            return Response({"error": "Teacher not found."}, status=status.HTTP_404_NOT_FOUND)
-        
-        data = request.data
-        
-        try:
-            if isinstance(data, list):
-                return self.handle_multiple_assignments(teacher, data)
-            else:
-                return self.handle_single_assignment(teacher, data)
-        except (ValidationError, DRFValidationError) as e:
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        except Exception as e:
-            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-    def handle_single_assignment(self, teacher, data):
-        if 'slot_id' not in data or 'day_of_week' not in data:
-            raise DRFValidationError("Both 'slot_id' and 'day_of_week' are required.")
-        
-        slot_id = data['slot_id']
-        day_of_week = data['day_of_week']
-        
-        try:
-            slot = Slot.objects.get(pk=slot_id)
-        except Slot.DoesNotExist:
-            raise DRFValidationError(f"Slot with id {slot_id} does not exist.")
-        
-        with transaction.atomic():
-            assignment = TeacherSlotAssignment(
-                teacher=teacher,
-                slot=slot,
-                day_of_week=day_of_week
-            )
-            
-            try:
-                assignment.full_clean()
-                assignment.save()
-            except ValidationError as e:
-                raise DRFValidationError(e.message_dict if hasattr(e, 'message_dict') else str(e))
-        
-        return Response(
-            {"message": "Slot assignment added successfully."},
-            status=status.HTTP_201_CREATED
-        )
-
-    def handle_multiple_assignments(self, teacher, assignments_data):
-        results = []
-        created_count = 0
-        
-        with transaction.atomic():
-            for assignment_data in assignments_data:
-                if 'slot_id' not in assignment_data or 'day_of_week' not in assignment_data:
-                    results.append({
-                        "slot_id": assignment_data.get('slot_id'),
-                        "day_of_week": assignment_data.get('day_of_week'),
-                        "success": False,
-                        "error": "Both 'slot_id' and 'day_of_week' are required."
-                    })
-                    continue
-                
-                slot_id = assignment_data['slot_id']
-                day_of_week = assignment_data['day_of_week']
-                
-                try:
-                    slot = Slot.objects.get(pk=slot_id)
-                except Slot.DoesNotExist:
-                    results.append({
-                        "slot_id": slot_id,
-                        "day_of_week": day_of_week,
-                        "success": False,
-                        "error": f"Slot with id {slot_id} does not exist."
-                    })
-                    continue
-                
-                try:
-                    assignment = TeacherSlotAssignment(
-                        teacher=teacher,
-                        slot=slot,
-                        day_of_week=day_of_week
-                    )
-                    
-                    assignment.full_clean()
-                    assignment.save()
-                    
-                    results.append({
-                        "slot_id": slot_id,
-                        "day_of_week": day_of_week,
-                        "success": True,
-                        "message": "Slot assignment added successfully."
-                    })
-                    created_count += 1
-                except ValidationError as e:
-                    results.append({
-                        "slot_id": slot_id,
-                        "day_of_week": day_of_week,
-                        "success": False,
-                        "error": e.message_dict if hasattr(e, 'message_dict') else str(e)
-                    })
-        
-        if created_count == 0 and len(assignments_data) > 0:
-            return Response(
-                {"results": results, "message": "No assignments were created."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-        
-        return Response(
-            {"results": results, "message": f"Created {created_count} assignments."},
-            status=status.HTTP_207_MULTI_STATUS if len(results) > 1 else status.HTTP_201_CREATED
-        )
     
 class TeacherSlotListView(ListAPIView):
     authentication_classes = [JWTCookieAuthentication]
@@ -278,31 +174,492 @@ class TeacherSlotListView(ListAPIView):
 
     def get_queryset(self):
         queryset = super().get_queryset()
-        teacher_id = self.kwargs.get('teacher_id')
         
+        # Filter by teacher if teacher_id is provided
+        teacher_id = self.request.query_params.get('teacher_id')
         if teacher_id:
-            if not Teacher.objects.filter(teacher_id=teacher_id).exists():
-                raise NotFound(detail="Teacher not found")
-            return queryset.filter(teacher__teacher_id=teacher_id)
+            queryset = queryset.filter(teacher__id=teacher_id)
+        
+        # Filter by department if dept_id is provided
+        dept_id = self.request.query_params.get('dept_id')
+        if dept_id:
+            queryset = queryset.filter(teacher__dept_id=dept_id)
+        
+        # Filter by day if day_of_week is provided
+        day_of_week = self.request.query_params.get('day_of_week')
+        if day_of_week:
+            queryset = queryset.filter(day_of_week=day_of_week)
+        
+        # Filter by slot type if slot_type is provided
+        slot_type = self.request.query_params.get('slot_type')
+        if slot_type:
+            queryset = queryset.filter(slot__slot_type=slot_type)
         
         return queryset
 
     def list(self, request, *args, **kwargs):
-        queryset = self.filter_queryset(self.get_queryset())
+        queryset = self.get_queryset()
+        serializer = self.get_serializer(queryset, many=True)
+        
+        # Calculate summary statistics
+        include_stats = request.query_params.get('include_stats', 'false').lower() == 'true'
+        
+        if include_stats:
+            stats = self._calculate_stats(queryset)
+            return Response({
+                'assignments': serializer.data,
+                'stats': stats
+            })
+        
+        return Response(serializer.data)
     
-        grouped_data = {}
-        for assignment in queryset:
-            day_name = dict(TeacherSlotAssignment.DAYS_OF_WEEK)[assignment.day_of_week]
-            if day_name not in grouped_data:
-                grouped_data[day_name] = []
+    def _calculate_stats(self, queryset):
+        # Get unique teachers and departments in the queryset
+        teacher_ids = queryset.values_list('teacher', flat=True).distinct()
+        dept_ids = Teacher.objects.filter(id__in=teacher_ids).values_list('dept_id', flat=True).distinct()
+        
+        stats = {
+            'total_assignments': queryset.count(),
+            'teacher_count': len(teacher_ids),
+            'department_distribution': [],
+            'slot_type_distribution': {},
+            'day_distribution': {}
+        }
+        
+        # Department distribution
+        for dept_id in dept_ids:
+            if dept_id:
+                dept = Department.objects.get(id=dept_id)
+                dept_teachers = Teacher.objects.filter(dept_id=dept_id)
+                dept_teacher_count = dept_teachers.count()
+                
+                dept_stats = {
+                    'department': dept.dept_name,
+                    'total_teachers': dept_teacher_count,
+                    'assigned_teachers': Teacher.objects.filter(
+                        id__in=teacher_ids, 
+                        dept_id=dept_id
+                    ).count(),
+                    'slot_distribution': {}
+                }
+                
+                # Slot type distribution per department
+                for slot_type, _ in Slot.SLOT_TYPES:
+                    slot_teachers = queryset.filter(
+                        teacher__dept_id=dept_id, 
+                        slot__slot_type=slot_type
+                    ).values('teacher').distinct().count()
+                    
+                    dept_stats['slot_distribution'][slot_type] = {
+                        'teacher_count': slot_teachers,
+                        'percentage': round(slot_teachers / dept_teacher_count * 100, 1) if dept_teacher_count > 0 else 0
+                    }
+                
+                stats['department_distribution'].append(dept_stats)
+        
+        # Overall slot type distribution
+        for slot_type, _ in Slot.SLOT_TYPES:
+            stats['slot_type_distribution'][slot_type] = queryset.filter(
+                slot__slot_type=slot_type
+            ).count()
+        
+        # Day distribution
+        for day_value, day_name in TeacherSlotAssignment.DAYS_OF_WEEK:
+            stats['day_distribution'][day_name] = queryset.filter(
+                day_of_week=day_value
+            ).count()
+        
+        return stats
+
+class DepartmentSlotSummaryView(APIView):
+    """View to provide summary information about department slot allocations"""
+    authentication_classes = [JWTCookieAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, *args, **kwargs):
+        dept_id = request.query_params.get('dept_id')
+        
+        if not dept_id:
+            return Response({"error": "Department ID is required"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            department = Department.objects.get(id=dept_id)
+        except Department.DoesNotExist:
+            return Response({"error": "Department not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        # Get all teachers in this department
+        teachers = Teacher.objects.filter(dept_id=dept_id)
+        total_teachers = teachers.count()
+        
+        if total_teachers == 0:
+            return Response({
+                "department": department.dept_name,
+                "total_teachers": 0,
+                "message": "No teachers in this department"
+            })
+        
+        # Get all assignments for teachers in this department
+        assignments = TeacherSlotAssignment.objects.filter(teacher__dept_id=dept_id)
+        
+        # Count teachers with assignments
+        teachers_with_assignments = assignments.values('teacher').distinct().count()
+        
+        # Prepare data structures for proper counting of unique teachers
+        slot_distribution = {}
+        day_distribution = {}
+        teacher_assignment_count = {}  # Count of days each teacher is assigned
+        teachers_per_slot_type = {}    # Unique teachers per slot type
+        teachers_per_day = {}          # Unique teachers per day
+        
+        # Initialize data structures
+        for slot_type, slot_name in Slot.SLOT_TYPES:
+            slot_distribution[slot_type] = {
+                "name": slot_name,
+                "days": {}
+            }
+            teachers_per_slot_type[slot_type] = set()
             
-            grouped_data[day_name].append(
-                self.get_serializer(assignment).data
+            for day_value, day_name in TeacherSlotAssignment.DAYS_OF_WEEK:
+                slot_distribution[slot_type]["days"][day_name] = {
+                    "teacher_count": 0,
+                    "percentage": 0,
+                    "teachers": []
+                }
+        
+        for day_value, day_name in TeacherSlotAssignment.DAYS_OF_WEEK:
+            day_distribution[day_name] = {
+                "slot_distribution": {},
+                "total_teachers": 0
+            }
+            teachers_per_day[day_name] = set()
+            
+            for slot_type, slot_name in Slot.SLOT_TYPES:
+                day_distribution[day_name]["slot_distribution"][slot_type] = {
+                    "teacher_count": 0,
+                    "percentage": 0
+                }
+        
+        # Process all assignments
+        for assignment in assignments:
+            teacher = assignment.teacher
+            teacher_id = teacher.id
+            slot_type = assignment.slot.slot_type
+            day_value = assignment.day_of_week
+            day_name = dict(TeacherSlotAssignment.DAYS_OF_WEEK)[day_value]
+            
+            # Add teacher to slot distribution for this day
+            slot_distribution[slot_type]["days"][day_name]["teacher_count"] += 1
+            slot_distribution[slot_type]["days"][day_name]["teachers"].append({
+                "id": teacher_id,
+                "name": str(teacher)
+            })
+            
+            # Track unique teachers per slot type and day
+            teachers_per_slot_type[slot_type].add(teacher_id)
+            teachers_per_day[day_name].add(teacher_id)
+            
+            # Update teacher assignment count (days per teacher)
+            if teacher_id not in teacher_assignment_count:
+                teacher_assignment_count[teacher_id] = {day_name}
+            else:
+                teacher_assignment_count[teacher_id].add(day_name)
+        
+        # Calculate percentages for slot distribution
+        for slot_type in slot_distribution:
+            for day_name in slot_distribution[slot_type]["days"]:
+                count = slot_distribution[slot_type]["days"][day_name]["teacher_count"]
+                slot_distribution[slot_type]["days"][day_name]["percentage"] = round(count / total_teachers * 100, 1)
+        
+        # Fill in day distribution with unique teacher counts
+        for day_name, teacher_ids in teachers_per_day.items():
+            unique_teachers_count = len(teacher_ids)
+            day_distribution[day_name]["total_teachers"] = unique_teachers_count
+            
+            # Count teachers per slot type on this day
+            for slot_type in slot_distribution:
+                teachers_in_slot_on_day = set()
+                for teacher_data in slot_distribution[slot_type]["days"][day_name]["teachers"]:
+                    teachers_in_slot_on_day.add(teacher_data["id"])
+                
+                slot_teacher_count = len(teachers_in_slot_on_day)
+                day_distribution[day_name]["slot_distribution"][slot_type]["teacher_count"] = slot_teacher_count
+                day_distribution[day_name]["slot_distribution"][slot_type]["percentage"] = round(slot_teacher_count / total_teachers * 100, 1) if total_teachers > 0 else 0
+        
+        # Count teachers by number of assigned days (based on unique days)
+        days_assigned_distribution = {
+            "1 day": 0, "2 days": 0, "3 days": 0, "4 days": 0, "5 days": 0
+        }
+        
+        for teacher_id, days in teacher_assignment_count.items():
+            day_count = len(days)
+            if 1 <= day_count <= 5:
+                days_assigned_distribution[f"{day_count} day{'s' if day_count > 1 else ''}"] += 1
+        
+        # Check compliance with 33% per slot rule
+        compliance_status = {"status": "Compliant", "issues": []}
+        threshold = int(total_teachers * 0.33 + 0.5) + 1  # Round up and add 1 extra teacher
+        
+        for slot_type, slot_data in slot_distribution.items():
+            for day_name, day_data in slot_data["days"].items():
+                if day_data["teacher_count"] > threshold:
+                    compliance_status["status"] = "Non-Compliant"
+                    compliance_status["issues"].append(
+                        f"Slot {slot_type} on {day_name} has {day_data['teacher_count']} teachers "
+                        f"({day_data['percentage']}%), exceeding the 33% + 1 threshold of {threshold} teachers."
+                    )
+        
+        # Calculate slot type summary (unique teachers assigned to each slot type)
+        slot_type_summary = {}
+        for slot_type, teacher_ids in teachers_per_slot_type.items():
+            slot_type_summary[slot_type] = {
+                "teacher_count": len(teacher_ids),
+                "percentage": round(len(teacher_ids) / total_teachers * 100, 1) if total_teachers > 0 else 0
+            }
+        
+        result = {
+            "department": department.dept_name,
+            "total_teachers": total_teachers,
+            "teachers_with_assignments": teachers_with_assignments,
+            "unassigned_teachers": total_teachers - teachers_with_assignments,
+            "slot_distribution": slot_distribution,
+            "day_distribution": day_distribution,
+            "days_assigned_distribution": days_assigned_distribution,
+            "slot_type_summary": slot_type_summary,
+            "compliance": compliance_status
+        }
+        
+        return Response(result)
+
+class InitializeDefaultSlotsView(APIView):
+    """View to initialize the three default slot types"""
+    authentication_classes = [JWTCookieAuthentication]
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, *args, **kwargs):
+        # Create the three default slots if they don't exist
+        default_slots = [
+            {
+                'slot_name': 'Slot A',
+                'slot_type': 'A',
+                'slot_start_time': '08:00:00',
+                'slot_end_time': '15:00:00'
+            },
+            {
+                'slot_name': 'Slot B',
+                'slot_type': 'B',
+                'slot_start_time': '10:00:00',
+                'slot_end_time': '17:00:00'
+            },
+            {
+                'slot_name': 'Slot C',
+                'slot_type': 'C',
+                'slot_start_time': '12:00:00',
+                'slot_end_time': '19:00:00'
+            }
+        ]
+        
+        created_slots = []
+        existing_slots = []
+        
+        for slot_data in default_slots:
+            slot, created = Slot.objects.get_or_create(
+                slot_type=slot_data['slot_type'],
+                defaults=slot_data
             )
+            
+            if created:
+                created_slots.append({
+                    'id': slot.id,
+                    'slot_name': slot.slot_name,
+                    'slot_type': slot.slot_type,
+                    'slot_start_time': slot.slot_start_time,
+                    'slot_end_time': slot.slot_end_time
+                })
+            else:
+                existing_slots.append({
+                    'id': slot.id,
+                    'slot_name': slot.slot_name,
+                    'slot_type': slot.slot_type,
+                    'slot_start_time': slot.slot_start_time,
+                    'slot_end_time': slot.slot_end_time
+                })
         
         return Response({
-            'count': queryset.count(),
-            'results': grouped_data,
-            'teacher_id': self.kwargs.get('teacher_id'),
-            'message': 'Successfully retrieved slot assignments'
+            'created_slots': created_slots,
+            'existing_slots': existing_slots,
+            'message': f"Created {len(created_slots)} new slots. {len(existing_slots)} slots already existed."
         })
+
+class BatchTeacherSlotAssignmentView(APIView):
+    """
+    View to handle batch assignment operations for multiple teachers and slots
+    This provides better performance and error handling for bulk operations
+    """
+    authentication_classes = [JWTCookieAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        assignments = request.data.get('assignments', [])
+        
+        if not assignments:
+            return Response({"error": "No assignments provided."}, status=status.HTTP_400_BAD_REQUEST)
+
+        results = []
+        success_count = 0
+        
+        # Close existing connections to prevent database locks
+        from django.db import connections
+        for conn in connections.all():
+            conn.close_if_unusable_or_obsolete()
+        
+        # Process in smaller batches to reduce lock contention
+        batch_size = 10
+        for i in range(0, len(assignments), batch_size):
+            batch = assignments[i:i+batch_size]
+            batch_results, batch_success_count = self._process_batch(batch)
+            results.extend(batch_results)
+            success_count += batch_success_count
+        
+        if success_count == 0:
+            status_code = status.HTTP_400_BAD_REQUEST
+        elif success_count == len(assignments):
+            status_code = status.HTTP_201_CREATED
+        else:
+            status_code = status.HTTP_207_MULTI_STATUS
+        
+        return Response(
+            {
+                "results": results,
+                "success_count": success_count,
+                "total_operations": len(assignments)
+            },
+            status=status_code
+        )
+    
+    def _process_batch(self, batch):
+        results = []
+        success_count = 0
+        
+        for assignment in batch:
+            teacher_id = assignment.get('teacher_id')
+            slot_id = assignment.get('slot_id')
+            day_of_week = assignment.get('day_of_week')
+            action = assignment.get('action', 'create').lower()
+            
+            result = {
+                "action": action,
+                "teacher_id": teacher_id,
+                "slot_id": slot_id,
+                "day_of_week": day_of_week,
+                "success": False
+            }
+            
+            # Skip if missing required fields
+            if not all([teacher_id, slot_id, day_of_week is not None]):
+                result["error"] = "Missing required fields: teacher_id, slot_id, or day_of_week"
+                results.append(result)
+                continue
+            
+            try:
+                # Use a separate transaction for each assignment to prevent lock issues
+                with transaction.atomic():
+                    # Fetch teacher and slot
+                    try:
+                        teacher = Teacher.objects.get(id=teacher_id)
+                    except Teacher.DoesNotExist:
+                        raise DRFValidationError(f"Teacher with id {teacher_id} does not exist.")
+                    
+                    try:
+                        slot = Slot.objects.get(pk=slot_id)
+                    except Slot.DoesNotExist:
+                        raise DRFValidationError(f"Slot with id {slot_id} does not exist.")
+                    
+                    if action in ['create', 'update']:
+                        # Check 5-day week constraint
+                        current_days = TeacherSlotAssignment.objects.filter(
+                            teacher=teacher
+                        ).values_list('day_of_week', flat=True).distinct()
+                        
+                        if len(current_days) >= 5 and day_of_week not in current_days:
+                            raise DRFValidationError("Teacher already has assignments for 5 days. Maximum is 5 days per week.")
+                        
+                        # Check department distribution constraint (33% per slot type)
+                        if teacher.dept_id:
+                            dept_id = teacher.dept_id.id
+                            total_dept_teachers = Teacher.objects.filter(dept_id=dept_id).count()
+                            
+                            if total_dept_teachers > 0:
+                                # Get count of teachers in this department assigned to this slot type on this day
+                                teachers_in_slot = TeacherSlotAssignment.objects.filter(
+                                    teacher__dept_id=dept_id,
+                                    day_of_week=day_of_week,
+                                    slot__slot_type=slot.slot_type
+                                ).values('teacher').distinct().count()
+                                
+                                # Calculate max teachers allowed (33% of department + 1 extra teacher)
+                                max_teachers_per_slot = int((total_dept_teachers * 0.33) + 0.5) + 1  # Adding 1 to allow one extra teacher
+                                
+                                if teachers_in_slot >= max_teachers_per_slot:
+                                    raise DRFValidationError(
+                                        f"Maximum number of teachers (33% + 1) from department {teacher.dept_id.dept_name} "
+                                        f"already assigned to slot type {slot.slot_type} on {dict(TeacherSlotAssignment.DAYS_OF_WEEK)[day_of_week]}."
+                                    )
+                        
+                        # Create or update assignment
+                        assignment_obj, created = TeacherSlotAssignment.objects.get_or_create(
+                            teacher=teacher,
+                            day_of_week=day_of_week,
+                            defaults={'slot': slot}
+                        )
+                        
+                        if not created:
+                            assignment_obj.slot = slot
+                            assignment_obj.full_clean()
+                            assignment_obj.save()
+                            result["message"] = "Slot assignment updated successfully."
+                        else:
+                            result["message"] = "Slot assignment created successfully."
+                        
+                        result["success"] = True
+                        success_count += 1
+                    elif action == 'delete':
+                        try:
+                            assignment_obj = TeacherSlotAssignment.objects.get(
+                                teacher=teacher,
+                                day_of_week=day_of_week
+                            )
+                            assignment_obj.delete()
+                            result["message"] = "Slot assignment deleted successfully."
+                            result["success"] = True
+                            success_count += 1
+                        except TeacherSlotAssignment.DoesNotExist:
+                            raise DRFValidationError("Slot assignment not found.")
+                    else:
+                        raise DRFValidationError(f"Invalid action: {action}")
+            
+            except (ValidationError, DRFValidationError) as e:
+                if hasattr(e, 'message_dict'):
+                    result["error"] = e.message_dict
+                elif hasattr(e, 'detail'):
+                    # Handle DRF validation errors which have a detail attribute
+                    if isinstance(e.detail, list) and len(e.detail) > 0:
+                        # If it's a list of error details, get the first one
+                        error_detail = e.detail[0]
+                        if hasattr(error_detail, 'string'):
+                            # Direct access to the string representation
+                            result["error"] = error_detail.string
+                        else:
+                            # Fallback to str representation
+                            result["error"] = str(error_detail)
+                    else:
+                        # Otherwise, convert the detail to string
+                        result["error"] = str(e.detail)
+                else:
+                    # Regular string errors
+                    result["error"] = str(e)
+            except Exception as e:
+                result["error"] = str(e)
+            
+            results.append(result)
+        
+        return results, success_count

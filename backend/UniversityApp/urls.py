@@ -46,5 +46,5 @@ API_PATH = '/' if settings.ENVIRONMENT == 'production' else 'api/'
 urlpatterns = [
     path('admin/', admin.site.urls),
     # Include all API endpoints under 'api/' prefix
-    path(API_PATH, include(api_urlpatterns)),
+    path('api/', include(api_urlpatterns)),
 ]

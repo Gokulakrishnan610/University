@@ -87,9 +87,7 @@ export default function CreateCoursePage() {
   
   const handleCreateCourseMaster = (values: CourseMasterFormValues) => {
     createCourseMaster({
-      course_id: values.course_id,
-      course_name: values.course_name,
-      course_dept_id: values.course_dept_id
+      ...values
     });
   };
   

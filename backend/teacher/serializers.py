@@ -104,7 +104,8 @@ class CreateTeacherAvailabilitySerializer(serializers.ModelSerializer):
         
         # Ensure teacher is a POP/industry professional if adding availability
         teacher = data.get('teacher')
-        if teacher and not (teacher.is_industry_professional or teacher.teacher_role == 'POP'):
+        if teacher and not (teacher.is_industry_professional or 
+                          teacher.teacher_role in ['POP', 'Industry Professional']):
             if teacher.availability_type == 'limited':
                 # Allow limited availability for regular teachers too, but warn
                 pass

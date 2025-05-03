@@ -13,7 +13,7 @@ from pathlib import Path
 from decouple import config
 import os
 
-ENVIRONMENT = config("ENVIRONMENT", default="production")
+ENVIRONMENT = config("ENVIRONMENT", default="development")
 
 is_dev = ENVIRONMENT == "development"
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -24,12 +24,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-u2vgw=@#o06f1^xs0n_)np$bu8^c+)=kg6wo9eq0er$cak+a9p'
+SECRET_KEY = config('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = is_dev
+DEBUG = config("ENVIRONMENT") == "development"
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '46.202.160.179']
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development, set to False in production
@@ -39,6 +39,7 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React default
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
+    'http://46.202.160.179'
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https?://localhost:\d+$",
@@ -69,12 +70,13 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    'http://46.202.160.179'
 ]
 CSRF_COOKIE_SAMESITE = 'Lax'
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
 CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
-
+CSRF_COOKIE_DOMAIN= config('COOKIE_DOMAIN')
 
 # Application definition
 
@@ -88,6 +90,7 @@ INSTALLED_APPS = [
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
+    'whitenoise.runserver_nostatic',
     'django.contrib.staticfiles',
     'rest_framework',
     'import_export',
@@ -107,6 +110,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',  # Add CORS middleware before CommonMiddleware
     'django.middleware.common.CommonMiddleware',
@@ -202,10 +206,12 @@ USE_I18N = True
 USE_TZ = True
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = 'static/'
+STATIC_URL = '/uv-static/'
+if DEBUG:
+    STATICFILES_DIRS=[os.path.join(BASE_DIR, "static"),]
+else:
+    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -280,7 +286,7 @@ UNFOLD = {
 #     'PAGE_SIZE': 100
 # }
 if not is_dev:
-    FORCE_SCRIPT_NAME = '/api'
+    FORCE_SCRIPT_NAME = '/uv-api'
 
 LOGGING = {
     'version': 1,
