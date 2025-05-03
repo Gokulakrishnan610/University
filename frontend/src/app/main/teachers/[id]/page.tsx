@@ -5,7 +5,7 @@ import {
   useUpdateTeacher,
   Teacher as TeacherType
 } from '@/action/teacher';
-import { useGetTeacherCourseAssignments } from '@/action/teacherCourse';
+import { useGetTeacherCourseAssignmentsByTeacher } from '@/action/teacherCourse';
 import {
   Card,
   CardContent,
@@ -28,7 +28,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, Pencil, Mail, Building, Clock, BookOpen, User, UserMinus, Calendar, GraduationCap } from 'lucide-react';
+import { 
+  ChevronLeft, Pencil, Mail, Building, Clock, BookOpen, User, UserMinus, 
+  Calendar, GraduationCap, Briefcase 
+} from 'lucide-react';
 import { toast } from 'sonner';
 import {
   Table,
@@ -39,6 +42,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import TeacherForm from '../form';
+import AvailabilityManager from '../availability-manager';
 
 export default function TeacherDetails() {
   const { id } = useParams<{ id: string }>();
@@ -56,21 +60,13 @@ export default function TeacherDetails() {
     setShowEditForm(false);
   });
 
-  // Fetch assigned courses for this teacher
-  const { data: allAssignments = [], isPending: isAssignmentsLoading } = useGetTeacherCourseAssignments();
-  
-  // Filter only this teacher's assignments
-  const teacherAssignments = allAssignments.filter(
-    assignment => assignment.teacher_detail?.id === teacherId
-  );
-  
-  // Calculate total teaching hours
+  const { data: teacherAssignments = [], isPending: isAssignmentsLoading } = useGetTeacherCourseAssignmentsByTeacher(teacherId);
+
   const totalTeachingHours = teacherAssignments.reduce((total, assignment) => {
     const credits = assignment.course_detail?.credits || 0;
     return total + credits;
   }, 0);
 
-  // Clean up URL if edit parameter exists
   useEffect(() => {
     if (isEditMode) {
       const cleanUrl = location.pathname;
@@ -78,7 +74,6 @@ export default function TeacherDetails() {
     }
   }, [isEditMode, location.pathname]);
 
-  // Add error handling for invalid data
   useEffect(() => {
     if (isFetched && teacher && Object.keys(teacher).length === 0) {
       toast.error("Teacher data not found", {
@@ -155,6 +150,7 @@ export default function TeacherDetails() {
   };
 
   const fullName = userInfo ? `${userInfo.first_name} ${userInfo.last_name}` : '';
+  const isPOPOrIndustry = teacher.is_industry_professional || teacher.teacher_role === 'POP' || teacher.teacher_role === 'Industry Professional';
 
   const handleRemoveFromDepartment = () => {
     console.log('Removing teacher from department...');
@@ -177,9 +173,13 @@ export default function TeacherDetails() {
     setShowRemoveDialog(false);
   };
 
+  console.log(teacherAssignments);
+
   return (
     <div className="w-full mx-auto">
-      <Card className="shadow-md border-t-4 border-t-primary">
+
+      
+      <Card className="shadow-md border-t-4 border-t-primary mb-6">
         <CardHeader className="flex flex-row items-start justify-between pb-2">
           <div className="flex items-center space-x-4">
             <Avatar className="h-16 w-16 border-2 border-primary">
@@ -188,12 +188,14 @@ export default function TeacherDetails() {
               </AvatarFallback>
             </Avatar>
             <div>
-              <CardTitle className="text-2xl">
-                {fullName}
-                <Badge className="ml-3 bg-primary/20 text-primary hover:bg-primary/30">
+              <div className="flex items-center gap-2">
+                <CardTitle className="text-2xl">
+                  {fullName}
+                </CardTitle>
+                <Badge className="bg-primary/20 text-primary hover:bg-primary/30">
                   {teacher.teacher_role}
                 </Badge>
-              </CardTitle>
+              </div>
               <CardDescription className="flex items-center mt-1">
                 <span className="font-medium text-muted-foreground">{teacher.staff_code || 'No Staff Code'}</span>
                 {department && (
@@ -235,6 +237,15 @@ export default function TeacherDetails() {
                     <span className="text-muted-foreground mr-2">Working Hours:</span>
                     <span className="font-medium">{teacher.teacher_working_hours} hours/week</span>
                   </div>
+                  {isPOPOrIndustry && (
+                    <div className="flex items-center">
+                      <Briefcase className="h-4 w-4 text-muted-foreground mr-2" />
+                      <span className="text-muted-foreground mr-2">Availability:</span>
+                      <Badge variant="outline" className={teacher.availability_type === 'limited' ? 'text-amber-600' : ''}>
+                        {teacher.availability_type === 'limited' ? 'Limited (Specific Days/Times)' : 'Regular (All Working Days)'}
+                      </Badge>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -245,8 +256,13 @@ export default function TeacherDetails() {
                 </h3>
                 <div className="bg-muted/30 p-4 rounded-lg space-y-3">
                   <div>
-                    <span className="text-muted-foreground block mb-1">Specialization:</span>
+                    <span className="text-muted-foreground block mb-1">Specialisation:</span>
                     <span className="font-medium">{teacher.teacher_specialisation || 'Not specified'}</span>
+                  </div>
+                  
+                  <div>
+                    <span className="text-muted-foreground block mb-1">Department:</span>
+                    <span className="font-medium">{department ? department.dept_name : 'Not assigned'}</span>
                   </div>
                 </div>
               </div>
@@ -255,157 +271,114 @@ export default function TeacherDetails() {
             <div className="space-y-6">
               <div className="space-y-3">
                 <h3 className="text-lg font-semibold flex items-center">
-                  <Building className="h-5 w-5 mr-2 text-primary" />
-                  Department Information
+                  <GraduationCap className="h-5 w-5 mr-2 text-primary" />
+                  Teaching Load
                 </h3>
-                {department ? (
-                  <div className="bg-muted/30 p-4 rounded-lg space-y-3">
-                    <div>
-                      <span className="text-muted-foreground block mb-1">Department Name:</span>
-                      <span className="font-medium">{department.dept_name}</span>
+                <div className="bg-muted/30 p-4 rounded-lg">
+                  <div className="mb-3">
+                    <div className="flex justify-between items-center mb-1.5">
+                      <span className="text-sm text-muted-foreground">
+                        Current: {totalTeachingHours} / {teacher.teacher_working_hours} hours
+                      </span>
+                      <span className="text-xs font-medium">
+                        {Math.round((totalTeachingHours / teacher.teacher_working_hours) * 100)}%
+                      </span>
                     </div>
-                    <div>
-                      <span className="text-muted-foreground block mb-1">Established:</span>
-                      <span className="font-medium">{new Date(department.date_established).toLocaleDateString()}</span>
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block mb-1">Contact:</span>
-                      <span className="font-medium">{department.contact_info}</span>
+                    <div className="w-full bg-muted rounded-full h-2.5">
+                      <div 
+                        className="bg-primary h-2.5 rounded-full" 
+                        style={{ width: `${Math.min(100, (totalTeachingHours / teacher.teacher_working_hours) * 100)}%` }}
+                      ></div>
                     </div>
                   </div>
-                ) : (
-                  <div className="bg-muted/30 p-4 rounded-lg">
-                    <p className="text-muted-foreground">No department assigned</p>
-                  </div>
-                )}
+
+                  {isAssignmentsLoading ? (
+                    <div className="space-y-2">
+                      <Skeleton className="h-10 w-full" />
+                      <Skeleton className="h-10 w-full" />
+                    </div>
+                  ) : teacherAssignments.length === 0 ? (
+                    <div className="text-center py-4 text-muted-foreground">
+                      No course assignments found
+                    </div>
+                  ) : (
+                    <div className="max-h-[200px] overflow-y-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Course</TableHead>
+                            <TableHead>Role</TableHead>
+                            <TableHead className="text-right">Credits</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {teacherAssignments.map((assignment) => (
+                            <TableRow key={assignment.id}>
+                              <TableCell>
+                                {assignment.course_detail?.course_detail?.course_name || 'Unknown Course'}
+                              </TableCell>
+                              <TableCell>
+                                {assignment.is_assistant === true ? (
+                                  <Badge variant="outline">Assistant Teacher</Badge>
+                                ) : (
+                                  <Badge>Primary Teacher</Badge>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {assignment.course_detail?.credits || 0}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-
-          {/* Teaching Assignments Section */}
-          <div className="mt-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold flex items-center">
-                <GraduationCap className="h-5 w-5 mr-2 text-primary" />
-                Teaching Assignments
-              </h3>
-              <div className="flex items-center space-x-1">
-                <Badge variant="outline" className="bg-primary/5">
-                  <Clock className="h-3.5 w-3.5 mr-1.5" />
-                  <span>Teaching: {totalTeachingHours} hrs</span>
-                </Badge>
-                <Badge variant="outline" className="bg-amber-500/5 text-amber-500">
-                  <Clock className="h-3.5 w-3.5 mr-1.5" />
-                  <span>Available: {(teacher.teacher_working_hours - totalTeachingHours)} hrs</span>
-                </Badge>
-              </div>
-            </div>
-
-            {isAssignmentsLoading ? (
-              <div className="space-y-2 mt-2">
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-                <Skeleton className="h-10 w-full" />
-              </div>
-            ) : teacherAssignments.length === 0 ? (
-              <div className="bg-muted/30 p-6 rounded-lg text-center">
-                <p className="text-muted-foreground">No courses assigned to this teacher</p>
-                <Button 
-                  variant="outline" 
-                  className="mt-4"
-                  onClick={() => navigate('/teacher-course-assignment')}
-                >
-                  <Calendar className="mr-2 h-4 w-4" />
-                  Manage Course Assignments
-                </Button>
-              </div>
-            ) : (
-              <div className="border rounded-lg overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/30">
-                    <TableRow>
-                      <TableHead>Course</TableHead>
-                      <TableHead>Semester</TableHead>
-                      <TableHead>Academic Year</TableHead>
-                      <TableHead>Credits/Hours</TableHead>
-                      <TableHead>Students</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {teacherAssignments.map((assignment) => (
-                      <TableRow key={assignment.id} className="hover:bg-muted/40">
-                        <TableCell>
-                          <div>
-                            <div className="font-medium">{assignment.course_detail?.course_detail?.course_name || 'Unknown Course'}</div>
-                            <div className="text-xs text-muted-foreground">{assignment.course_detail?.course_detail?.course_id || 'No Code'}</div>
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="font-normal">
-                            Semester {assignment.semester}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{assignment.academic_year}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Badge variant="secondary" className="font-normal">
-                              {assignment.course_detail?.credits || 0} hrs
-                            </Badge>
-                          </div>
-                        </TableCell>
-                        <TableCell>{assignment.student_count || 0}</TableCell>
-                        <TableCell className="text-right">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/teacher-course-assignment/${assignment.id}`)}
-                          >
-                            View
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
-
-      {showEditForm && (
-        <TeacherForm
-          teacher={teacher}
-          onClose={() => setShowEditForm(false)}
-          disableDepartmentEdit={true}
-          onSuccess={() => {
-            refetch();
-            setShowEditForm(false);
-          }}
-        />
+      
+      {/* Availability Management for POP/Industry Professionals */}
+      {(isPOPOrIndustry || teacher.availability_type === 'limited') && (
+        <AvailabilityManager teacher={teacher} />
       )}
 
+      {/* Remove from Department Confirmation */}
       <AlertDialog open={showRemoveDialog} onOpenChange={setShowRemoveDialog}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove from Department</AlertDialogTitle>
+            <AlertDialogTitle>Remove Teacher from Department</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove {fullName} from {department?.dept_name}?
-              This action will only remove the teacher's department association.
+              Are you sure you want to remove this teacher from {department?.dept_name}?
+              This will not delete the teacher from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
+            <AlertDialogAction 
               onClick={handleRemoveFromDepartment}
-              className="bg-destructive hover:bg-destructive/90"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
             >
               Remove
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Edit Teacher Form */}
+      {showEditForm && (
+        <TeacherForm
+          teacher={teacher}
+          onClose={() => setShowEditForm(false)}
+          onSuccess={() => {
+            setShowEditForm(false);
+            refetch();
+          }}
+          disableDepartmentEdit={!!department}
+        />
+      )}
     </div>
   );
 } 

@@ -96,6 +96,20 @@ export const useLogin = (onSuccess?: (result: any) => void) => {
   );
 };
 
+export const useCsrfToken = () => {
+  return useQueryData(
+    ['csrf_token'],
+    async () => {
+      try {
+        const response = await api.get('/api/auth/csrf_token/');
+        return response.data;
+      } catch (error) {
+        return null;
+      }
+    }
+  )
+}
+
 // Get current user using HTTP cookies
 export const useCurrentUser = () => {
   return useQueryData<ProfileResponse | null>(

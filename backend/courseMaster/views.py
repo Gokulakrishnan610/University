@@ -7,6 +7,8 @@ from .serializers import CourseMasterSerializer
 from rest_framework.permissions import IsAuthenticated
 from authentication.authentication import JWTCookieAuthentication
 from department.views import get_user_department
+from utlis.pagination import PagePagination
+from django.db.models import Q
 
 # Create your views here.
 class CourseMasterListAPIView(generics.ListCreateAPIView):
@@ -14,9 +16,18 @@ class CourseMasterListAPIView(generics.ListCreateAPIView):
     permission_classes=[IsAuthenticated]
     queryset = CourseMaster.objects.all()
     serializer_class = CourseMasterSerializer
+    pagination_class = PagePagination
     
     def get_queryset(self):
         queryset = CourseMaster.objects.all()
+        
+        # Handle search
+        search_query = self.request.query_params.get('search', None)
+        if search_query:
+            queryset = queryset.filter(
+                Q(course_id__icontains=search_query) |
+                Q(course_name__icontains=search_query)
+            )
         
         # Allow filtering by department
         department_id = self.request.query_params.get('department_id', None)

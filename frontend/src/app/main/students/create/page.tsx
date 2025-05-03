@@ -25,14 +25,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGetCurrentDepartment } from '@/action';
 
 // Define the validation schema using Zod
 const studentFormSchema = z.object({
-  student: z.number().int().positive({ message: "Student ID is required" }),
+  // User information fields
+  email: z.string().email({ message: "Please enter a valid email address" }),
+  first_name: z.string().min(1, { message: "First name is required" }),
+  last_name: z.string().min(1, { message: "Last name is required" }),
+  phone_number: z.string().min(7, { message: "Please enter a valid phone number" }),
+  gender: z.enum(["M", "F"], { 
+    required_error: "Gender is required",
+  }),
+  
+  // Student information fields
   batch: z.number().int().positive({ message: "Batch year is required" }),
   current_semester: z.number().int().min(1).max(10, { message: "Semester must be between 1 and 10" }),
   year: z.number().int().min(1).max(5, { message: "Year must be between 1 and 5" }),
-  dept: z.number().int().nullable().optional(),
+  dept_id: z.number().int().nullable().optional(),
   roll_no: z.string().nullable().optional(),
   student_type: z.enum(["Mgmt", "Govt"], { 
     required_error: "Student type is required",
@@ -46,17 +56,22 @@ type StudentFormValues = z.infer<typeof studentFormSchema>;
 
 const StudentCreate = () => {
   const navigate = useNavigate();
+  const { data: department, isPending } = useGetCurrentDepartment();
 
   // Initialize form with Zod schema
   const form = useForm<StudentFormValues>({
     resolver: zodResolver(studentFormSchema),
     defaultValues: {
-      student: 0,
+      email: "",
+      first_name: "",
+      last_name: "",
+      phone_number: "",
+      gender: "M",
       batch: new Date().getFullYear(),
       current_semester: 1,
       year: 1,
       roll_no: "",
-      dept: null,
+      dept_id: department?.id,
       student_type: "Mgmt",
       degree_type: "UG",
     },
@@ -69,7 +84,6 @@ const StudentCreate = () => {
 
   // Form submission handler
   const onSubmit = (data: StudentFormValues) => {
-    console.log('Submitting form data:', data);
     createStudent(data as CreateStudentRequest);
   };
 
@@ -112,21 +126,99 @@ const StudentCreate = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <FormField
                       control={form.control}
-                      name="student"
+                      name="email"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-base">Student User ID <span className="text-red-500">*</span></FormLabel>
+                          <FormLabel className="text-base">Email <span className="text-red-500">*</span></FormLabel>
                           <FormControl>
                             <Input 
                               {...field} 
-                              type="number" 
                               className="h-11" 
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                              placeholder="Enter email address" 
                             />
                           </FormControl>
                           <FormDescription>
-                            The User ID associated with this student
+                            Student will use this email to login
                           </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="first_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">First Name <span className="text-red-500">*</span></FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              className="h-11" 
+                              placeholder="Enter first name" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="last_name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Last Name <span className="text-red-500">*</span></FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              className="h-11" 
+                              placeholder="Enter last name" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="phone_number"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Phone Number <span className="text-red-500">*</span></FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              className="h-11" 
+                              placeholder="Enter phone number" 
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="gender"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Gender <span className="text-red-500">*</span></FormLabel>
+                          <Select 
+                            onValueChange={field.onChange} 
+                            defaultValue={field.value}
+                          >
+                            <FormControl>
+                              <SelectTrigger className="h-11">
+                                <SelectValue placeholder="Select gender" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="M">Male</SelectItem>
+                              <SelectItem value="F">Female</SelectItem>
+                            </SelectContent>
+                          </Select>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -146,30 +238,6 @@ const StudentCreate = () => {
                               placeholder="Enter roll number" 
                             />
                           </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name="dept"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">Department ID</FormLabel>
-                          <FormControl>
-                            <Input 
-                              {...field} 
-                              value={field.value || ""}
-                              type="number" 
-                              className="h-11" 
-                              placeholder="Enter department ID"
-                              onChange={(e) => field.onChange(parseInt(e.target.value) || null)}
-                            />
-                          </FormControl>
-                          <FormDescription>
-                            Department the student belongs to
-                          </FormDescription>
                           <FormMessage />
                         </FormItem>
                       )}
@@ -300,25 +368,23 @@ const StudentCreate = () => {
                     />
                   </div>
                 </TabsContent>
-
-                <div className="flex gap-3 justify-end pt-4 border-t mt-8">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => navigate('/students')}
-                    className="w-28"
-                  >
-                    Cancel
-                  </Button>
-                  <Button 
-                    type="submit" 
-                    disabled={isSubmitting || form.formState.isSubmitting}
-                    className="w-28"
-                  >
-                    {isSubmitting || form.formState.isSubmitting ? 'Creating...' : 'Create'}
-                  </Button>
-                </div>
               </Tabs>
+
+              <div className="flex justify-end gap-4">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => navigate('/students')}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? 'Creating...' : 'Create Student'}
+                </Button>
+              </div>
             </form>
           </Form>
         </CardContent>

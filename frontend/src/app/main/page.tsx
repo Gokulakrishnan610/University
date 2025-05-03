@@ -16,7 +16,8 @@ import StudentManagement from "./students/page";
 import StudentDetails from "./students/[id]/page";
 import StudentCreate from "./students/create/page";
 import StudentEdit from "./students/[id]/edit/page";
-
+import CreateCoursePage from "./courses/create/page";
+import TeacherSlotAssignmentPage from "./teachers/slot-allocation/page";
 
 export default function Dashboard() {
 
@@ -26,15 +27,18 @@ export default function Dashboard() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/setting" element={<Setting />} />
       <Route path="/courses" element={<CourseManagement />} />
+      <Route path="/courses/create" element={<CreateCoursePage/>} />
       <Route path="/courses/all-courses" element={<AllCoursesPage />} />
       <Route path="/courses/allocations" element={<AllocationManagementPage />} />
       <Route path="/courses/:id" element={<CourseDetails />} />
       <Route path="/courses/:id/room-preferences" element={<CourseRoomPreferencesPage />} />
       <Route path="/teachers" element={<TeacherManagement />} />
+      <Route path="/teachers/slot-allocation" element={<TeacherSlotAssignmentPage />} />
       <Route path="/teachers/:id" element={<TeacherDetails />} />
       <Route path="/teacher-course-assignment" element={<TeacherCourseAssignmentPage />} />
       <Route path="/teacher-course-assignment/create" element={<TeacherCourseAssignmentCreate />} />
       <Route path="/teacher-course-assignment/:id" element={<TeacherCourseAssignmentDetail />} />
+     
       <Route path="/students" element={<StudentManagement />} />
       <Route path="/students/create" element={<StudentCreate />} />
       <Route path="/students/:id" element={<StudentDetails />} />

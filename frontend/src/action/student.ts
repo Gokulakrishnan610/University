@@ -6,7 +6,13 @@ import api from "./api";
 // Types
 export interface Student {
   id: number;
-  student: number; // User ID
+  student_detail: {
+    email: string;
+    first_name: string;
+    last_name: string;
+    phone_number: string;
+    gender: string;
+  };
   batch: number;
   current_semester: number;
   year: number;
@@ -16,12 +22,24 @@ export interface Student {
   degree_type: string;
 }
 
+export interface StudentStats {
+  total: number;
+  by_year: { year: number; count: number }[];
+  by_semester: { current_semester: number; count: number }[];
+  by_student_type: { student_type: string; count: number }[];
+  by_degree_type: { degree_type: string; count: number }[];
+}
+
 export interface CreateStudentRequest {
-  student: number; // User ID
+  email: string;
+  first_name: string;
+  last_name: string;
+  phone_number: string;
+  gender: string;
   batch: number;
   current_semester: number;
   year: number;
-  dept?: number;
+  dept_id?: number;
   roll_no?: string;
   student_type: string;
   degree_type: string;
@@ -30,16 +48,50 @@ export interface CreateStudentRequest {
 export type UpdateStudentRequest = Partial<CreateStudentRequest>;
 
 // Get all students
-export const useGetStudents = () => {
+export const useGetStudents = (
+  page: number = 1,
+  pageSize: number = 10,
+  searchQuery: string = '',
+  year?: number,
+  semester?: number,
+  studentType?: string
+) => {
   return useQueryData(
-    ['students'],
+    ['students', page, pageSize, searchQuery, year, semester, studentType],
     async () => {
       try {
-        const response = await api.get('/api/students/');
+        const response = await api.get('/api/students/', {
+          params: {
+            page,
+            page_size: pageSize,
+            search: searchQuery || undefined,
+            year: year || undefined,
+            current_semester: semester || undefined,
+            student_type: studentType || undefined
+          }
+        });
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
           throw new Error(error.response.data.message || 'Failed to fetch students');
+        }
+        throw error;
+      }
+    }
+  );
+};
+
+// Get student statistics
+export const useGetStudentStats = () => {
+  return useQueryData(
+    ['studentStats'],
+    async () => {
+      try {
+        const response = await api.get('/api/students/stats/');
+        return response.data as StudentStats;
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          throw new Error(error.response.data.message || 'Failed to fetch student statistics');
         }
         throw error;
       }
@@ -118,12 +170,12 @@ export const useUpdateStudent = (id: number, onSuccess?: () => void) => {
 };
 
 // Delete a student
-export const useDeleteStudent = (id: number, onSuccess?: () => void) => {
+export const useDeleteStudent = (id: number = 0, onSuccess?: () => void) => {
   return useMutationData(
-    ['deleteStudent', id.toString()],
-    async () => {
+    ['deleteStudent'],
+    async (studentId: number) => {
       try {
-        const response = await api.delete(`/api/students/${id}/`);
+        const response = await api.delete(`/api/students/${studentId}/`);
         return {
           status: response.status,
           data: response.data.message || 'Student deleted successfully',

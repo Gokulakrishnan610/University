@@ -4,7 +4,7 @@ import axios from "axios";
 import api from "./api";
 import { DepartmentDetails } from "./course";
 
-// Types
+// Type for course master
 export interface CourseMaster {
   id: number;
   course_id: string;
@@ -29,16 +29,22 @@ export interface CreateCourseMasterRequest {
 export type UpdateCourseMasterRequest = Partial<CreateCourseMasterRequest>;
 
 // Get all course masters
-export const useGetCourseMasters = () => {
-  return useQueryData<CourseMaster[]>(
-    ['course-masters'],
+export const useGetCourseMasters = (page: number = 1, pageSize: number = 10, searchQuery: string = '') => {
+  return useQueryData<{results: CourseMaster[], count: number}>(
+    ['course-masters', page, pageSize, searchQuery],
     async () => {
       try {
-        const response = await api.get('/api/course-master/');
-        return response.data || [];
+        const response = await api.get('/api/course-master/', {
+          params: {
+            page,
+            page_size: pageSize,
+            search: searchQuery || undefined
+          }
+        });
+        return response.data || { results: [], count: 0 };
       } catch (error) {
         console.error('Error fetching course masters:', error);
-        return [];
+        return { results: [], count: 0 };
       }
     }
   );
