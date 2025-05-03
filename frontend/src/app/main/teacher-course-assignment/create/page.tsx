@@ -37,6 +37,7 @@ import {
 const teacherCourseFormSchema = z.object({
     teacher_id: z.string().min(1, "Teacher is required"),
     course_id: z.string().min(1, "Course is required"),
+    no_of_students: z.number().min(1, "Number of students is required"),
     preferred_availability_slots: z.array(z.string()).optional(),
     is_assistant: z.boolean().default(false),
 });
@@ -58,12 +59,20 @@ export default function CreateTeacherCourseAssignment() {
     const { data: teacherAvailability = [], isPending: availabilityLoading } =
         useGetTeacherAvailability(selectedTeacher ? parseInt(selectedTeacher) : 0);
 
+    const STUDENT_COUNT_OPTIONS = [
+        { value: 70, label: "70 students" },
+        { value: 140, label: "140 students" },
+        { value: 210, label: "210 students" },
+        { value: 280, label: "280 students" }
+    ];
+
     // Setup form with Zod  
     const form = useForm<TeacherCourseFormValues>({
         resolver: zodResolver(teacherCourseFormSchema),
         defaultValues: {
             teacher_id: "",
             course_id: "",
+            no_of_students: 70, // Default to 60 students
             preferred_availability_slots: [],
             is_assistant: false,
         },
@@ -273,7 +282,7 @@ export default function CreateTeacherCourseAssignment() {
             course_id: parseInt(data.course_id),
             semester: 1, // Default value
             academic_year: new Date().getFullYear(), // Default current year
-            student_count: 70, // Default student count per teacher
+            student_count: data.no_of_students, // Default student count per teacher
             is_assistant: data.is_assistant,
             // @ts-ignore - API accepts this parameter but type definition hasn't been updated
             preferred_availability_slots: preferred_slots
@@ -491,6 +500,34 @@ export default function CreateTeacherCourseAssignment() {
                                                 <FormMessage />
                                             </FormItem>
                                         )}
+                                    />
+
+                                    <FormField
+                                    control={form.control}
+                                    name="no_of_students"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                        <FormLabel>Number of Students</FormLabel>
+                                        <Select 
+                                            onValueChange={(value) => field.onChange(parseInt(value))}
+                                            value={field.value?.toString()}
+                                        >
+                                            <FormControl>
+                                            <SelectTrigger>
+                                                <SelectValue placeholder="Select number of students" />
+                                            </SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>
+                                            {STUDENT_COUNT_OPTIONS.map((option) => (
+                                                <SelectItem key={option.value} value={option.value.toString()}>
+                                                {option.label}
+                                                </SelectItem>
+                                            ))}
+                                            </SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                        </FormItem>
+                                    )}
                                     />
 
                                     {/* Show assistant teacher option when course needs assistant */}
