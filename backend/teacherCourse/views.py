@@ -19,7 +19,7 @@ class TeacherCourseListView(generics.ListCreateAPIView):
         user = self.request.user
         
         # Admin users can see all assignments
-        if user.is_superuser or user.is_staff:
+        if user.is_superuser:
             return TeacherCourse.objects.all()
             
         try:
