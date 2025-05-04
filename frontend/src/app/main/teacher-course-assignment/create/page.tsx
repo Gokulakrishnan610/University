@@ -149,8 +149,25 @@ export default function CreateTeacherCourseAssignment() {
 
         if (!selectedTeacherData) return null;
 
+        // Calculate total assigned hours using LTP instead of just credits
         const totalAssignedHours = teacherAssignments.reduce((total, assignment) => {
-            return total + (assignment.course_detail?.credits || 0);
+            const course = assignment.course_detail;
+            if (!course) return total;
+
+            // Calculate LTP hours based on course type
+            const lectureHours = course.lecture_hours || 0;
+            const tutorialHours = course.tutorial_hours || 0;
+            const practicalHours = course.practical_hours || 0;
+
+            if (course.course_type === 'T') { // Theory
+                return total + lectureHours + tutorialHours;
+            } else if (course.course_type === 'LoT') { // Lab and Theory
+                return total + lectureHours + tutorialHours + practicalHours;
+            } else if (course.course_type === 'L') { // Lab only
+                return total + practicalHours;
+            }
+
+            return total + (course.credits || 0); // Fallback to credits if course type is unknown
         }, 0);
 
         const availableHours = (selectedTeacherData.teacher_working_hours || 0) - totalAssignedHours;
@@ -191,11 +208,30 @@ export default function CreateTeacherCourseAssignment() {
         );
     }, [selectedTeacher, teachers, courses, isPOPOrIndustry]);
 
+    // Helper function to calculate LTP hours for a course
+    const calculateLTPHours = (course: Course) => {
+        if (!course) return 0;
+
+        const lectureHours = course.lecture_hours || 0;
+        const tutorialHours = course.tutorial_hours || 0;
+        const practicalHours = course.practical_hours || 0;
+
+        if (course.course_type === 'T') { // Theory
+            return lectureHours + tutorialHours;
+        } else if (course.course_type === 'LoT') { // Lab and Theory
+            return lectureHours + tutorialHours + practicalHours;
+        } else if (course.course_type === 'L') { // Lab only
+            return practicalHours;
+        }
+
+        return course.credits || 0; // Fallback to credits if course type is unknown
+    };
+
     // Transform filtered courses into combobox options
     const courseOptions: ComboboxOption[] = useMemo(() => {
         return availableCourses.map((course: Course) => ({
             value: course.id.toString(),
-            label: `${course.course_detail?.course_name} (${course.course_detail?.course_id} ${course.id} - ${course.credits} credits)`
+            label: `${course.course_detail?.course_name} (${course.course_detail?.course_id} - L:${course.lecture_hours || 0} T:${course.tutorial_hours || 0} P:${course.practical_hours || 0} - ${calculateLTPHours(course)} hrs)`
         }));
     }, [availableCourses]);
 
@@ -662,16 +698,34 @@ export default function CreateTeacherCourseAssignment() {
                                         <p className="text-sm text-muted-foreground">No current assignments</p>
                                     ) : (
                                         <div className="space-y-2">
-                                            {teacherWorkload.assignments.map(assignment => (
-                                                <div key={assignment.id} className="flex justify-between items-center p-2 bg-muted/30 rounded-md">
-                                                    <div>
-                                                        <p className="font-medium">{assignment.course_detail?.course_detail?.course_name}</p>
+                                            {teacherWorkload.assignments.map(assignment => {
+                                                const course = assignment.course_detail;
+                                                // Calculate LTP hours for display
+                                                const lectureHours = course?.lecture_hours || 0;
+                                                const tutorialHours = course?.tutorial_hours || 0;
+                                                const practicalHours = course?.practical_hours || 0;
+                                                let ltpHours = course?.credits || 0;
+
+                                                if (course?.course_type === 'T') {
+                                                    ltpHours = lectureHours + tutorialHours;
+                                                } else if (course?.course_type === 'LoT') {
+                                                    ltpHours = lectureHours + tutorialHours + practicalHours;
+                                                } else if (course?.course_type === 'L') {
+                                                    ltpHours = practicalHours;
+                                                }
+
+                                                return (
+                                                    <div key={assignment.id} className="flex justify-between items-center p-2 bg-muted/30 rounded-md">
+                                                        <div>
+                                                            <p className="font-medium">{assignment.course_detail?.course_detail?.course_name}</p>
+                                                            <p className="text-xs text-muted-foreground">L:{lectureHours} T:{tutorialHours} P:{practicalHours}</p>
+                                                        </div>
+                                                        <Badge variant="secondary">
+                                                            {ltpHours} hrs
+                                                        </Badge>
                                                     </div>
-                                                    <Badge variant="secondary">
-                                                        {assignment.course_detail?.credits} hrs
-                                                    </Badge>
-                                                </div>
-                                            ))}
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

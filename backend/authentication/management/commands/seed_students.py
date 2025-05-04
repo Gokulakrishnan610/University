@@ -43,7 +43,7 @@ class StudentCSVImporter:
                 dept_name = row['dept']
 
                 # Get or create department
-                dept = Department.objects.get(dept_name=dept_name)
+                dept = Department.objects.get(name=dept_name)
 
                 # Create user
                 user, created = User.objects.get_or_create(

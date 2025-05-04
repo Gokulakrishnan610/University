@@ -247,19 +247,19 @@ export const validateSlotDistribution = (
 // Pre-defined slot types that match our backend
 export const SLOT_TYPES = [
   {
-    id: 31,
+    id: 1,
     type: 'A',
     name: 'Slot A',
     time: '8:00 AM - 3:00 PM'
   },
   {
-    id: 32,
+    id: 2,
     type: 'B',
     name: 'Slot B',
     time: '10:00 AM - 5:00 PM'
   },
   {
-    id: 33,
+    id: 3,
     type: 'C',
     name: 'Slot C',
     time: '12:00 PM - 7:00 PM'

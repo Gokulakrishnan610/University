@@ -18,8 +18,8 @@ const Page = () => {
                  <p>The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.</p>
                 </CardContent>
                 <CardFooter className="flex justify-evenly">
-                <Button onClick={() => navigate("/dashboard")}><MoveLeftIcon/> Go Back</Button>
-                <Button onClick={() => navigate("/dashboard")}><HomeIcon/> Back To Dashboard</Button>
+                <Button onClick={() => navigate("/")}><MoveLeftIcon/> Go Back</Button>
+                <Button onClick={() => navigate("/")}><HomeIcon/> Back To Dashboard</Button>
                 </CardFooter>
             </Card>
       

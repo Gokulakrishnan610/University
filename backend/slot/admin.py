@@ -2,9 +2,10 @@ from django.contrib import admin
 from .models import Slot, TeacherSlotAssignment
 from django.db.models import Count, Q
 from django.utils.html import format_html
+from unfold.admin import ModelAdmin
 
 @admin.register(Slot)
-class SlotAdmin(admin.ModelAdmin):
+class SlotAdmin(ModelAdmin):
     list_display = ('id','slot_name', 'slot_type', 'slot_time_range', 'total_assignments')
     list_filter = ('slot_type',)
     search_fields = ('slot_name',)

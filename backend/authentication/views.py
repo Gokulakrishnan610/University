@@ -101,6 +101,7 @@ class LoginAPIView(generics.CreateAPIView):
             try:
                 print("Hello Wiore", email)
                 user = User.objects.get(email=email)
+                print("User", user)
                 is_blocked = BlockedStudents.objects.filter(email=email).exists()
                 if is_blocked:
                     return Response({
