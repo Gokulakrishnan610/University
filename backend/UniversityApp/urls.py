@@ -36,6 +36,8 @@ api_urlpatterns = [
     path("slots/", include('slot.urls')),
     path('rooms/', include('rooms.urls')),
     path('dashboard/', include('dashboard.urls')),
+    path('timetable/', include('timetable.urls')),
+    path('attendance/', include('attendancerecord.urls')),
     path('import/<str:resource_name>/', ImportDataView.as_view(), name="import-resource"),
     # Health check endpoint
     path('health/', health_check, name='health_check'),

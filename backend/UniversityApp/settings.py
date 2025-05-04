@@ -106,6 +106,8 @@ INSTALLED_APPS = [
     'courseMaster',
     'slot',
     'dashboard',  # Added dashboard app
+    'timetable',  # Added timetable app
+    'attendancerecord',  # Added attendance record app
 ]
 
 MIDDLEWARE = [
