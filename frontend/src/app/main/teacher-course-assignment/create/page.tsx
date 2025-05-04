@@ -216,7 +216,7 @@ export default function CreateTeacherCourseAssignment() {
         const tutorialHours = course.tutorial_hours || 0;
         const practicalHours = course.practical_hours || 0;
 
-        if (course.course_type === 'T') { // Theory
+        if (course.course_type === 'T        ') { // Theory
             return lectureHours + tutorialHours;
         } else if (course.course_type === 'LoT') { // Lab and Theory
             return lectureHours + tutorialHours + practicalHours;
@@ -231,7 +231,7 @@ export default function CreateTeacherCourseAssignment() {
     const courseOptions: ComboboxOption[] = useMemo(() => {
         return availableCourses.map((course: Course) => ({
             value: course.id.toString(),
-            label: `${course.course_detail?.course_name} (${course.course_detail?.course_id} - L:${course.lecture_hours || 0} T:${course.tutorial_hours || 0} P:${course.practical_hours || 0} - ${calculateLTPHours(course)} hrs)`
+            label: `${course.course_detail?.course_name} - ${course.id} - (${course.course_detail?.course_id}- L:${course.lecture_hours || 0} T:${course.tutorial_hours || 0} P:${course.practical_hours || 0} - ${calculateLTPHours(course)} hrs)`
         }));
     }, [availableCourses]);
 
@@ -411,7 +411,7 @@ export default function CreateTeacherCourseAssignment() {
 
             if (existingAssignment) {
                 const courseName = selectedCourseData.course_detail?.course_name;
-                const teacherName = teachers.find(t => t.id.toString() === data.teacher_id)?.teacher_id?.first_name || 'This teacher';
+                const teacherName = teachers.find((t: any) => t.id.toString() === data.teacher_id)?.teacher_id?.first_name || 'This teacher';
                 errors.push(`${teacherName} is already assigned to ${courseName}. A teacher cannot be assigned to the same course multiple times.`);
             }
         }
