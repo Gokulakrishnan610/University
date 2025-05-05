@@ -274,4 +274,7 @@ export const DAYS_OF_WEEK = [
   { value: 3, label: 'Thursday' },
   { value: 4, label: 'Friday' },
   { value: 5, label: 'Saturday' }
-]; 
+];
+
+// Restricted days (Monday or Saturday - teachers can only choose one)
+export const RESTRICTED_DAYS = [0, 5]; // Monday and Saturday 

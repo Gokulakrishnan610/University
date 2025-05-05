@@ -13,6 +13,7 @@ from django.db import transaction
 from rest_framework.response import Response
 from rest_framework import status
 from django.db.models import Count, Q
+from collections import Counter
 
 # Create your views here.
 class SlotListView(ListAPIView):
@@ -107,6 +108,23 @@ class TeacherSlotPreferenceView(CreateAPIView):
         if len(current_days) >= 5 and day_of_week not in current_days:
             raise DRFValidationError("Teacher already has assignments for 5 days. Maximum is 5 days per week.")
         
+        # Check Monday/Saturday constraint - only one of these days allowed
+        if day_of_week in TeacherSlotAssignment.RESTRICTED_DAYS:
+            restricted_day_assignments = TeacherSlotAssignment.objects.filter(
+                teacher=teacher,
+                day_of_week__in=TeacherSlotAssignment.RESTRICTED_DAYS
+            ).exclude(day_of_week=day_of_week)
+            
+            if restricted_day_assignments.exists():
+                restricted_day = dict(TeacherSlotAssignment.DAYS_OF_WEEK)[restricted_day_assignments.first().day_of_week]
+                raise DRFValidationError(
+                    f"Teacher already has a slot assigned for {restricted_day}. "
+                    f"Teachers can only choose one of these days: Monday or Saturday."
+                )
+        
+        # Check slot type distribution constraint
+        self._validate_slot_type_distribution(teacher, slot, day_of_week)
+        
         # Check department distribution constraint (33% per slot type)
         if teacher.dept_id:
             dept_id = teacher.dept_id.id
@@ -147,6 +165,54 @@ class TeacherSlotPreferenceView(CreateAPIView):
             "message": f"Slot assignment {action} successfully.",
             "created": created
         }
+
+    def _validate_slot_type_distribution(self, teacher, new_slot, new_day_of_week):
+        """
+        Validate that the teacher's slot choices follow the required distribution format:
+        Valid combinations: A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2
+        """
+        # Get all current assignments for this teacher
+        current_assignments = list(TeacherSlotAssignment.objects.filter(
+            teacher=teacher
+        ).exclude(day_of_week=new_day_of_week).values_list('slot__slot_type', flat=True))
+        
+        # Add the new slot type to the distribution
+        current_assignments.append(new_slot.slot_type)
+        
+        # Count occurrences of each slot type
+        slot_type_counts = Counter(current_assignments)
+        total_assignments = len(current_assignments)
+        
+        # Don't need to check if less than 5 assignments
+        if total_assignments > 5:
+            raise DRFValidationError("Teacher cannot have more than 5 slot assignments in total.")
+        
+        # When we reach 5 assignments, ensure we have a valid combination
+        if total_assignments == 5:
+            # Valid combinations
+            valid_combinations = [
+                # Format: {A: count, B: count, C: count}
+                {'A': 2, 'B': 2, 'C': 1},
+                {'A': 1, 'B': 2, 'C': 2},
+                {'A': 2, 'B': 1, 'C': 2}
+            ]
+            
+            is_valid = False
+            for combo in valid_combinations:
+                if all(slot_type_counts.get(slot_type, 0) == count for slot_type, count in combo.items()):
+                    is_valid = True
+                    break
+            
+            if not is_valid:
+                slot_a_count = slot_type_counts.get('A', 0)
+                slot_b_count = slot_type_counts.get('B', 0)
+                slot_c_count = slot_type_counts.get('C', 0)
+                
+                raise DRFValidationError(
+                    f"Invalid slot distribution. Current distribution is: "
+                    f"A: {slot_a_count}, B: {slot_b_count}, C: {slot_c_count}. "
+                    f"Valid distributions for 5 days are: A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2."
+                )
 
     def _handle_delete(self, teacher, data):
         if 'slot_id' not in data or 'day_of_week' not in data:
@@ -593,6 +659,64 @@ class BatchTeacherSlotAssignmentView(APIView):
                         
                         if len(current_days) >= 5 and day_of_week not in current_days:
                             raise DRFValidationError("Teacher already has assignments for 5 days. Maximum is 5 days per week.")
+                        
+                        # Check Monday/Saturday constraint - only one of these days allowed
+                        if day_of_week in TeacherSlotAssignment.RESTRICTED_DAYS:
+                            restricted_day_assignments = TeacherSlotAssignment.objects.filter(
+                                teacher=teacher,
+                                day_of_week__in=TeacherSlotAssignment.RESTRICTED_DAYS
+                            ).exclude(day_of_week=day_of_week)
+                            
+                            if restricted_day_assignments.exists():
+                                restricted_day = dict(TeacherSlotAssignment.DAYS_OF_WEEK)[restricted_day_assignments.first().day_of_week]
+                                raise DRFValidationError(
+                                    f"Teacher already has a slot assigned for {restricted_day}. "
+                                    f"Teachers can only choose one of these days: Monday or Saturday."
+                                )
+                        
+                        # Check slot type distribution constraint
+                        # Get all current assignments for this teacher
+                        current_assignments = list(TeacherSlotAssignment.objects.filter(
+                            teacher=teacher
+                        ).exclude(day_of_week=day_of_week).values_list('slot__slot_type', flat=True))
+                        
+                        # Add the new slot type to the distribution
+                        current_assignments.append(slot.slot_type)
+                        
+                        # Count occurrences of each slot type
+                        slot_type_counts = Counter(current_assignments)
+                        total_assignments = len(current_assignments)
+                        
+                        # Don't need to check if less than 5 assignments
+                        if total_assignments > 5:
+                            raise DRFValidationError("Teacher cannot have more than 5 slot assignments in total.")
+                        
+                        # When we reach 5 assignments, ensure we have a valid combination
+                        if total_assignments == 5:
+                            # Valid combinations
+                            valid_combinations = [
+                                # Format: {A: count, B: count, C: count}
+                                {'A': 2, 'B': 2, 'C': 1},
+                                {'A': 1, 'B': 2, 'C': 2},
+                                {'A': 2, 'B': 1, 'C': 2}
+                            ]
+                            
+                            is_valid = False
+                            for combo in valid_combinations:
+                                if all(slot_type_counts.get(slot_type, 0) == count for slot_type, count in combo.items()):
+                                    is_valid = True
+                                    break
+                            
+                            if not is_valid:
+                                slot_a_count = slot_type_counts.get('A', 0)
+                                slot_b_count = slot_type_counts.get('B', 0)
+                                slot_c_count = slot_type_counts.get('C', 0)
+                                
+                                raise DRFValidationError(
+                                    f"Invalid slot distribution. Current distribution is: "
+                                    f"A: {slot_a_count}, B: {slot_b_count}, C: {slot_c_count}. "
+                                    f"Valid distributions for 5 days are: A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2."
+                                )
                         
                         # Check department distribution constraint (33% per slot type)
                         if teacher.dept_id:
