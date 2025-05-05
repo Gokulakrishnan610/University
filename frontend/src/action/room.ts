@@ -43,7 +43,7 @@ export const useGetRooms = (roomType?: string) => {
       try {
         const response = await api.get('/api/rooms/', {
           params: {
-            roomType : roomType
+            room_type : roomType
           }
         });
         return response.data;
