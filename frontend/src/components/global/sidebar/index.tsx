@@ -34,7 +34,7 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/",
     },
     {
-      title: "Department Course Master",
+      title: "Course Master",
       icon: <BookOpen className="h-5 w-5" />,
       href: "/courses",
     },
