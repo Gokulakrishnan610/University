@@ -854,6 +854,7 @@ export default function CreateTeacherCourseAssignment() {
                                                     <Select 
                                                         onValueChange={(value) => field.onChange(parseInt(value))}
                                                         value={field.value?.toString()}
+                                                        disabled={!selectedTeacher || coursesLoading || courseOptions.length === 0}
                                                     >
                                                         <FormControl>
                                                         <SelectTrigger>
