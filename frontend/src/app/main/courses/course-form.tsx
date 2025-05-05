@@ -90,7 +90,7 @@ export default function CourseForm({
   const debouncedSearchTerm = useDebounce(searchTermState, 300);
   const [page, setPage] = useState(currentPage);
   const pageSize = 10;
-  console.log('defaultValues', departments);
+
   useEffect(() => {
     if (onSearchChange && debouncedSearchTerm !== searchTerm) {
       onSearchChange(debouncedSearchTerm);
@@ -108,7 +108,6 @@ export default function CourseForm({
       setPage(currentPage);
     }
   }, [currentPage]);
-  
   const totalResults = initialCourseMasters?.length || 0;
   const calculatedTotalPages = Math.ceil(totalResults / pageSize);
   
@@ -242,7 +241,6 @@ export default function CourseForm({
       setPage(newPage);
     }
   };
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8 py-4">
@@ -325,6 +323,8 @@ export default function CourseForm({
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Department Information</h3>
           <div className="grid grid-cols-2 gap-4">
+
+            {defaultValues?.for_dept_id && (
             <FormField
               control={form.control}
               name="for_dept_id"
@@ -333,7 +333,7 @@ export default function CourseForm({
                   <FormLabel>For Department</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))} 
-                    value={field.value ? field.value.toString() : ''}
+                    value={defaultValues?.for_dept_id ? defaultValues?.for_dept_id.toString() : ''}
                     disabled={!isFieldEditable('for_dept_id')}
                   >
                     <FormControl>
@@ -355,8 +355,8 @@ export default function CourseForm({
                   <FormMessage />
                 </FormItem>
               )}
-            />
-            
+            />)}
+            {defaultValues?.teaching_dept_id && (
             <FormField
               control={form.control}
               name="teaching_dept_id"
@@ -365,7 +365,7 @@ export default function CourseForm({
                   <FormLabel>Teaching Department</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))} 
-                    value={field.value ? field.value.toString() : ''}
+                    value={defaultValues?.teaching_dept_id ? defaultValues?.teaching_dept_id.toString() : ''}
                     disabled={!isFieldEditable('teaching_dept_id')}
                   >
                     <FormControl>
@@ -388,6 +388,7 @@ export default function CourseForm({
                 </FormItem>
               )}
             />
+            )}  
           </div>
         </div>
         
