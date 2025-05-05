@@ -9,7 +9,6 @@ class RoomListAPIView(generics.ListAPIView):
 
     def get_queryset(self):
         room_type = self.request.query_params.get('room_type', None)
-        print("Room type:", room_type)
         if room_type:
             return Room.objects.filter(room_type=room_type)
         return Room.objects.all()

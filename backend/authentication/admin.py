@@ -31,7 +31,7 @@ class CustomUserAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = UserResource
     inlines = []
 
-    list_display = ('pk', 'email', 'first_name', 'last_name', 'is_staff')
+    list_display = ('email', 'name', 'is_staff')
     search_fields = ('email', 'first_name', 'last_name')
     list_filter = ('is_staff', 'is_superuser', 'user_type', 'gender')
     ordering = ('email',)
@@ -42,6 +42,11 @@ class CustomUserAdmin(ImportExportModelAdmin, ModelAdmin):
         ('Permissions', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Important Dates', {'fields': ('last_login', 'date_joined')}),
     )
+
+
+    def name(self, obj):
+        return f"{obj.first_name} {obj.last_name}"
+    name.short_description = 'Name'
 
     def get_inline_instances(self, request, obj = ...):
         if not obj:
