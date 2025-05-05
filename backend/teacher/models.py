@@ -5,7 +5,9 @@ class Teacher(models.Model):
     TEACHER_ROLES = [
         ('Professor', 'Professor'),
         ('Associate Professor', 'Associate Professor'),
-        ('Assistant Professor', 'Assistant Professor'),
+        ('Assistant Professor', 'Assistant Professor (AP)'),
+        ('Assistant Professor', 'Assistant Professor (SG)'),
+        ('Assistant Professor', 'Assistant Professor (SS)'),
         ('Asst. Professor', 'Asst. Professor'),
         ('HOD', 'Head of Department'),
         ('DC', 'DC'),

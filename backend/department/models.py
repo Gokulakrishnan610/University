@@ -11,7 +11,7 @@ class Department(models.Model):
         return self.dept_name
 
     def clean(self):
-        self.dept_name = self.dept_name.upper()
+        self.dept_name = self.dept_name.title()
         if self.hod_id and self.hod_id.user_type != 'teacher':
             raise ValidationError("Only teachers can be assigned as HOD")
         return super().clean()

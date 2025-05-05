@@ -6,27 +6,36 @@ from .models import Teacher, TeacherAvailability
 from unfold.admin import StackedInline
 from django.db.models import Q
 from django.contrib import messages
+from import_export import fields
 
 class TeacherResource(resources.ModelResource):
+    email = fields.Field(attribute='teacher_id__email', column_name='Email')
+    first_name = fields.Field(attribute='teacher_id__first_name', column_name='First Name')
+    last_name = fields.Field(attribute='teacher_id__last_name', column_name='Last Name')
+    department = fields.Field(attribute='dept_id__dept_name', column_name='Department')
+    working_hours = fields.Field(attribute='teacher_working_hours', column_name='Working Hours')
+
     class Meta:
         model = Teacher
         fields = (
             'id',
-            'teacher_id__email',
-            'teacher_id__first_name',
-            'teacher_id__last_name',
-            'dept_id',
+            'email',
+            'first_name',
+            'last_name',
+            'department',
             'staff_code',
-            'teacher_specialisation',
-            'teacher_working_hours',
             'teacher_role',
+            'working_hours',  # Use the renamed field
             'availability_type',
             'is_industry_professional',
-            'is_placeholder',
-            'placeholder_description',
+            'resignation_status',
         )
         export_order = fields
 
+    def dehydrate_working_hours(self, teacher):
+        # Ensure the value is exported as string to avoid decimal conversion
+        return str(teacher.teacher_working_hours)
+        
 class TeacherAvailabilityInline(admin.TabularInline):
     model = TeacherAvailability
     extra = 0
