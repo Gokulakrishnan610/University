@@ -9,7 +9,8 @@ import {
   GraduationCap,
   Users,
   X,
-  LogOut
+  LogOut,
+  Calendar
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCurrentUser, useLogout } from "@/action";
@@ -53,10 +54,16 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/teachers/slot-allocation",
     },
     {
-      title: "Students",
-      icon: <Users className="h-5 w-5" />,
-      href: "/students",
+      title: "Faculty Time Table",
+      icon: <Calendar className="h-5 w-5" />,
+      href: "/timetable",
+
     },
+      {
+        title: "Students",
+        icon: <Users className="h-5 w-5" />,
+        href: "/students",
+      },
     {
       title: "Profile",
       icon: <User className="h-5 w-5" />,

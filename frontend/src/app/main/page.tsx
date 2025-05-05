@@ -19,6 +19,7 @@ import StudentEdit from "./students/[id]/edit/page";
 import CreateCoursePage from "./courses/create/page";
 import TeacherSlotAssignmentPage from "./teachers/slot-allocation/page";
 import PageNotFound from "../page-not-found/page"
+import TimeTable from "./timetable";
 
 export default function Dashboard() {
 
@@ -40,7 +41,7 @@ export default function Dashboard() {
       <Route path="/teacher-course-assignment" element={<TeacherCourseAssignmentPage />} />
       <Route path="/teacher-course-assignment/create" element={<TeacherCourseAssignmentCreate />} />
       <Route path="/teacher-course-assignment/:id" element={<TeacherCourseAssignmentDetail />} />
-     
+      <Route path="/timetable" element={<TimeTable />} />
       <Route path="/students" element={<StudentManagement />} />
       <Route path="/students/create" element={<StudentCreate />} />
       <Route path="/students/:id" element={<StudentDetails />} />
