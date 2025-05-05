@@ -12,6 +12,7 @@ import { toast } from 'sonner';
 import { Loader2, ArrowLeft, Users, Calendar, AlertTriangle, Clock, Info } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Input } from '@/components/ui/input';
 import { useGetCourseAssignmentStats } from '@/action/course';
 import {
     Table,
@@ -40,7 +41,7 @@ const teacherCourseFormSchema = z.object({
     assignments: z.array(
         z.object({
             course_id: z.string().min(1, "Course is required"),
-            no_of_students: z.number().min(1, "Number of students is required"),
+            no_of_students: z.number().min(1, "Number of students must be at least 1"),
             preferred_availability_slots: z.array(z.string()).optional(),
             is_assistant: z.boolean().default(false),
             show_assistant_option: z.boolean().default(false)
@@ -335,32 +336,31 @@ export default function CreateTeacherCourseAssignment() {
         const assignments = form.watch("assignments");
         const newAssignments = [...assignments];
         newAssignments[index].course_id = value;
-
-        // Update student count based on stats if we have a valid course
-        if (value) {
+    
+        // Only update student count if it's the default value (70)
+        if (value && newAssignments[index].no_of_students === 70) {
             const studentCount = getStudentCountForCourse(value);
             newAssignments[index].no_of_students = studentCount;
-
-            // Check if course needs assistant teacher
-            const courseData = courses.find(c => c.id.toString() === value);
-            if (courseData && courseData.need_assist_teacher) {
-                // Only show the assistant option for this specific assignment
-                newAssignments[index].show_assistant_option = true;
-            } else {
-                newAssignments[index].show_assistant_option = false;
-                newAssignments[index].is_assistant = false;
-            }
         }
-
+    
+        // Check if course needs assistant teacher
+        const courseData = courses.find(c => c.id.toString() === value);
+        if (courseData && courseData.need_assist_teacher) {
+            newAssignments[index].show_assistant_option = true;
+        } else {
+            newAssignments[index].show_assistant_option = false;
+            newAssignments[index].is_assistant = false;
+        }
+    
         form.setValue("assignments", newAssignments);
-
-        // Keep track of all selected courses
+    
+        // Update selected courses
         const updatedCourses = form.getValues("assignments")
             .map(a => a.course_id)
             .filter(Boolean) as string[];
         setSelectedCourses(updatedCourses);
-
-        // Update the selected course for stats display (show stats for the first course)
+    
+        // Update the selected course for stats display
         if (index === 0) {
             setSelectedCourse(value);
         }
@@ -453,7 +453,7 @@ export default function CreateTeacherCourseAssignment() {
                         course_id: parseInt(assignment.course_id),
                         semester: selectedCourseData.course_semester || 1,
                         academic_year: selectedCourseData.course_year || new Date().getFullYear(),
-                        student_count: studentCount,
+                        student_count: studentCount || 70,
                         is_assistant: assignment.is_assistant,
                         preferred_availability_slots: preferred_slots
                     });
@@ -850,30 +850,21 @@ export default function CreateTeacherCourseAssignment() {
                                                 name={`assignments.${index}.no_of_students`}
                                                 render={({ field }) => (
                                                     <FormItem>
-                                                    <FormLabel>Number of Students</FormLabel>
-                                                    <Select 
-                                                        onValueChange={(value) => field.onChange(parseInt(value))}
-                                                        value={field.value?.toString()}
-                                                        disabled={!selectedTeacher || coursesLoading || courseOptions.length === 0}
-                                                    >
+                                                        <FormLabel>Number of Students</FormLabel>
                                                         <FormControl>
-                                                        <SelectTrigger>
-                                                            <SelectValue placeholder="Select number of students" />
-                                                        </SelectTrigger>
+                                                            <Input
+                                                                type="number"
+                                                                min="1"
+                                                                placeholder="Enter number of students"
+                                                                {...field}
+                                                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                                                disabled={!selectedTeacher || coursesLoading || courseOptions.length === 0}
+                                                            />
                                                         </FormControl>
-                                                        <SelectContent>
-                                                        {STUDENT_COUNT_OPTIONS.map((option) => (
-                                                            <SelectItem key={option.value} value={option.value.toString()}>
-                                                            {option.label}
-                                                            </SelectItem>
-                                                        ))}
-                                                        </SelectContent>
-                                                    </Select>
-                                                    <FormMessage />
+                                                        <FormMessage />
                                                     </FormItem>
                                                 )}
                                             />
-
                                             {/* Show assistant teacher option when course needs assistant */}
                                             {assignment.show_assistant_option && (
                                                 <FormField
