@@ -71,12 +71,11 @@ export default function CreateCoursePage() {
   
   useEffect(() => {
     if (currentDepartment && currentDepartment.id) {
-      console.log('Setting default departments:', currentDepartment);
       // Set both for_dept_id and teaching_dept_id to the current department's ID
       setCourseFormDefaults(prev => ({
         ...prev,
         for_dept_id: currentDepartment.id,
-        teaching_dept_id: currentDepartment.id
+        teaching_dept_id: currentDepartment.id,
       }));
     }
   }, [currentDepartment]);
