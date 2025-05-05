@@ -810,7 +810,7 @@ export default function SlotAllocationPage() {
     <main className="mx-auto">
       <div className="flex justify-between items-center mb-6">
         <div className="flex items-center gap-2">
-          <h1 className="text-2xl font-bold ml-4">Teacher Slot Allocation</h1>
+          <h1 className="text-2xl font-bold ml-4">Faculty Slot Allocation</h1>
 
           {isHOD && hodDeptId && (
             <Badge variant="outline" className="ml-2 text-xs">
