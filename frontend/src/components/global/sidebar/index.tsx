@@ -126,11 +126,11 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
                   }}
                 >
                   <Button
-                    variant={location.pathname === route.href || location.pathname.startsWith(route.href + '/') ? "secondary" : "ghost"}
+                    variant={location.pathname === route.href ? "secondary" : "ghost"}
                     className="w-full justify-start"
                   >
                     {route.icon}
-                    <span className="ml-2">{route.title}</span>
+                    <span className="ml-2 truncate">{route.title}</span>
                   </Button>
                 </Link>
               ))}
