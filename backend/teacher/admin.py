@@ -35,7 +35,6 @@ class TeacherResource(resources.ModelResource):
     def dehydrate_working_hours(self, teacher):
         # Ensure the value is exported as string to avoid decimal conversion
         return str(teacher.teacher_working_hours)
-        
 class TeacherAvailabilityInline(admin.TabularInline):
     model = TeacherAvailability
     extra = 0

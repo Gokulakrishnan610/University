@@ -23,9 +23,12 @@ class Room(models.Model):
     room_type = models.CharField("Room Type", max_length=50, choices=ROOM_TYPES)
     room_min_cap = models.IntegerField("Minimum Capacity", default=0)
     room_max_cap = models.IntegerField("Maximum Capacity", default=0)
+    tech_level = models.CharField("Technology Level", max_length=50, choices=TECH_LEVEL, default='None')
     has_projector = models.BooleanField("Has Projector", default=False)
     has_ac = models.BooleanField("Has AC", default=False)
-    tech_level = models.CharField("Technology Level", max_length=50, choices=TECH_LEVEL, default='None')
+    smart_board = models.BooleanField("Smart Board", default=False)
+    green_board = models.BooleanField("Green Board", default=False)
+    isLcsAvailable = models.BooleanField("Is LCS Available", default=False)
 
     def __str__(self):
         return f"{self.room_number} ({self.block})"
