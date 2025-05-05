@@ -33,22 +33,22 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/",
     },
     {
-      title: "Courses",
+      title: "Course Master",
       icon: <BookOpen className="h-5 w-5" />,
       href: "/courses",
     },
     {
-      title: "Teachers",
+      title: "Faculty Master",
       icon: <GraduationCap className="h-5 w-5" />,
       href: "/teachers",
     },
     {
-      title: "Teacher Course Allocation",
+      title: "Faculty Course Allocation",
       icon: <GraduationCap className="h-5 w-5" />,
       href: "/teacher-course-assignment",
     },
     {
-      title: "Teachers Slot Allocation",
+      title: "Faculty Slot Allocation",
       icon: <GraduationCap className="h-5 w-5" />,
       href: "/teachers/slot-allocation",
     },
