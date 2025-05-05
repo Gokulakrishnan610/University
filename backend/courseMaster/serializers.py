@@ -20,5 +20,6 @@ class CourseMasterSerializer(serializers.ModelSerializer):
             'tutorial_hours',
             'credits',
             'regulation',
-            'course_type'
+            'course_type',
+            'degree_type',
         ]
