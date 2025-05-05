@@ -9,7 +9,7 @@ export default function CourseRoomPreferencesPage() {
   const courseId = parseInt(id as string);
 
   const { data: courseResponse, isPending: isLoadingCourse } = useGetCourse(courseId);
-  const { data: rooms, isPending: isLoadingRooms } = useGetRooms();
+  const { data: rooms, isPending: isLoadingRooms } = useGetRooms("Non-Technical");
   
   // Extract course data from the response
   const course = courseResponse?.status === "success" ? courseResponse.data : null;

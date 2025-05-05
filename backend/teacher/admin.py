@@ -44,7 +44,7 @@ class TeacherAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = TeacherResource
     inlines = [TeacherAvailabilityInline]
 
-    list_display = ('id','teacher_id', 'dept_id', 'staff_code', 'teacher_role', 'teacher_specialisation', 
+    list_display = ('teacher_name', 'staff_code', 'dept_id', 'teacher_role', 'teacher_specialisation', 
                     'teacher_working_hours', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
     search_fields = ('teacher_id__email', 'teacher_id__first_name', 'teacher_id__last_name', 'staff_code', 'teacher_specialisation')
     list_filter = ('dept_id', 'teacher_working_hours', 'teacher_role', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
@@ -68,7 +68,10 @@ class TeacherAdmin(ImportExportModelAdmin, ModelAdmin):
             'description': 'Manage teacher status including placeholders for future positions'
         }),
     )
-    
+
+    def teacher_name(self, obj):
+        return f"{obj.teacher_id.first_name} {obj.teacher_id.last_name}"
+
     def get_readonly_fields(self, request, obj=None):
         """Make is_industry_professional readonly as it's set automatically based on role"""
         return ('is_industry_professional',)

@@ -3,10 +3,9 @@ from django.db import models
 # Create your models here.
 class Room(models.Model):
     ROOM_TYPES = [
-        ('Classroom', 'Classroom'),
-        ('Laboratory', 'Laboratory'),
-        ('Seminar Hall', 'Seminar Hall'),
-        ('Conference Room', 'Conference Room')
+        ('Class Room', 'Class Room'),
+        ('Computer Lab', 'Computer Lab'),
+        ('Core Lab', 'Core Lab'),
     ]
     TECH_LEVEL = [
         ('None', 'None'),
