@@ -214,10 +214,10 @@ export default function TeacherManagement() {
           <div>
             <div className="flex items-center gap-2">
               <Users className="h-6 w-6 text-primary" />
-              <CardTitle className="text-2xl">Teacher Management</CardTitle>
+              <CardTitle className="text-2xl">Faculty Management</CardTitle>
             </div>
             <CardDescription className="mt-1.5">
-              Manage teachers in your department
+              Manage Faculty in your department
             </CardDescription>
           </div>
           <div className="flex gap-2">
@@ -227,7 +227,7 @@ export default function TeacherManagement() {
             </Button>
             <Button onClick={() => setShowPlaceholderForm(true)} className="gap-2">
               <UserPlus className="h-4 w-4" />
-              New Placeholder Teacher
+              New Placeholder Faculty
             </Button>
           </div>
         </CardHeader>
@@ -242,7 +242,7 @@ export default function TeacherManagement() {
             <div className="flex flex-col items-center justify-center py-16 border rounded-lg bg-muted/20">
               <Users className="h-16 w-16 text-muted-foreground/60 mb-4" />
               <p className="text-muted-foreground text-lg mb-4">
-                No teachers found in your department
+                No Faculties found in your department
               </p>
             </div>
           ) : (
@@ -252,7 +252,7 @@ export default function TeacherManagement() {
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="search"
-                    placeholder="Search teachers..."
+                    placeholder="Search Faculty..."
                     className="pl-8 w-full sm:w-[300px]"
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
@@ -401,7 +401,7 @@ export default function TeacherManagement() {
                 <Table>
                   <TableHeader className="bg-muted/30">
                     <TableRow>
-                      <TableHead className="w-[250px]">Teacher</TableHead>
+                      <TableHead className="w-[250px]">Faculty</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Department</TableHead>
                       <TableHead>Working Hours</TableHead>
@@ -413,7 +413,7 @@ export default function TeacherManagement() {
                     {filteredTeachers.length === 0 ? (
                       <TableRow>
                         <TableCell colSpan={6} className="h-24 text-center">
-                          No teachers matching the current filters
+                          No Faculty matching the current filters
                         </TableCell>
                       </TableRow>
                     ) : (
@@ -563,10 +563,10 @@ export default function TeacherManagement() {
       <AlertDialog open={!!teacherToRemove} onOpenChange={(open) => !open && setTeacherToRemove(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Remove Teacher from Department</AlertDialogTitle>
+            <AlertDialogTitle>Remove Faculty from Department</AlertDialogTitle>
             <AlertDialogDescription>
-              Are you sure you want to remove this teacher from their department? 
-              This will not delete the teacher from the system.
+              Are you sure you want to remove this Faculty from their department? 
+              This will not delete the Faculty from the system.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

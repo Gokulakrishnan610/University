@@ -32,6 +32,7 @@ class CourseMasterAdmin(ImportExportModelAdmin, ModelAdmin):
         'course_dept_id',
         'credits',       # Corrected from course_credits
         'course_type',
+        'degree_type'
     )
 
     search_fields = (
@@ -42,6 +43,7 @@ class CourseMasterAdmin(ImportExportModelAdmin, ModelAdmin):
     list_filter = (
         'course_dept_id',
         'course_type',
+        'degree_type'
     )
 
     ordering = ('course_id',)

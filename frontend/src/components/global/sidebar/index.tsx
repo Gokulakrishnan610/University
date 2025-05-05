@@ -9,7 +9,8 @@ import {
   GraduationCap,
   Users,
   X,
-  LogOut
+  LogOut,
+  Calendar
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useCurrentUser, useLogout } from "@/action";
@@ -33,30 +34,36 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       href: "/",
     },
     {
-      title: "Courses",
+      title: "Course Master",
       icon: <BookOpen className="h-5 w-5" />,
       href: "/courses",
     },
     {
-      title: "Teachers",
+      title: "Faculty Master",
       icon: <GraduationCap className="h-5 w-5" />,
       href: "/teachers",
     },
     {
-      title: "Teacher Course Allocation",
+      title: "Faculty Course Allocation",
       icon: <GraduationCap className="h-5 w-5" />,
       href: "/teacher-course-assignment",
     },
     {
-      title: "Teachers Slot Allocation",
+      title: "Faculty Slot Allocation",
       icon: <GraduationCap className="h-5 w-5" />,
       href: "/teachers/slot-allocation",
     },
     {
-      title: "Students",
-      icon: <Users className="h-5 w-5" />,
-      href: "/students",
+      title: "Faculty Time Table",
+      icon: <Calendar className="h-5 w-5" />,
+      href: "/timetable",
+
     },
+      {
+        title: "Students",
+        icon: <Users className="h-5 w-5" />,
+        href: "/students",
+      },
     {
       title: "Profile",
       icon: <User className="h-5 w-5" />,

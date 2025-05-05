@@ -219,8 +219,8 @@ export function TeacherCourseAssignment() {
                 <CardHeader>
                     <div className="flex items-center justify-between">
                         <div>
-                            <CardTitle>Teacher Course Assignments</CardTitle>
-                            <CardDescription>View and manage teacher course assignments</CardDescription>
+                            <CardTitle>Faculty Course Assignments</CardTitle>
+                            <CardDescription>View and manage Faculty course assignments</CardDescription>
                         </div>
                         <Button onClick={() => navigate('/teacher-course-assignment/create')}>
                             <Plus className="mr-2 h-4 w-4" />
@@ -252,7 +252,7 @@ export function TeacherCourseAssignment() {
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="outline">
                                         <Filter className="mr-2 h-4 w-4" />
-                                        Teachers
+                                        Faculty
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent className="w-56">
