@@ -36,7 +36,7 @@ class TeacherAdmin(ImportExportModelAdmin, ModelAdmin):
     resource_class = TeacherResource
     inlines = [TeacherAvailabilityInline]
 
-    list_display = ('id','teacher_id', 'dept_id', 'staff_code', 'teacher_role', 'teacher_specialisation', 
+    list_display = ('teacher_id__last_name', 'staff_code', 'dept_id', 'teacher_role', 'teacher_specialisation', 
                     'teacher_working_hours', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
     search_fields = ('teacher_id__email', 'teacher_id__first_name', 'teacher_id__last_name', 'staff_code', 'teacher_specialisation')
     list_filter = ('dept_id', 'teacher_working_hours', 'teacher_role', 'is_industry_professional', 'availability_type', 'is_placeholder', 'resignation_status')
