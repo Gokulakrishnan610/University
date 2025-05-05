@@ -56,6 +56,13 @@ export default function CreateTeacherCourseAssignment() {
     const [selectedCourse, setSelectedCourse] = useState<string>('');
     const [selectedCourses, setSelectedCourses] = useState<string[]>([]);
 
+    const STUDENT_COUNT_OPTIONS = [
+        { value: 70, label: "70 students" },
+        { value: 140, label: "140 students" },
+        { value: 210, label: "210 students" },
+        { value: 280, label: "280 students" }
+    ];
+
     // Fetch data with loading states
     const { data: teachers = [], isPending: teachersLoading } = useGetTeachers();
     const { data: courses = [], isPending: coursesLoading } = useGetCourses();
@@ -438,8 +445,8 @@ export default function CreateTeacherCourseAssignment() {
                 if (!selectedCourseData) continue;
 
                 const preferred_slots = assignment.preferred_availability_slots?.map(id => parseInt(id)) || [];
-                const studentCount = getStudentCountForCourse(assignment.course_id);
-
+                // const studentCount = getStudentCountForCourse(assignment.course_id);
+                const studentCount = assignment.no_of_students;
                 try {
                     await createAssignment.mutateAsync({
                         teacher_id: parseInt(data.teacher_id),
@@ -834,6 +841,34 @@ export default function CreateTeacherCourseAssignment() {
                                                             />
                                                         </FormControl>
                                                         <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+
+                                            <FormField
+                                                control={form.control}
+                                                name={`assignments.${index}.no_of_students`}
+                                                render={({ field }) => (
+                                                    <FormItem>
+                                                    <FormLabel>Number of Students</FormLabel>
+                                                    <Select 
+                                                        onValueChange={(value) => field.onChange(parseInt(value))}
+                                                        value={field.value?.toString()}
+                                                    >
+                                                        <FormControl>
+                                                        <SelectTrigger>
+                                                            <SelectValue placeholder="Select number of students" />
+                                                        </SelectTrigger>
+                                                        </FormControl>
+                                                        <SelectContent>
+                                                        {STUDENT_COUNT_OPTIONS.map((option) => (
+                                                            <SelectItem key={option.value} value={option.value.toString()}>
+                                                            {option.label}
+                                                            </SelectItem>
+                                                        ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                    <FormMessage />
                                                     </FormItem>
                                                 )}
                                             />
