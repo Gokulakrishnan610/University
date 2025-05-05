@@ -11,13 +11,16 @@ export interface Room {
   description: string;
   maintained_by: number;
   is_lab: boolean;
-  room_type: string;
+  room_type: RoomType;
   room_min_cap: number;
   room_max_cap: number;
   has_projector: boolean;
   has_ac: boolean;
-  tech_level: string;
+  tech_level: TechLevel;
 }
+
+export type RoomType = 'Class-Room' | 'Computer-Lab' | 'Core-Lab';
+export type TechLevel = 'None' | 'Basic' | 'Advanced' | 'High-tech';
 
 export interface CreateRoomRequest {
   room_number: string;
@@ -25,12 +28,12 @@ export interface CreateRoomRequest {
   description: string;
   maintained_by: number;
   is_lab: boolean;
-  room_type: string;
+  room_type: RoomType;
   room_min_cap: number;
   room_max_cap: number;
   has_projector: boolean;
   has_ac: boolean;
-  tech_level: string;
+  tech_level: TechLevel;
 }
 
 export type UpdateRoomRequest = Partial<CreateRoomRequest>;
@@ -41,11 +44,7 @@ export const useGetRooms = (roomType?: string) => {
     ['rooms'],
     async () => {
       try {
-        const response = await api.get('/api/rooms/', {
-          params: {
-            room_type : roomType
-          }
-        });
+        const response = await api.get(`/api/rooms?room_type=${roomType}`);
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {

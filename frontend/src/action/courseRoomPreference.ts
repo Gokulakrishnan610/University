@@ -2,6 +2,7 @@ import { useMutationData } from "@/hooks/useMutationData";
 import { useQueryData } from "@/hooks/useQueryData";
 import axios from "axios";
 import api from "./api";
+import { TechLevel } from "./room";
 
 // Types
 export interface CourseRoomPreference {
@@ -12,7 +13,7 @@ export interface CourseRoomPreference {
   room_detail?: any;
   preference_level: number;
   preferred_for: 'GENERAL' | 'TL' | 'NTL';
-  tech_level_preference: 'None' | 'Basic' | 'Advanced' | 'High-tech';
+  tech_level_preference: TechLevel;
   lab_type?: 'low-end' | 'mid-end' | 'high-end';
   lab_description?: string;
 }
@@ -22,7 +23,7 @@ export interface CreateCourseRoomPreferenceRequest {
   room_id?: number;
   preference_level: number;
   preferred_for: 'GENERAL' | 'TL' | 'NTL';
-  tech_level_preference: 'None' | 'Basic' | 'Advanced' | 'High-tech';
+  tech_level_preference: TechLevel;
   lab_type?: 'low-end' | 'mid-end' | 'high-end';
   lab_description?: string;
 }
@@ -30,7 +31,7 @@ export interface CreateCourseRoomPreferenceRequest {
 export interface UpdateCourseRoomPreferenceRequest {
   preference_level?: number;
   preferred_for?: 'GENERAL' | 'TL' | 'NTL';
-  tech_level_preference?: 'None' | 'Basic' | 'Advanced' | 'High-tech';
+  tech_level_preference?: TechLevel;
   lab_type?: 'low-end' | 'mid-end' | 'high-end';
   lab_description?: string;
 }

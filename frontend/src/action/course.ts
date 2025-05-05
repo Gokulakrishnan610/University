@@ -23,6 +23,7 @@ export interface CourseMaster {
   credits: number;
   regulation: string;
   course_type: string;
+  degree_type: string;
 }
 
 export interface Course {

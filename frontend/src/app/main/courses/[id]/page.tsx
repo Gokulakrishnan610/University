@@ -667,29 +667,29 @@ export default function CourseDetails() {
                 </Card>
               </TabsContent>
 
-              {/* <TabsContent value="room-preferences" className="mt-4">
-                <Card>
-                  <CardHeader className="py-4">
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <LayoutGrid className="h-5 w-5 text-primary" />
-                      Room Preferences
-                    </CardTitle>
-                    <CardDescription>
-                      Manage room preferences for this course
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="pb-6">
-                    <div className="text-center py-6">
-                      <Button onClick={() => navigate(`/courses/${courseId}/room-preferences`)}>
-                        Manage Room Preferences
-                      </Button>
-                      <p className="text-sm text-muted-foreground mt-2">
-                        Click to view and manage room preferences for this course
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TabsContent> */}
+                <TabsContent value="room-preferences" className="mt-4">
+                  <Card>
+                    <CardHeader className="py-4">
+                      <CardTitle className="text-lg flex items-center gap-2">
+                        <LayoutGrid className="h-5 w-5 text-primary" />
+                        Room Preferences
+                      </CardTitle>
+                      <CardDescription>
+                        Manage room preferences for this course
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="pb-6">
+                      <div className="text-center py-6">
+                        <Button onClick={() => navigate(`/courses/${courseId}/room-preferences`)}>
+                          Manage Room Preferences
+                        </Button>
+                        <p className="text-sm text-muted-foreground mt-2">
+                          Click to view and manage room preferences for this course
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
             </Tabs>
           </div>
         </CardContent>
@@ -697,7 +697,7 @@ export default function CourseDetails() {
 
       {/* Edit Course Dialog */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="sm:max-w-[600px] overflow-hidden">
+        <DialogContent className="sm:max-w-[700px] overflow-hidden">
           <ScrollArea className="h-[600px]">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">

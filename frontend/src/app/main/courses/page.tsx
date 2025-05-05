@@ -461,6 +461,7 @@ export default function CourseManagementPage() {
                           <TableHead>Teaching Department</TableHead>
                           <TableHead>Relationship</TableHead>
                           <TableHead>Year & Semester</TableHead>
+                          <TableHead>B.E / B.Tech</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
@@ -512,6 +513,7 @@ export default function CourseManagementPage() {
                                 </Badge>
                               </TableCell>
                               <TableCell>Year {course.course_year}, Sem {course.course_semester}</TableCell>
+                              <TableCell>{course.course_detail.degree_type}</TableCell>
                               <TableCell>
                                 <Badge 
                                   variant={
