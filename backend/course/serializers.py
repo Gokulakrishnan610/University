@@ -90,14 +90,14 @@ class CourseSerializer(serializers.ModelSerializer):
         # Owner department - full rights (edit and delete)
         is_owner = user_dept.id == owning_dept_id
         
-        # Teaching department - limited edit rights, no delete
+        # Teaching department - limited edit rights, now also has delete rights
         is_teacher = user_dept.id == teaching_dept_id if teaching_dept_id else False
         
         # For department - no edit or delete rights
         is_learner = user_dept.id == for_dept_id if for_dept_id else False
         
-        # Only owner department can delete
-        can_delete = is_owner
+        # Owner or teaching department can delete
+        can_delete = is_owner or is_teacher
         
         # Owner or teaching department can edit
         can_edit = is_owner or is_teacher

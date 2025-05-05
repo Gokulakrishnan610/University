@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import { Room } from "@/action/room";
+import { Room, RoomType, TechLevel } from "@/action/room";
 import {
   CreateCourseRoomPreferenceRequest,
   useCreateCourseRoomPreference,
@@ -31,7 +31,6 @@ import { Loader2 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../../../components/ui/card";
 import { toast } from "sonner";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
 import { useGetRooms } from "@/action/room";
@@ -40,7 +39,7 @@ const formSchema = z.object({
   room_id: z.coerce.number().min(1, { message: "Room is required" }).optional(),
   preference_level: z.coerce.number().min(1, { message: "Preference level should be at least 1" }).max(10, { message: "Preference level should be at most 10" }),
   preferred_for: z.enum(["GENERAL", "TL", "NTL"]),
-  tech_level_preference: z.enum(["None", "Basic", "Advanced", "High-tech"]),
+  tech_level_preference: z.enum(["None", "Basic", "Advanced", "High-tech"]) as z.ZodType<TechLevel>,
   lab_type: z.enum(["low-end", "mid-end", "high-end"]).optional(),
   specific_lab: z.coerce.number().optional(),
 });
@@ -69,12 +68,12 @@ export function RoomPreferenceForm({
   const [formError, setFormError] = useState<string | null>(null);
   
   // Filter rooms by type
-
-  const { data } = useGetRooms("Non-Technical");
-  console.log(data)
-  const technicalLabRooms = rooms.filter(room => room.room_type?.includes("Technical") || room.room_type?.includes("TL"));
-  const nonTechnicalLabRooms = rooms.filter(room => room.room_type?.includes("Non-Technical") || room.room_type?.includes("NTL"));
-  const generalRooms = rooms.filter(room => !room.room_type?.includes("Technical") && !room.room_type?.includes("Non-Technical"));
+  const { data } = useGetRooms("Core-Lab");
+  
+  // Updated room filtering based on the new room types
+  const technicalLabRooms = rooms.filter(room => room.room_type === 'Computer-Lab');
+  const nonTechnicalLabRooms = rooms.filter(room => room.room_type === 'Core-Lab');
+  const generalRooms = rooms.filter(room => room.room_type === 'Class-Room');
   
   const defaultValues: Partial<FormValues> = existingPreference
     ? {
@@ -217,7 +216,7 @@ export function RoomPreferenceForm({
           <Alert className="mb-4 bg-blue-50 border-blue-200">
             <AlertCircle className="h-4 w-4 text-blue-600" />
             <AlertDescription className="text-blue-800">
-              When selecting Non-Technical Lab, you must choose a specific room.
+              When selecting Core Lab, you must choose a specific room.
             </AlertDescription>
           </Alert>
         )}
@@ -248,9 +247,9 @@ export function RoomPreferenceForm({
                   </Select>
                   <FormDescription>
                     Type of room preferred for this course.
-                    {field.value === "GENERAL" && " Room selection not required for General preferences."}
-                    {field.value === "TL" && " Room selection not required for Technical Lab preferences."}
-                    {field.value === "NTL" && " Room selection required for Non-Technical Lab preferences."}
+                    {field.value === "GENERAL" && " Room selection not required for general Class Room preferences."}
+                    {field.value === "TL" && " Room selection not required for Computer Lab preferences."}
+                    {field.value === "NTL" && " Room selection required for Core Lab preferences."}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -263,7 +262,7 @@ export function RoomPreferenceForm({
                 name="lab_type"
                 render={({ field }) => (
                   <FormItem className="space-y-3">
-                    <FormLabel>Technical Lab Type</FormLabel>
+                    <FormLabel>Computer Lab Type</FormLabel>
                     <FormControl>
                       <RadioGroup
                         onValueChange={field.onChange}
@@ -318,7 +317,7 @@ export function RoomPreferenceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="flex items-center">
-                      Specific Lab Room <span className="text-red-500 ml-1">*</span>
+                      Specific Core Lab Room <span className="text-red-500 ml-1">*</span>
                     </FormLabel>
                     <Select
                       disabled={isPending}
@@ -327,7 +326,7 @@ export function RoomPreferenceForm({
                     >
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select a specific lab room" />
+                          <SelectValue placeholder="Select a specific Core Lab room" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -339,7 +338,7 @@ export function RoomPreferenceForm({
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      <span className="font-medium">Required:</span> Select a specific non-technical lab for your course
+                      <span className="font-medium">Required:</span> Select a specific Core Lab for your course
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

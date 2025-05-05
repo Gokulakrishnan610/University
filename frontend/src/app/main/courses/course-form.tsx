@@ -229,11 +229,6 @@ export default function CourseForm({
     onSubmit(submissionValues as z.infer<typeof courseFormSchema>);
   };
 
-  // Debug form values
-  const formValues = form.watch();
-  useEffect(() => {
-    console.log('Form values changed:', formValues);
-  }, [formValues]);
   
   // Function to handle page changes properly
   const handlePageChange = (newPage: number) => {
@@ -286,7 +281,7 @@ export default function CourseForm({
         )}
         
         {/* Basic Course Information */}
-        <div className="space-y-4">
+        <div className="space-y-4 ">
           <h3 className="text-lg font-medium">Basic Course Information</h3>
           <div className="grid grid-cols-2 gap-4">
             <FormField
@@ -492,7 +487,7 @@ export default function CourseForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Regulation</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={true}>
+                  <Select onValueChange={field.onChange} value={defaultValues?.regulation} disabled={true}>
                     <FormControl>
                       <SelectTrigger className="bg-muted/40">
                         <SelectValue placeholder="Select regulation" />

@@ -1,5 +1,5 @@
-import { useQueryData } from "@/hooks/useQueryData";
 import { useMutationData } from "@/hooks/useMutationData";
+import { useQueryData } from "@/hooks/useQueryData";
 import axios from "axios";
 import api from "./api";
 import { DepartmentDetails } from "./course";
@@ -11,13 +11,13 @@ export interface CourseMaster {
   course_name: string;
   course_dept_id: number;
   course_dept_detail: DepartmentDetails;
-  lecture_hours: number;
-  tutorial_hours: number;
-  practical_hours: number;
-  credits: number;
-  course_type: string;
   is_zero_credit_course: boolean;
+  lecture_hours: number;
+  practical_hours: number;
+  tutorial_hours: number;
+  credits: number;
   regulation: string;
+  course_type: string;
 }
 
 export interface CreateCourseMasterRequest {
@@ -29,61 +29,55 @@ export interface CreateCourseMasterRequest {
 export type UpdateCourseMasterRequest = Partial<CreateCourseMasterRequest>;
 
 // Get all course masters
-export const useGetCourseMasters = (page: number = 1, pageSize: number = 10, searchQuery: string = '') => {
-  return useQueryData<{results: CourseMaster[], count: number}>(
-    ['course-masters', page, pageSize, searchQuery],
+export const useGetCourseMasters = (searchParams?: URLSearchParams) => {
+  return useQueryData<CourseMaster[]>(
+    ['course-masters', searchParams?.toString()],
     async () => {
       try {
-        const response = await api.get('/api/course-master/', {
-          params: {
-            page,
-            page_size: pageSize,
-            search: searchQuery || undefined
-          }
-        });
-        return response.data || { results: [], count: 0 };
+        const url = searchParams ? `/api/coursemaster/?${searchParams.toString()}` : '/api/coursemaster/';
+        const response = await api.get(url);
+        return response.data || [];
       } catch (error) {
         console.error('Error fetching course masters:', error);
-        return { results: [], count: 0 };
+        return [];
       }
     }
   );
 };
 
-// Get a single course master by ID
+// Get course master details
 export const useGetCourseMaster = (id: number) => {
   return useQueryData<CourseMaster>(
     ['course-master', id.toString()],
     async () => {
       try {
-        const response = await api.get(`/api/course-master/${id}/`);
+        const response = await api.get(`/api/coursemaster/${id}/`);
         return response.data;
       } catch (error) {
         console.error(`Error fetching course master with ID ${id}:`, error);
-        return {};
+        return null;
       }
     },
     !!id
   );
 };
 
-// Create a new course master
+// Create course master
 export const useCreateCourseMaster = (onSuccess?: () => void) => {
   return useMutationData(
     ['createCourseMaster'],
-    async (data: CreateCourseMasterRequest) => {
+    async (data: Partial<CourseMaster>) => {
       try {
-        const response = await api.post('/api/course-master/', data);
+        const response = await api.post('/api/coursemaster/', data);
         return {
           status: response.status,
-          data: response.data.message || 'Course master created successfully',
+          data: response.data || 'Course master created successfully',
         };
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
-          console.error('Course master creation error:', error.response.data);
           return {
             status: error.response.status,
-            data: error.response.data.message || error.response.data.detail || 'Failed to create course master',
+            data: error.response.data || 'Failed to create course master',
           };
         }
         throw error;
@@ -94,22 +88,22 @@ export const useCreateCourseMaster = (onSuccess?: () => void) => {
   );
 };
 
-// Update an existing course master
+// Update course master
 export const useUpdateCourseMaster = (id: number, onSuccess?: () => void) => {
   return useMutationData(
     ['updateCourseMaster', id.toString()],
-    async (data: UpdateCourseMasterRequest) => {
+    async (data: Partial<CourseMaster>) => {
       try {
-        const response = await api.put(`/api/course-master/${id}/`, data);
+        const response = await api.patch(`/api/coursemaster/${id}/`, data);
         return {
           status: response.status,
-          data: response.data.message || 'Course master updated successfully',
+          data: response.data || 'Course master updated successfully',
         };
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
           return {
             status: error.response.status,
-            data: error.response.data.message || 'Failed to update course master',
+            data: error.response.data || 'Failed to update course master',
           };
         }
         throw error;
@@ -120,22 +114,22 @@ export const useUpdateCourseMaster = (id: number, onSuccess?: () => void) => {
   );
 };
 
-// Delete a course master
+// Delete course master
 export const useDeleteCourseMaster = (id: number, onSuccess?: () => void) => {
   return useMutationData(
     ['deleteCourseMaster', id.toString()],
     async () => {
       try {
-        const response = await api.delete(`/api/course-master/${id}/`);
+        const response = await api.delete(`/api/coursemaster/${id}/`);
         return {
           status: response.status,
-          data: response.data.message || 'Course master deleted successfully',
+          data: response.data || 'Course master deleted successfully',
         };
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
           return {
             status: error.response.status,
-            data: error.response.data.message || 'Failed to delete course master',
+            data: error.response.data || 'Failed to delete course master',
           };
         }
         throw error;
