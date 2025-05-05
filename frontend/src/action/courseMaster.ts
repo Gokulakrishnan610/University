@@ -18,29 +18,72 @@ export interface CourseMaster {
   course_type: string;
   is_zero_credit_course: boolean;
   regulation: string;
+  permissions?: CourseMasterPermissions;
+  related_courses_count?: number;
+}
+
+export interface CourseMasterPermissions {
+  can_edit: boolean;
+  can_delete: boolean;
+  is_owner: boolean;
+}
+
+export interface CourseMasterStats {
+  total_courses: number;
+  theory_courses_count: number;
+  lab_courses_count: number;
+  combined_courses_count: number;
+  zero_credit_courses_count: number;
+  department_stats: {
+    department_id: number;
+    department_name: string;
+    course_count: number;
+  }[];
+  regulation_stats: {
+    regulation: string;
+    course_count: number;
+  }[];
 }
 
 export interface CreateCourseMasterRequest {
   course_id: string;
   course_name: string;
   course_dept_id: number;
+  lecture_hours?: number;
+  tutorial_hours?: number;
+  practical_hours?: number;
+  credits?: number;
+  course_type?: string;
+  is_zero_credit_course?: boolean;
+  regulation?: string;
 }
 
 export type UpdateCourseMasterRequest = Partial<CreateCourseMasterRequest>;
 
 // Get all course masters
-export const useGetCourseMasters = (page: number = 1, pageSize: number = 10, searchQuery: string = '') => {
+export const useGetCourseMasters = (page: number = 1, pageSize: number = 10, searchQuery: string = '', departmentId?: string, courseType?: string) => {
   return useQueryData<{results: CourseMaster[], count: number}>(
-    ['course-masters', page, pageSize, searchQuery],
+    ['course-masters', page, pageSize, searchQuery, departmentId, courseType],
     async () => {
       try {
-        const response = await api.get('/api/course-master/', {
-          params: {
-            page,
-            page_size: pageSize,
-            search: searchQuery || undefined
-          }
-        });
+        const params: Record<string, string | number> = {
+          page,
+          page_size: pageSize
+        };
+        
+        if (searchQuery) {
+          params.search = searchQuery;
+        }
+        
+        if (departmentId && departmentId !== 'all') {
+          params.department_id = departmentId;
+        }
+        
+        if (courseType && courseType !== 'all') {
+          params.course_type = courseType;
+        }
+        
+        const response = await api.get('/api/course-master/', { params });
         return response.data || { results: [], count: 0 };
       } catch (error) {
         console.error('Error fetching course masters:', error);
@@ -50,9 +93,41 @@ export const useGetCourseMasters = (page: number = 1, pageSize: number = 10, sea
   );
 };
 
+// Get course master stats
+export const useGetCourseMasterStats = () => {
+  return useQueryData<CourseMasterStats>(
+    ['course-master-stats'],
+    async () => {
+      try {
+        const response = await api.get('/api/course-master/stats/');
+        return response.data || {
+          total_courses: 0,
+          theory_courses_count: 0,
+          lab_courses_count: 0,
+          combined_courses_count: 0,
+          zero_credit_courses_count: 0,
+          department_stats: [],
+          regulation_stats: []
+        };
+      } catch (error) {
+        console.error('Error fetching course master stats:', error);
+        return {
+          total_courses: 0,
+          theory_courses_count: 0,
+          lab_courses_count: 0,
+          combined_courses_count: 0,
+          zero_credit_courses_count: 0,
+          department_stats: [],
+          regulation_stats: []
+        };
+      }
+    }
+  );
+};
+
 // Get a single course master by ID
 export const useGetCourseMaster = (id: number) => {
-  return useQueryData<CourseMaster>(
+  return useQueryData<{data: CourseMaster, status: string}>(
     ['course-master', id.toString()],
     async () => {
       try {
@@ -60,10 +135,27 @@ export const useGetCourseMaster = (id: number) => {
         return response.data;
       } catch (error) {
         console.error(`Error fetching course master with ID ${id}:`, error);
-        return {};
+        return { status: "error", data: {} };
       }
     },
     !!id
+  );
+};
+
+// Get related courses for a course master
+export const useGetRelatedCourses = (courseId: number) => {
+  return useQueryData<{count: number, courses: any[]}>(
+    ['course-master-related', courseId.toString()],
+    async () => {
+      try {
+        const response = await api.get(`/api/course-master/${courseId}/related-courses/`);
+        return response.data || { count: 0, courses: [] };
+      } catch (error) {
+        console.error(`Error fetching related courses for course master ID ${courseId}:`, error);
+        return { count: 0, courses: [] };
+      }
+    },
+    !!courseId
   );
 };
 
@@ -94,7 +186,6 @@ export const useCreateCourseMaster = (onSuccess?: () => void) => {
   );
 };
 
-// Update an existing course master
 export const useUpdateCourseMaster = (id: number, onSuccess?: () => void) => {
   return useMutationData(
     ['updateCourseMaster', id.toString()],
@@ -110,6 +201,7 @@ export const useUpdateCourseMaster = (id: number, onSuccess?: () => void) => {
           return {
             status: error.response.status,
             data: error.response.data.message || 'Failed to update course master',
+            error: error.response.data
           };
         }
         throw error;
@@ -136,6 +228,7 @@ export const useDeleteCourseMaster = (id: number, onSuccess?: () => void) => {
           return {
             status: error.response.status,
             data: error.response.data.message || 'Failed to delete course master',
+            error: error.response.data
           };
         }
         throw error;

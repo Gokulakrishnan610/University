@@ -239,7 +239,7 @@ export default function CreateTeacherCourseAssignment() {
     const courseOptions: ComboboxOption[] = useMemo(() => {
         return availableCourses.map((course: Course) => ({
             value: course.id.toString(),
-            label: `${course.course_detail?.course_name} - ${course.id} - (${course.course_detail?.course_id}- L:${course.lecture_hours || 0} T:${course.tutorial_hours || 0} P:${course.practical_hours || 0} - ${calculateLTPHours(course)} hrs)`
+            label: `${course.course_detail?.course_name} - For ${course.for_dept_detail.dept_name} - (${course.course_detail?.course_id}- L:${course.lecture_hours || 0} T:${course.tutorial_hours || 0} P:${course.practical_hours || 0} - ${calculateLTPHours(course)} hrs)`
         }));
     }, [availableCourses]);
 

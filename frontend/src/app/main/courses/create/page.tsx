@@ -10,6 +10,7 @@ import { useGetDepartments, useGetCurrentDepartment } from '@/action/department'
 import { useCreateCourse } from '@/action/course';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
 
 export default function CreateCoursePage() {
   const navigate = useNavigate();
@@ -174,11 +175,19 @@ export default function CreateCoursePage() {
         
         <TabsContent value="master">
           <Card>
-            <CardHeader>
+            <CardHeader className='flex flex-row justify-between items-center'>
+              <div className='gap-y-4'>
               <CardTitle>New Course Master</CardTitle>
               <CardDescription>
-                Create a new course in the master catalog. Once created, it can be added to any department's curriculum.
-              </CardDescription>
+                  Create a new course in the master catalog. Once created, it can be added to any department's curriculum.
+                </CardDescription>
+              </div>
+              <div>
+                <Button variant="default" onClick={() => navigate('/course-masters')}>
+                  <BookOpen className="h-4 w-4" />
+                  <span>Course Masters</span>
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               {isLoading ? (

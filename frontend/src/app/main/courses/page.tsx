@@ -201,8 +201,12 @@ export default function CourseManagementPage() {
                 onClick={() => navigate('/courses/all-courses')}
                 className="flex items-center gap-1.5"
               >
-                <ListFilter className="h-4 w-4" />
-                <span>View All Courses</span>
+                  <ListFilter className="h-4 w-4" />
+                  <span>View All Courses</span>
+              </Button>
+              <Button variant="outline" onClick={() => navigate('/course-masters')}>
+                <BookOpen className="h-4 w-4" />
+                <span>Course Masters</span>
               </Button>
             </div>
           </div>

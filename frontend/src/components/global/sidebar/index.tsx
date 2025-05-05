@@ -33,11 +33,6 @@ export function Sidebar({ isOpen, onClose }: SidebarProps) {
       icon: <LayoutDashboard className="h-5 w-5" />,
       href: "/",
     },
-    // {
-    //   title: "Course Masters",
-    //   icon: <BookOpen className="h-5 w-5" />,
-    //   href: "/course-masters",
-    // },
     {
       title: "Department Course Master",
       icon: <BookOpen className="h-5 w-5" />,

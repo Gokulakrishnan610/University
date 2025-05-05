@@ -22,6 +22,7 @@ import PageNotFound from "../page-not-found/page"
 import TimeTable from "./timetable";
 import CourseMasterDetailPage from "./course-masters/[id]/page";
 import CourseMastersPage from "./course-masters/page";
+import CourseMasterEditPage from "./course-masters/[id]/edit/page";
 
 export default function Dashboard() {
 
@@ -50,6 +51,7 @@ export default function Dashboard() {
       <Route path="/students/:id/edit" element={<StudentEdit />} />
       <Route path="/course-masters" element={<CourseMastersPage />} />
       <Route path="/course-masters/:id" element={<CourseMasterDetailPage />} />
+      <Route path="/course-masters/:id/edit" element={<CourseMasterEditPage />} />
       <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
   );
