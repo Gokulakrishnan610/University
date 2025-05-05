@@ -34,6 +34,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle } from "lucide-react";
+import { useGetRooms } from "@/action/room";
 
 const formSchema = z.object({
   room_id: z.coerce.number().min(1, { message: "Room is required" }).optional(),
@@ -68,6 +69,9 @@ export function RoomPreferenceForm({
   const [formError, setFormError] = useState<string | null>(null);
   
   // Filter rooms by type
+
+  const { data } = useGetRooms("Non-Technical");
+  console.log(data)
   const technicalLabRooms = rooms.filter(room => room.room_type?.includes("Technical") || room.room_type?.includes("TL"));
   const nonTechnicalLabRooms = rooms.filter(room => room.room_type?.includes("Non-Technical") || room.room_type?.includes("NTL"));
   const generalRooms = rooms.filter(room => !room.room_type?.includes("Technical") && !room.room_type?.includes("Non-Technical"));

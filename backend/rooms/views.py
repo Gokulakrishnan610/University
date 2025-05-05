@@ -12,6 +12,7 @@ class RoomListAPIView(generics.ListAPIView):
     serializer_class = RoomSerializer
 
     def get_queryset(self):
+        print("hits this route")
         room_type = self.request.query_params.get('room_type', None)
         if not room_type:
             return Response(

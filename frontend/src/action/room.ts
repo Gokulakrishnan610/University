@@ -36,12 +36,16 @@ export interface CreateRoomRequest {
 export type UpdateRoomRequest = Partial<CreateRoomRequest>;
 
 // Get all rooms
-export const useGetRooms = () => {
+export const useGetRooms = (roomType?: string) => {
   return useQueryData(
     ['rooms'],
     async () => {
       try {
-        const response = await api.get('/api/rooms/');
+        const response = await api.get('/api/rooms/', {
+          params: {
+            roomType : roomType
+          }
+        });
         return response.data;
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
@@ -54,7 +58,7 @@ export const useGetRooms = () => {
 };
 
 // Get a single room by ID
-export const useGetRoom = (id: number) => {
+export const useGetRoom = (id: number, roomType? : string) => {
   return useQueryData(
     ['room', id.toString()],
     async () => {
