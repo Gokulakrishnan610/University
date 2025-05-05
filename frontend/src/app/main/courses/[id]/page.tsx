@@ -391,7 +391,7 @@ export default function CourseDetails() {
                   <ArrowLeftRight className="h-4 w-4" />
                   Department Roles
                 </TabsTrigger>
-                <TabsTrigger value="room-preferences" className="flex items-center gap-1.5">
+                <TabsTrigger value="room-preferences" className="flex items-center gap-1.5" onClick={() => navigate(`/courses/${courseId}/room-preferences`)}>
                   <LayoutGrid className="h-4 w-4" />
                   Room Preferences
                 </TabsTrigger>
@@ -667,7 +667,7 @@ export default function CourseDetails() {
                 </Card>
               </TabsContent>
 
-              <TabsContent value="room-preferences" className="mt-4">
+              {/* <TabsContent value="room-preferences" className="mt-4">
                 <Card>
                   <CardHeader className="py-4">
                     <CardTitle className="text-lg flex items-center gap-2">
@@ -689,7 +689,7 @@ export default function CourseDetails() {
                     </div>
                   </CardContent>
                 </Card>
-              </TabsContent>
+              </TabsContent> */}
             </Tabs>
           </div>
         </CardContent>
