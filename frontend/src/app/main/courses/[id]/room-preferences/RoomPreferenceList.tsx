@@ -123,8 +123,8 @@ export function RoomPreferenceList({ courseId, rooms }: RoomPreferenceListProps)
   const getRoomTypeName = (type: string) => {
     switch (type) {
       case "GENERAL": return "General";
-      case "TL": return "Technical Lab";
-      case "NTL": return "Non-Technical Lab";
+      case "TL": return "Computer Lab";
+    case "NTL": return "Core Lab";
       default: return type;
     }
   };
