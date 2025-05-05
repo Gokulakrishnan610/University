@@ -35,6 +35,10 @@ function App() {
         
         {/* Protected routes (require authentication) */}
         <Route element={<DashboardLayout />}>
+          {/* Course Masters routes */}
+  
+
+          {/* Dashboard and other routes */}
           <Route path="/*" element={
             <ProtectedRoute>
               <Dashboard />
