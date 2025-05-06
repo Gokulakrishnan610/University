@@ -2,6 +2,7 @@ from django.contrib import admin
 from django import forms
 from django.db.models import Q
 from .models import TeacherCourse
+from unfold.admin import ModelAdmin
 
 class TeacherCourseForm(forms.ModelForm):
     """Custom form to handle POP/industry professional scheduling"""
@@ -33,7 +34,7 @@ class TeacherCourseForm(forms.ModelForm):
             except (ValueError, TypeError, Teacher.DoesNotExist):
                 pass
 
-class TeacherCourseAdmin(admin.ModelAdmin):
+class TeacherCourseAdmin(ModelAdmin):
     form = TeacherCourseForm
     list_display = ('teacher_id', 'course_id', 'academic_year', 'semester', 'student_count', 'requires_special_scheduling')
     list_filter = ('academic_year', 'semester', 'teacher_id__dept_id', 'course_id__course_id', 'requires_special_scheduling', 'teacher_id__is_industry_professional')

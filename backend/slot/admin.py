@@ -3,6 +3,8 @@ from .models import Slot, TeacherSlotAssignment
 from django.db.models import Count, Q
 from django.utils.html import format_html
 from unfold.admin import ModelAdmin
+from .resources import TeacherSlotResource
+from import_export.admin import ImportExportModelAdmin
 
 @admin.register(Slot)
 class SlotAdmin(ModelAdmin):
@@ -43,12 +45,13 @@ class SlotTypeFilter(admin.SimpleListFilter):
         return queryset
 
 @admin.register(TeacherSlotAssignment)
-class TeacherSlotAssignmentAdmin(admin.ModelAdmin):
+class TeacherSlotAssignmentAdmin(ModelAdmin, ImportExportModelAdmin):
     list_display = ('teacher', 'department', 'day_name', 'slot_info', 'assignment_status')
     list_filter = (DayOfWeekFilter, SlotTypeFilter, 'teacher__dept_id')
     search_fields = ('teacher__teacher_id__first_name', 'teacher__teacher_id__last_name', 'teacher__staff_code')
     autocomplete_fields = ('teacher', 'slot')
-    
+    resource_classes = [TeacherSlotResource]
+
     def department(self, obj):
         if obj.teacher.dept_id:
             return obj.teacher.dept_id.dept_name
@@ -57,7 +60,7 @@ class TeacherSlotAssignmentAdmin(admin.ModelAdmin):
     
     def day_name(self, obj):
         return dict(TeacherSlotAssignment.DAYS_OF_WEEK)[obj.day_of_week]
-    day_name.short_description = "Day"
+    day_name.short_description = "Day"  
     
     def slot_info(self, obj):
         return f"{obj.slot.slot_name} ({obj.slot.get_slot_type_display()}: {obj.slot.slot_start_time.strftime('%H:%M')} - {obj.slot.slot_end_time.strftime('%H:%M')})"

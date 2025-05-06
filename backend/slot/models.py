@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.db.models import Count
 from collections import Counter
 
+
 # Create your models here.
 class Slot(models.Model):
     SLOT_TYPES = [
