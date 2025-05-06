@@ -496,9 +496,9 @@ export default function CreateTeacherCourseAssignment() {
                 const existingAssignments = assignments.filter(a => a.course_detail?.id.toString() === assignment.course_id);
                 
                 // If this is a new assignment and we exceed teacher requirements, warn
-                if (existingAssignments.length >= requiredTeachers) {
-                    errors.push(`Warning: Course "${selectedCourseData.course_detail?.course_name}" already has ${existingAssignments.length} teachers assigned, which meets the calculated requirement of ${requiredTeachers} teachers based on student count.`);
-                }
+                // if (existingAssignments.length >= requiredTeachers) {
+                //     errors.push(`Warning: Course "${selectedCourseData.course_detail?.course_name}" already has ${existingAssignments.length} teachers assigned, which meets the calculated requirement of ${requiredTeachers} teachers based on student count.`);
+                // }
             }
         }
 
