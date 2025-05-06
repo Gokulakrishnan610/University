@@ -86,6 +86,7 @@ export default function CourseForm({
   currentPage = 1,
   totalPages: parentTotalPages = 1
 }: CourseFormProps) {
+
   const [searchTermState, setSearchTermState] = useState(searchTerm || '');
   const debouncedSearchTerm = useDebounce(searchTermState, 300);
   const [page, setPage] = useState(currentPage);
@@ -133,7 +134,7 @@ export default function CourseForm({
       teaching_dept_id: defaultValues?.teaching_dept_id || 0,
       need_assist_teacher: false,
       regulation: "R2019",
-      course_type: "T",
+      course_type: undefined,
       elective_type: "NE",
       lab_type: "NULL",
       is_zero_credit_course: false,
@@ -157,7 +158,7 @@ export default function CourseForm({
         teaching_dept_id: 0,
         need_assist_teacher: false,
         regulation: "R2019",
-        course_type: "LoT",
+        // course_type: "LoT",
         elective_type: "NE",
         lab_type: "NULL",
         is_zero_credit_course: false,
@@ -186,9 +187,11 @@ export default function CourseForm({
   // Add effect to handle course master selection
   useEffect(() => {
     const subscription = form.watch((value, { name }) => {
+      console.log('Form value changed:', name, value);
       if (name === 'course_id' && value.course_id) {
         const selectedCourse:any = initialCourseMasters.find(course => course.id === value.course_id);
         if (selectedCourse) {
+          console.log('Selected course:', selectedCourse);
           // Set values for pre-populated fields from CourseMaster
           form.setValue('lecture_hours', selectedCourse.lecture_hours);
           form.setValue('tutorial_hours', selectedCourse.tutorial_hours);
@@ -502,7 +505,7 @@ export default function CourseForm({
                     <FormLabel>Regulation</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      value={field.value || ''} 
+                      value={defaultValues?.regulation || ''} 
                       disabled={true}
                     >
                       <FormControl>
@@ -530,7 +533,7 @@ export default function CourseForm({
                     <FormLabel>Course Type</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      value={field.value || ''}
+                      value={field.value || defaultValues?.course_type  || ''}
                       disabled={true}
                     >
                       <FormControl>

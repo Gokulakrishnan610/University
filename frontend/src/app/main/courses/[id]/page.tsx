@@ -470,7 +470,7 @@ export default function CourseDetails() {
                             <h3 className="text-sm font-medium text-muted-foreground">Course Type</h3>
                             <div className="mt-1 flex flex-wrap gap-2">
                               <Badge variant="outline">
-                                {course.course_type === 'T' ? 'Theory' :
+                                {course .course_type === 'T' ? 'Theory' :
                                   course.course_type === 'L' ? 'Lab' :
                                     course.course_type === 'LoT' ? 'Lab & Theory' : course.course_type}
                               </Badge>
