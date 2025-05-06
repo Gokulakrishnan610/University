@@ -25,6 +25,42 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+// Helper component to display workload information consistently
+interface CourseWorkloadProps {
+    lecture?: number;
+    tutorial?: number;
+    practical?: number;
+    showTotal?: boolean;
+}
+
+const CourseWorkload: React.FC<CourseWorkloadProps> = ({ 
+    lecture = 0, 
+    tutorial = 0, 
+    practical = 0,
+    showTotal = true
+}) => {
+    const adjustedPractical = practical * 2;
+    const totalHours = lecture + tutorial + adjustedPractical;
+    
+    return (
+        <div>
+            {showTotal && (
+                <div className="font-medium">
+                    {totalHours} hrs total
+                </div>
+            )}
+            <div className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+                {lecture > 0 && <span>L: {lecture}</span>}
+                {tutorial > 0 && <span>T: {tutorial}</span>}
+                {practical > 0 && (
+                    <span className="text-primary font-medium">
+                        P: {practical}×2={adjustedPractical}
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+};
 
 export function TeacherCourseAssignment() {
     const navigate = useNavigate();
@@ -235,18 +271,28 @@ export function TeacherCourseAssignment() {
 
     // Function to export assignments as CSV
     const exportToCSV = () => {
-        const headers = ['Teacher', 'Course', 'Course Code', 'Department', 'Role', 'Students'];
+        const headers = ['Teacher', 'Course', 'Course Code', 'Department', 'Role', 'Students', 'Hours', 'Workload (Adjusted)'];
 
         const csvRows = [
             headers.join(','),
-            ...filteredAssignments.map(a => [
-                `"${a.teacher_detail?.teacher_id?.first_name || ''} ${a.teacher_detail?.teacher_id?.last_name || ''}"`,
-                `"${a.course_detail?.course_detail?.course_name || ''}"`,
-                `"${a.course_detail?.course_detail?.course_id || ''}"`,
-                `"${a.course_detail?.teaching_dept_detail?.dept_name || ''}"`,
-                `"${a.is_assistant ? 'Assistant' : 'Primary'}"`,
-                a.student_count || 0
-            ].join(','))
+            ...filteredAssignments.map(a => {
+                const lectureHours = a.course_detail?.lecture_hours || 0;
+                const tutorialHours = a.course_detail?.tutorial_hours || 0;
+                const practicalHours = a.course_detail?.practical_hours || 0;
+                const adjustedWorkload = lectureHours + tutorialHours + (practicalHours * 2);
+                const rawHours = lectureHours + tutorialHours + practicalHours;
+                
+                return [
+                    `"${a.teacher_detail?.teacher_id?.first_name || ''} ${a.teacher_detail?.teacher_id?.last_name || ''}"`,
+                    `"${a.course_detail?.course_detail?.course_name || ''}"`,
+                    `"${a.course_detail?.course_detail?.course_id || ''}"`,
+                    `"${a.course_detail?.teaching_dept_detail?.dept_name || ''}"`,
+                    `"${a.is_assistant ? 'Assistant' : 'Primary'}"`,
+                    a.student_count || 0,
+                    rawHours,
+                    adjustedWorkload
+                ].join(',');
+            })
         ];
 
         const csvString = csvRows.join('\n');
@@ -268,6 +314,18 @@ export function TeacherCourseAssignment() {
         
         // Each 70 students (or fraction) requires one teacher
         return Math.ceil(studentCount / 70);
+    };
+
+    // Calculate adjusted workload with practical hours counted as double
+    const calculateAdjustedWorkload = (assignment: TCAssignment) => {
+        if (!assignment.course_detail) return 0;
+        
+        const lectureHours = assignment.course_detail.lecture_hours || 0;
+        const tutorialHours = assignment.course_detail.tutorial_hours || 0;
+        // Practical hours are counted double for workload
+        const practicalHours = (assignment.course_detail.practical_hours || 0) * 2;
+        
+        return lectureHours + tutorialHours + practicalHours;
     };
 
     const handleCourseSelect = (courseId: number) => {
@@ -586,11 +644,18 @@ export function TeacherCourseAssignment() {
                                     </div>
                                 ) : courseStats && !Array.isArray(courseStats) ? (
                                     <div className="space-y-4">
+                                        {/* Course stats debugging */}
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="bg-secondary/10 p-3 rounded-md">
                                                 <div className="text-sm text-muted-foreground">Course</div>
                                                 <div className="font-medium">{courseStats.course_name}</div>
                                                 <div className="text-xs font-mono">{courseStats.course_code}</div>
+                                                <div className="mt-2 pt-2 border-t">
+                                                    <div className="text-xs text-muted-foreground mb-1">Workload Note</div>
+                                                    <div className="text-xs">
+                                                        <span className="font-medium text-primary">Note:</span> Practical hours are counted as double (×2) for workload calculations
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {/* Student count from the course */}
@@ -771,6 +836,16 @@ export function TeacherCourseAssignment() {
                                                         <span className="font-mono">{courseGroup.courseCode}</span>
                                                         <span>•</span>
                                                         <Badge variant="outline">{courseGroup.department}</Badge>
+                                                        {courseGroup.assignments.length > 0 && courseGroup.assignments[0].course_detail?.practical_hours > 0 && (
+                                                            <div className="ml-2">
+                                                                <CourseWorkload
+                                                                    lecture={courseGroup.assignments[0].course_detail?.lecture_hours || 0}
+                                                                    tutorial={courseGroup.assignments[0].course_detail?.tutorial_hours || 0}
+                                                                    practical={courseGroup.assignments[0].course_detail?.practical_hours || 0}
+                                                                    showTotal={false}
+                                                                />
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                             </div>
@@ -778,6 +853,13 @@ export function TeacherCourseAssignment() {
                                                 <div className="text-right">
                                                     <div className="text-sm font-medium">{courseGroup.assignments.length} Teachers</div>
                                                     <div className="text-xs text-muted-foreground">{courseGroup.studentCount} Students</div>
+                                                    {courseGroup.assignments.length > 0 && courseGroup.assignments[0].course_detail?.practical_hours > 0 && (
+                                                        <div className="text-xs mt-1">
+                                                            <span className="text-primary font-medium">
+                                                                {courseGroup.assignments[0].course_detail.practical_hours} practical hrs (×2)
+                                                            </span>
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
                                                     <Button 
@@ -814,6 +896,7 @@ export function TeacherCourseAssignment() {
                                                     <TableHead>Students</TableHead>
                                                     <TableHead>Academic Year</TableHead>
                                                     <TableHead>Semester</TableHead>
+                                                    <TableHead>Hours</TableHead>
                                                     <TableHead className="text-right">Actions</TableHead>
                                                 </TableRow>
                                             </TableHeader>
@@ -845,6 +928,15 @@ export function TeacherCourseAssignment() {
                                                         <TableCell>{assignment.student_count || 0}</TableCell>
                                                         <TableCell>{assignment.academic_year || 'N/A'}</TableCell>
                                                         <TableCell>{assignment.semester || 'N/A'}</TableCell>
+                                                        <TableCell>
+                                                            {assignment.course_detail && (
+                                                                <CourseWorkload
+                                                                    lecture={assignment.course_detail.lecture_hours || 0}
+                                                                    tutorial={assignment.course_detail.tutorial_hours || 0}
+                                                                    practical={assignment.course_detail.practical_hours || 0}
+                                                                />
+                                                            )}
+                                                        </TableCell>
                                                         <TableCell className="text-right">
                                                             <div className="flex justify-end gap-2">
                                                                 <Button
