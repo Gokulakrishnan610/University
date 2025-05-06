@@ -131,6 +131,7 @@ export default function CourseMasterForm({
                 <Select 
                   onValueChange={(value) => field.onChange(parseInt(value))} 
                   defaultValue={field.value ? field.value.toString() : undefined}
+                  disabled={true}
                 >
                   <FormControl>
                     <SelectTrigger>

@@ -108,12 +108,11 @@ class CourseSerializer(serializers.ModelSerializer):
             # Owner can edit all fields except those now in CourseMaster
             editable_fields = [
                 'course_year', 'course_semester',
-                'for_dept_id', 'teaching_dept_id', 'need_assist_teacher',
+                'for_dept_id', 'teaching_dept_id',
                 'elective_type', 'lab_type', 'teaching_status'
             ]
         elif is_teacher:
-            # Teaching department can only edit teaching-related fields
-            editable_fields = ['teaching_status']
+            editable_fields = ['teaching_status', 'course_year', 'course_semester','need_assist_teacher']
         
         return {
             'can_edit': can_edit,

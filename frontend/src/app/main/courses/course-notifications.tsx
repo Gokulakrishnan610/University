@@ -143,7 +143,7 @@ export function CourseNotifications({ inDialog = false, isRead = false }: Course
           </div>
           <div className="mt-2 text-right">
             <Button variant="ghost" size="sm" asChild className="h-8 text-xs">
-              <Link to={`/main/courses/${course.id}`}>
+              <Link to={`/courses/${course.id}`}>
                 <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                 View Details
               </Link>

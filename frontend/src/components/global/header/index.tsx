@@ -238,7 +238,7 @@ export default function Header({
             <DialogHeader>
               <DialogTitle>Notifications</DialogTitle>
               <DialogDescription>
-                Course-related notifications and allocation requests
+                Course-related notifications (Notification of courses that are taken by other department)
               </DialogDescription>
             </DialogHeader>
 

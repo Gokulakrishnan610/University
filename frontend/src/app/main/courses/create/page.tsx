@@ -64,20 +64,28 @@ export default function CreateCoursePage() {
   });
   
   // Course master creation mutation
-  const { mutate: createCourseMaster, isPending: isCreatingCourseMaster } = useCreateCourseMaster(() => {
-    refetchCourseMasters();
-    toast.success("Course master created successfully");
-    setActiveTab('course'); // Switch to course tab after creating a master
-  });
+  const { mutate: createCourseMaster, isPending: isCreatingCourseMaster } = useCreateCourseMaster(
+    () => {
+      refetchCourseMasters();
+      toast.success("Course master created successfully");
+      setActiveTab('course');
+    },
+    (error) => {
+      toast.error(error.message || 'An unexpected error occurred while creating the course master.');
+    }
+  );
   
+  // Set default values when current department is available
   useEffect(() => {
     if (currentDepartment && currentDepartment.id) {
       // Set both for_dept_id and teaching_dept_id to the current department's ID
-      setCourseFormDefaults(prev => ({
-        ...prev,
+      setCourseFormDefaults({
         for_dept_id: currentDepartment.id,
         teaching_dept_id: currentDepartment.id,
-      }));
+        // Set default values for regulation and course_type so they will render
+        regulation: "R2019",
+        course_type: "T"
+      });
     }
   }, [currentDepartment]);
   
@@ -162,7 +170,6 @@ export default function CreateCoursePage() {
                     'course_id', 
                     'course_year', 
                     'course_semester', 
-                    'for_dept_id', 
                     'need_assist_teacher', 
                     'elective_type', 
                     'teaching_status'

@@ -152,26 +152,27 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
             
             # Get user's department (if HOD)
             user_dept = None
+            print("Heere")
             try:
                 user_dept = Department.objects.get(hod_id=user)
             except Department.DoesNotExist:
                 pass
-            
+            print("After exception")
             if user_dept:
                 # Owner department - full rights (edit and delete)
                 is_owner = user_dept.id == course.course_id.course_dept_id.id
                 
-                # Teaching department - limited edit rights, no delete
+                # Teaching department - now has both edit and delete rights
                 is_teacher = user_dept.id == course.teaching_dept_id.id if course.teaching_dept_id else False
                 
                 # For department - no edit or delete rights
                 is_learner = user_dept.id == course.for_dept_id.id if course.for_dept_id else False
                 
-                # If DELETE, only owner can delete
-                if self.request.method == 'DELETE' and not is_owner:
+                # If DELETE, allow both owner and teaching department to delete
+                if self.request.method == 'DELETE' and not (is_owner or is_teacher):
                     self.permission_denied(
                         self.request,
-                        message="Only the owner department's HOD can delete this course."
+                        message="Only the owner or teaching department's HOD can delete this course."
                     )
                 
                 # If EDIT (PUT/PATCH), only owner or teacher can edit
@@ -245,13 +246,30 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
             except Department.DoesNotExist:
                 pass
             
-            # Restrict what teaching departments can edit
-            if user_dept and user_dept.id == instance.teaching_dept_id.id and user_dept.id != instance.course_id.course_dept_id.id:
-                # Teaching department can only edit certain fields
-                allowed_fields = ['teaching_status', 'no_of_students']
-                for field in list(request.data.keys()):
-                    if field not in allowed_fields:
-                        request.data.pop(field, None)
+            # Get editable fields from the serializer for the current user's department
+            if user_dept:
+                # Owner department - full rights
+                is_owner = user_dept.id == instance.course_id.course_dept_id.id
+                # Teaching department
+                is_teacher = user_dept.id == instance.teaching_dept_id.id if instance.teaching_dept_id else False
+                
+                # Get appropriate editable fields based on department role
+                allowed_fields = []
+                if is_owner:
+                    allowed_fields = [
+                        'course_year', 'course_semester',
+                        'for_dept_id', 'teaching_dept_id', 'need_assist_teacher',
+                        'elective_type', 'lab_type', 'teaching_status', 'no_of_students'
+                    ]
+                elif is_teacher:
+                    # Teaching department can edit more than just teaching_status
+                    allowed_fields = ['teaching_status', 'no_of_students', 'course_year', 'course_semester']
+                
+                # Only keep allowed fields
+                if not is_owner:  # Owner can edit all fields
+                    for field in list(request.data.keys()):
+                        if field not in allowed_fields:
+                            request.data.pop(field, None)
             
             serializer = self.get_serializer(instance, data=request.data, partial=True)
             serializer.is_valid(raise_exception=True)
@@ -1029,17 +1047,47 @@ class CourseNotification(APIView):
     def get(self, req):
         try:
             teacher = Teacher.objects.get(teacher_id=req.user)
-            teacher_dept = teacher.dept_id.dept_name
+            teacher_dept = teacher.dept_id
             
-            other_dept_using_my_course = Course.objects.filter(
-                course_id__course_dept_id__dept_name=teacher_dept
-            ).exclude(
-                for_dept_id__dept_name=teacher_dept
-            ).exclude(
-                teaching_dept_id__dept_name=teacher_dept
-            )  
+            # Get all courses where the department is involved (as owner, teacher, or for_dept)
+            dept_involved_courses = Course.objects.filter(
+                models.Q(course_id__course_dept_id=teacher_dept) |  # Department owns the course
+                models.Q(teaching_dept_id=teacher_dept) |           # Department teaches the course
+                models.Q(for_dept_id=teacher_dept)                  # Course is for department's students
+            ).select_related(
+                'course_id',
+                'course_id__course_dept_id',
+                'teaching_dept_id',
+                'for_dept_id'
+            ).distinct()
             
-            serializer = CourseSerializer(other_dept_using_my_course, many=True)
+            # Filter to find cross-department relationships only
+            # These are courses where at least one of the departments is not the teacher's department
+            cross_dept_courses = []
+            for course in dept_involved_courses:
+                owner_dept = course.course_id.course_dept_id
+                teacher_dept_id = course.teaching_dept_id
+                for_dept_id = course.for_dept_id
+                
+                # Skip courses where all departments are the same (fully internal)
+                if owner_dept == teacher_dept_id == for_dept_id == teacher_dept:
+                    continue
+                
+                # Add relationship details to help interpret course relationships
+                course.relationship_details = {
+                    "is_owner": owner_dept == teacher_dept,
+                    "is_teacher": teacher_dept_id == teacher_dept,
+                    "is_for_dept": for_dept_id == teacher_dept,
+                    "departments_involved": {
+                        "owner": owner_dept.dept_name,
+                        "teacher": teacher_dept_id.dept_name if teacher_dept_id else "None",
+                        "for_dept": for_dept_id.dept_name if for_dept_id else "None"
+                    }
+                }
+                
+                cross_dept_courses.append(course)
+            
+            serializer = CourseSerializer(cross_dept_courses, many=True)
             
             return Response({
                 "detail": "Success",

@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Trash2, Eye, Search, X, Filter, Download, Plus } from 'lucide-react';
+import { Loader2, Trash2, Eye, Search, X, Filter, Download, Plus, ChevronDown, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -23,12 +23,50 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
+// Helper component to display workload information consistently
+interface CourseWorkloadProps {
+    lecture?: number;
+    tutorial?: number;
+    practical?: number;
+    showTotal?: boolean;
+}
+
+const CourseWorkload: React.FC<CourseWorkloadProps> = ({ 
+    lecture = 0, 
+    tutorial = 0, 
+    practical = 0,
+    showTotal = true
+}) => {
+    const adjustedPractical = practical * 2;
+    const totalHours = lecture + tutorial + adjustedPractical;
+    
+    return (
+        <div>
+            {showTotal && (
+                <div className="font-medium">
+                    {totalHours} hrs total
+                </div>
+            )}
+            <div className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+                {lecture > 0 && <span>L: {lecture}</span>}
+                {tutorial > 0 && <span>T: {tutorial}</span>}
+                {practical > 0 && (
+                    <span className="text-primary font-medium">
+                        P: {practical}×2={adjustedPractical}
+                    </span>
+                )}
+            </div>
+        </div>
+    );
+};
 
 export function TeacherCourseAssignment() {
     const navigate = useNavigate();
     const [assignmentToDelete, setAssignmentToDelete] = useState<TCAssignment | null>(null);
     const [selectedCourseId, setSelectedCourseId] = useState<number | null>(null);
+    const [expandedCourses, setExpandedCourses] = useState<Set<string>>(new Set());
 
     // Search and filter states
     const [searchQuery, setSearchQuery] = useState<string>('');
@@ -139,6 +177,65 @@ export function TeacherCourseAssignment() {
     }, [assignments, searchQuery, selectedDepartmentFilter, selectedTeacherFilter, selectedSubjectFilter,
         selectedCourseCodeFilter, showIndustryOnly, showPOPOnly, teacherRoleFilter]);
 
+    // Group assignments by course
+    const groupedAssignments = useMemo(() => {
+        const grouped: Record<string, {
+            courseId: number;
+            courseName: string;
+            courseCode: string;
+            department: string;
+            assignments: TCAssignment[];
+            studentCount: number;
+            isExpanded: boolean;
+        }> = {};
+
+        filteredAssignments.forEach(assignment => {
+            const courseId = assignment.course_detail?.id;
+            const courseName = assignment.course_detail?.course_detail?.course_name || 'Unknown Course';
+            const courseCode = assignment.course_detail?.course_detail?.course_id || 'Unknown Code';
+            const department = assignment.course_detail?.teaching_dept_detail?.dept_name || 'Unknown Department';
+            
+            const key = `${courseId}`;
+            
+            if (!grouped[key]) {
+                grouped[key] = {
+                    courseId: courseId || 0,
+                    courseName,
+                    courseCode,
+                    department,
+                    assignments: [],
+                    studentCount: 0,
+                    isExpanded: expandedCourses.has(key)
+                };
+            }
+            
+            grouped[key].assignments.push(assignment);
+            grouped[key].studentCount += assignment.student_count || 0;
+        });
+        
+        return Object.values(grouped).sort((a, b) => a.courseName.localeCompare(b.courseName));
+    }, [filteredAssignments, expandedCourses]);
+
+    // Toggle course expansion
+    const toggleCourseExpansion = (courseId: number) => {
+        setExpandedCourses(prev => {
+            const newSet = new Set(prev);
+            const key = `${courseId}`;
+            if (newSet.has(key)) {
+                newSet.delete(key);
+            } else {
+                // If there are more than 3 courses open, close the oldest one
+                // to avoid too many open sections
+                if (newSet.size >= 3) {
+                    const values = Array.from(newSet);
+                    newSet.delete(values[0]); // Remove the first (oldest) item
+                }
+                newSet.add(key);
+            }
+            return newSet;
+        });
+    };
+
     const handleDelete = () => {
         if (!assignmentToDelete) return;
 
@@ -174,18 +271,28 @@ export function TeacherCourseAssignment() {
 
     // Function to export assignments as CSV
     const exportToCSV = () => {
-        const headers = ['Teacher', 'Course', 'Course Code', 'Department', 'Role', 'Students'];
+        const headers = ['Teacher', 'Course', 'Course Code', 'Department', 'Role', 'Students', 'Hours', 'Workload (Adjusted)'];
 
         const csvRows = [
             headers.join(','),
-            ...filteredAssignments.map(a => [
-                `"${a.teacher_detail?.teacher_id?.first_name || ''} ${a.teacher_detail?.teacher_id?.last_name || ''}"`,
-                `"${a.course_detail?.course_detail?.course_name || ''}"`,
-                `"${a.course_detail?.course_detail?.course_id || ''}"`,
-                `"${a.course_detail?.teaching_dept_detail?.dept_name || ''}"`,
-                `"${a.is_assistant ? 'Assistant' : 'Primary'}"`,
-                a.student_count || 0
-            ].join(','))
+            ...filteredAssignments.map(a => {
+                const lectureHours = a.course_detail?.lecture_hours || 0;
+                const tutorialHours = a.course_detail?.tutorial_hours || 0;
+                const practicalHours = a.course_detail?.practical_hours || 0;
+                const adjustedWorkload = lectureHours + tutorialHours + (practicalHours * 2);
+                const rawHours = lectureHours + tutorialHours + practicalHours;
+                
+                return [
+                    `"${a.teacher_detail?.teacher_id?.first_name || ''} ${a.teacher_detail?.teacher_id?.last_name || ''}"`,
+                    `"${a.course_detail?.course_detail?.course_name || ''}"`,
+                    `"${a.course_detail?.course_detail?.course_id || ''}"`,
+                    `"${a.course_detail?.teaching_dept_detail?.dept_name || ''}"`,
+                    `"${a.is_assistant ? 'Assistant' : 'Primary'}"`,
+                    a.student_count || 0,
+                    rawHours,
+                    adjustedWorkload
+                ].join(',');
+            })
         ];
 
         const csvString = csvRows.join('\n');
@@ -209,8 +316,30 @@ export function TeacherCourseAssignment() {
         return Math.ceil(studentCount / 70);
     };
 
-        const handleCourseSelect = (courseId: number) => {
-        setSelectedCourseId(courseId === selectedCourseId ? null : courseId);
+    // Calculate adjusted workload with practical hours counted as double
+    const calculateAdjustedWorkload = (assignment: TCAssignment) => {
+        if (!assignment.course_detail) return 0;
+        
+        const lectureHours = assignment.course_detail.lecture_hours || 0;
+        const tutorialHours = assignment.course_detail.tutorial_hours || 0;
+        // Practical hours are counted double for workload
+        const practicalHours = (assignment.course_detail.practical_hours || 0) * 2;
+        
+        return lectureHours + tutorialHours + practicalHours;
+    };
+
+    const handleCourseSelect = (courseId: number) => {
+        const newSelectedId = courseId === selectedCourseId ? null : courseId;
+        setSelectedCourseId(newSelectedId);
+        
+        // If selecting a course, ensure its group is expanded
+        if (newSelectedId) {
+            setExpandedCourses(prev => {
+                const newSet = new Set(prev);
+                newSet.add(`${courseId}`);
+                return newSet;
+            });
+        }
     };
 
     return (
@@ -459,6 +588,38 @@ export function TeacherCourseAssignment() {
                         </div>
                     </div>
 
+                    {/* Course Summary Stats */}
+                    {!assignmentsLoading && filteredAssignments.length > 0 && (
+                        <div className="flex flex-wrap gap-4 mb-6 p-3 bg-muted/30 rounded-md">
+                            <div>
+                                <div className="text-sm text-muted-foreground">Total Courses</div>
+                                <div className="text-2xl font-semibold">{groupedAssignments.length}</div>
+                            </div>
+                            <div className="border-l pl-4">
+                                <div className="text-sm text-muted-foreground">Total Assignments</div>
+                                <div className="text-2xl font-semibold">{filteredAssignments.length}</div>
+                            </div>
+                            <div className="border-l pl-4">
+                                <div className="text-sm text-muted-foreground">Total Students</div>
+                                <div className="text-2xl font-semibold">
+                                    {filteredAssignments.reduce((sum, assignment) => sum + (assignment.student_count || 0), 0)}
+                                </div>
+                            </div>
+                            <div className="border-l pl-4">
+                                <div className="text-sm text-muted-foreground">Primary Teachers</div>
+                                <div className="text-2xl font-semibold">
+                                    {filteredAssignments.filter(a => !a.is_assistant).length}
+                                </div>
+                            </div>
+                            <div className="border-l pl-4">
+                                <div className="text-sm text-muted-foreground">Assistant Teachers</div>
+                                <div className="text-2xl font-semibold">
+                                    {filteredAssignments.filter(a => a.is_assistant).length}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Course Statistics Section */}
                     {selectedCourseId && (
                         <Card className="mb-6 border border-primary/20">
@@ -483,11 +644,18 @@ export function TeacherCourseAssignment() {
                                     </div>
                                 ) : courseStats && !Array.isArray(courseStats) ? (
                                     <div className="space-y-4">
+                                        {/* Course stats debugging */}
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div className="bg-secondary/10 p-3 rounded-md">
                                                 <div className="text-sm text-muted-foreground">Course</div>
                                                 <div className="font-medium">{courseStats.course_name}</div>
                                                 <div className="text-xs font-mono">{courseStats.course_code}</div>
+                                                <div className="mt-2 pt-2 border-t">
+                                                    <div className="text-xs text-muted-foreground mb-1">Workload Note</div>
+                                                    <div className="text-xs">
+                                                        <span className="font-medium text-primary">Note:</span> Practical hours are counted as double (×2) for workload calculations
+                                                    </div>
+                                                </div>
                                             </div>
 
                                             {/* Student count from the course */}
@@ -644,93 +812,157 @@ export function TeacherCourseAssignment() {
                             <p className="text-muted-foreground">No assignments found</p>
                         </div>
                     ) : (
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>ID</TableHead>
-                                    <TableHead>Course</TableHead>
-                                    <TableHead>Teacher</TableHead>
-                                    <TableHead>Role</TableHead>
-                                    <TableHead>Department</TableHead>
-                                    <TableHead>Students</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {filteredAssignments.map((assignment) => (
-                                    <TableRow
-                                        key={assignment.id}
-                                        className={selectedCourseId === assignment.course_detail?.id ? "bg-primary/5" : ""}
-                                        onClick={() => handleCourseSelect(assignment.course_detail?.id || 0)}
-                                        style={{ cursor: 'pointer' }}
-                                    >
-                                        <TableCell className="font-medium">{assignment.id}</TableCell>
-                                        <TableCell>
-                                            <div>
-                                                <div className="font-medium">{assignment.course_detail?.course_detail?.course_name}</div>
-                                                <div className="text-xs text-muted-foreground">
-                                                    {assignment.course_detail?.course_detail?.course_id}
+                        <div className="space-y-4">
+                            {groupedAssignments.map((courseGroup) => (
+                                <Collapsible
+                                    key={courseGroup.courseId}
+                                    open={expandedCourses.has(`${courseGroup.courseId}`)}
+                                    onOpenChange={() => toggleCourseExpansion(courseGroup.courseId)}
+                                    className={`border rounded-md overflow-hidden ${selectedCourseId === courseGroup.courseId ? 'border-primary shadow-sm' : ''}`}
+                                >
+                                    <CollapsibleTrigger asChild>
+                                        <div 
+                                            className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 ${selectedCourseId === courseGroup.courseId ? 'bg-primary/10' : ''}`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                {expandedCourses.has(`${courseGroup.courseId}`) ? (
+                                                    <ChevronDown className="h-4 w-4 text-primary" />
+                                                ) : (
+                                                    <ChevronRight className="h-4 w-4 text-primary" />
+                                                )}
+                                                <div>
+                                                    <h3 className="font-medium">{courseGroup.courseName}</h3>
+                                                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                                                        <span className="font-mono">{courseGroup.courseCode}</span>
+                                                        <span>•</span>
+                                                        <Badge variant="outline">{courseGroup.department}</Badge>
+                                                        {courseGroup.assignments.length > 0 && courseGroup.assignments[0].course_detail?.practical_hours > 0 && (
+                                                            <div className="ml-2">
+                                                                <CourseWorkload
+                                                                    lecture={courseGroup.assignments[0].course_detail?.lecture_hours || 0}
+                                                                    tutorial={courseGroup.assignments[0].course_detail?.tutorial_hours || 0}
+                                                                    practical={courseGroup.assignments[0].course_detail?.practical_hours || 0}
+                                                                    showTotal={false}
+                                                                />
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                {selectedCourseId === assignment.course_detail?.id && (
-                                                    <Badge variant="outline" className="mt-1">Selected</Badge>
-                                                )}
                                             </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <div className="font-medium flex items-center gap-1">
-                                                {assignment.teacher_detail?.teacher_id?.first_name} {assignment.teacher_detail?.teacher_id?.last_name}
-                                                {assignment.teacher_detail?.teacher_role === 'POP' && (
-                                                    <Badge variant="secondary" className="ml-1 text-xs">POP</Badge>
-                                                )}
-                                                {assignment.teacher_detail?.is_industry_professional && (
-                                                    <Badge variant="outline" className="ml-1 text-xs">🏢 Industry</Badge>
-                                                )}
+                                            <div className="flex items-center gap-4">
+                                                <div className="text-right">
+                                                    <div className="text-sm font-medium">{courseGroup.assignments.length} Teachers</div>
+                                                    <div className="text-xs text-muted-foreground">{courseGroup.studentCount} Students</div>
+                                                    {courseGroup.assignments.length > 0 && courseGroup.assignments[0].course_detail?.practical_hours > 0 && (
+                                                        <div className="text-xs mt-1">
+                                                            <span className="text-primary font-medium">
+                                                                {courseGroup.assignments[0].course_detail.practical_hours} practical hrs (×2)
+                                                            </span>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleCourseSelect(courseGroup.courseId);
+                                                        }}
+                                                    >
+                                                        View Stats
+                                                    </Button>
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            navigate(`/teacher-course-assignment/create?course=${courseGroup.courseId}`);
+                                                        }}
+                                                    >
+                                                        <Plus className="h-4 w-4 mr-1" /> Assign
+                                                    </Button>
+                                                </div>
                                             </div>
-                                            <div className="text-sm text-muted-foreground">
-                                                {assignment.teacher_detail?.staff_code}
-                                            </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            {assignment.is_assistant ? (
-                                                <Badge variant="outline">Assistant</Badge>
-                                            ) : (
-                                                <Badge>Primary</Badge>
-                                            )}
-                                        </TableCell>
-                                        <TableCell>
-                                            <Badge variant="outline">
-                                                {assignment.course_detail?.teaching_dept_detail?.dept_name}
-                                            </Badge>
-                                        </TableCell>
-                                        <TableCell>{assignment.student_count || 0}</TableCell>
-                                        <TableCell className="text-right">
-                                            <div className="flex justify-end gap-2">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        viewDetails(assignment.id);
-                                                    }}
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                    variant="ghost"
-                                                    size="sm"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setAssignmentToDelete(assignment);
-                                                    }}
-                                                >
-                                                    <Trash2 className="h-4 w-4 text-destructive" />
-                                                </Button>
-                                            </div>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
+                                        </div>
+                                    </CollapsibleTrigger>
+                                    <CollapsibleContent>
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead>ID</TableHead>
+                                                    <TableHead>Teacher</TableHead>
+                                                    <TableHead>Role</TableHead>
+                                                    <TableHead>Students</TableHead>
+                                                    <TableHead>Academic Year</TableHead>
+                                                    <TableHead>Semester</TableHead>
+                                                    <TableHead>Hours</TableHead>
+                                                    <TableHead className="text-right">Actions</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {courseGroup.assignments.map((assignment) => (
+                                                    <TableRow key={assignment.id}>
+                                                        <TableCell className="font-medium">{assignment.id}</TableCell>
+                                                        <TableCell>
+                                                            <div className="font-medium flex items-center gap-1">
+                                                                {assignment.teacher_detail?.teacher_id?.first_name} {assignment.teacher_detail?.teacher_id?.last_name}
+                                                                {assignment.teacher_detail?.teacher_role === 'POP' && (
+                                                                    <Badge variant="secondary" className="ml-1 text-xs">POP</Badge>
+                                                                )}
+                                                                {assignment.teacher_detail?.is_industry_professional && (
+                                                                    <Badge variant="outline" className="ml-1 text-xs">🏢 Industry</Badge>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-sm text-muted-foreground">
+                                                                {assignment.teacher_detail?.staff_code}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            {assignment.is_assistant ? (
+                                                                <Badge variant="outline">Assistant</Badge>
+                                                            ) : (
+                                                                <Badge>Primary</Badge>
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell>{assignment.student_count || 0}</TableCell>
+                                                        <TableCell>{assignment.academic_year || 'N/A'}</TableCell>
+                                                        <TableCell>{assignment.semester || 'N/A'}</TableCell>
+                                                        <TableCell>
+                                                            {assignment.course_detail && (
+                                                                <CourseWorkload
+                                                                    lecture={assignment.course_detail.lecture_hours || 0}
+                                                                    tutorial={assignment.course_detail.tutorial_hours || 0}
+                                                                    practical={assignment.course_detail.practical_hours || 0}
+                                                                />
+                                                            )}
+                                                        </TableCell>
+                                                        <TableCell className="text-right">
+                                                            <div className="flex justify-end gap-2">
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => viewDetails(assignment.id)}
+                                                                >
+                                                                    <Eye className="h-4 w-4" />
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="sm"
+                                                                    onClick={() => setAssignmentToDelete(assignment)}
+                                                                >
+                                                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                                                </Button>
+                                                            </div>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CollapsibleContent>
+                                </Collapsible>
+                            ))}
+                        </div>
                     )}
                 </CardContent>
             </Card>
