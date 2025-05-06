@@ -238,7 +238,7 @@ export default function CreateTeacherCourseAssignment() {
     const courseOptions: ComboboxOption[] = useMemo(() => {
         return availableCourses.map((course: Course) => ({
             value: course.id.toString(),
-            label: `${course.course_detail?.course_name} (${course.course_detail?.course_id}) [L:${course.lecture_hours || 0}|T:${course.tutorial_hours || 0}|P:${course.practical_hours || 0}] - For: ${course.for_dept_detail.dept_name}`
+            label: `${course.course_detail?.course_name} - ${course.course_year} year - (${course.course_detail?.course_id}) [L:${course.lecture_hours || 0}|T:${course.tutorial_hours || 0}|P:${course.practical_hours || 0}] - For: ${course.for_dept_detail.dept_name}`
         }));
     }, [availableCourses]);
 
@@ -485,119 +485,6 @@ export default function CreateTeacherCourseAssignment() {
                 <h1 className="text-xl font-bold">Create New Course Assignment</h1>
             </div>
 
-            {/* Course Statistics for Selected Courses */}
-            {selectedCourses.length > 0 && (
-                <Card className="mb-6">
-                    <CardHeader>
-                        <CardTitle>Selected Course Statistics</CardTitle>
-                        <CardDescription>
-                            Information about the courses you're assigning and required teachers
-                        </CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <div className="space-y-4">
-                            {selectedCourses.map(courseId => {
-                                const courseData = courses.find(c => c.id.toString() === courseId);
-                                if (!courseData) return null;
-
-                                const studentCount = getStudentCountForCourse(courseId);
-                                const requiredTeachers = calculateRequiredTeachers(studentCount);
-
-                                // Find current teacher assignments for this course
-                                const courseAssignments = assignments.filter(
-                                    a => a.course_detail?.id.toString() === courseId
-                                );
-
-                                // Calculate LTP hours
-                                const lHours = courseData.lecture_hours || 0;
-                                const tHours = courseData.tutorial_hours || 0;
-                                const pHours = courseData.practical_hours || 0;
-                                const totalHours = calculateLTPHours(courseData);
-
-                                return (
-                                    <div key={courseId} className="border rounded-lg p-3">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <h3 className="font-medium">{courseData.course_detail?.course_name}</h3>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        {courseData.course_detail?.course_id}
-                                                    </Badge>
-                                                </div>
-                                                <div className="flex flex-wrap items-center gap-1 mt-1">
-                                                    <Badge variant="secondary" className="text-xs">
-                                                        Year {courseData.course_year}
-                                                    </Badge>
-                                                    <Badge variant="secondary" className="text-xs">
-                                                        Sem {courseData.course_semester}
-                                                    </Badge>
-                                                    <Badge variant="outline" className="text-xs bg-primary/5">
-                                                        L:{lHours} T:{tHours} P:{pHours} ({totalHours}h)
-                                                    </Badge>
-                                                    <Badge variant="outline" className="text-xs">
-                                                        For: {courseData.for_dept_detail.dept_name}
-                                                    </Badge>
-                                                </div>
-                                            </div>
-                                            <Badge variant={courseAssignments.length >= requiredTeachers ? "outline" : "destructive"} className="ml-2">
-                                                {courseAssignments.length}/{requiredTeachers} teachers
-                                            </Badge>
-                                        </div>
-
-                                        <div className="grid grid-cols-2 gap-2 mb-2">
-                                            <div className="bg-secondary/10 p-2 rounded-md flex items-center justify-between">
-                                                <div>
-                                                    <div className="text-xs text-muted-foreground">Teachers</div>
-                                                    <div className="font-medium">{courseAssignments.length}</div>
-                                                </div>
-                                                <div className={courseAssignments.length >= requiredTeachers ? "text-green-600 text-xs" : "text-red-600 text-xs"}>
-                                                    {courseAssignments.length >= requiredTeachers ? "Adequate" : "Need more"}
-                                                </div>
-                                            </div>
-                                            <div className="bg-secondary/10 p-2 rounded-md">
-                                                <div className="text-xs text-muted-foreground">Students</div>
-                                                <div className="font-medium">{studentCount}</div>
-                                                {deptStudentCount && courseData.for_dept_id === deptStudentCount.department_id && (
-                                                    <div className="text-xs text-muted-foreground">Dept. validated</div>
-                                                )}
-                                            </div>
-                                        </div>
-
-                                        {courseAssignments.length > 0 && (
-                                            <div className="mt-2 text-xs">
-                                                <div className="font-medium mb-1">Current Assignments</div>
-                                                <div className="border rounded overflow-hidden">
-                                                    <div className="grid grid-cols-3 bg-muted/30 p-1">
-                                                        <div className="font-medium">Teacher</div>
-                                                        <div className="font-medium text-center">Role</div>
-                                                        <div className="font-medium text-right">Students</div>
-                                                    </div>
-                                                    {courseAssignments.map(assignment => (
-                                                        <div key={assignment.id} className="grid grid-cols-3 p-1 border-t">
-                                                            <div className="truncate">
-                                                                {assignment.teacher_detail?.teacher_id?.first_name} {assignment.teacher_detail?.teacher_id?.last_name}
-                                                            </div>
-                                                            <div className="text-center">
-                                                                <Badge variant={assignment.is_assistant ? "outline" : "default"} className="text-xs">
-                                                                    {assignment.is_assistant ? "Assistant" : "Primary"}
-                                                                </Badge>
-                                                            </div>
-                                                            <div className="text-right">
-                                                                {assignment.student_count || 0}
-                                                            </div>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </CardContent>
-                </Card>
-            )}
-
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 {/* Teacher Workload Information */}
                 <Card>
@@ -756,8 +643,8 @@ export default function CreateTeacherCourseAssignment() {
                     </CardContent>
                 </Card>
 
-                {/* Assignment Form and Course Stats */}
-                <div className="space-y-8">
+                {/* Assignment Form */}
+                <div className="space-y-4">
                     <Card>
                         <CardHeader className="pb-3">
                             <div className="flex justify-between items-center">
@@ -777,7 +664,7 @@ export default function CreateTeacherCourseAssignment() {
                                 </Button>
                             </div>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent >
                             <Form {...form}>
                                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                                     {form.watch("assignments").map((assignment, index) => (
@@ -794,7 +681,7 @@ export default function CreateTeacherCourseAssignment() {
                                                 </Button>
                                             )}
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div className="space-y-3 overflow-x-hidden">
                                                 <FormField
                                                     control={form.control}
                                                     name={`assignments.${index}.course_id`}
@@ -942,6 +829,121 @@ export default function CreateTeacherCourseAssignment() {
                     </Card>
                 </div>
             </div>
+
+            {/* Course Statistics for Selected Courses - Moved below the form */}
+            {selectedCourses.length > 0 && (
+                <Card className="mt-8">
+                    <CardHeader className="py-3">
+                        <div className="flex items-center gap-2">
+                            <CardTitle className="text-base">Selected Course Statistics</CardTitle>
+                            <Badge variant="outline" className="ml-2">
+                                {selectedCourses.length} {selectedCourses.length === 1 ? 'course' : 'courses'}
+                            </Badge>
+                        </div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {selectedCourses.map(courseId => {
+                                const courseData = courses.find(c => c.id.toString() === courseId);
+                                if (!courseData) return null;
+
+                                const studentCount = getStudentCountForCourse(courseId);
+                                const requiredTeachers = calculateRequiredTeachers(studentCount);
+
+                                // Find current teacher assignments for this course
+                                const courseAssignments = assignments.filter(
+                                    a => a.course_detail?.id.toString() === courseId
+                                );
+
+                                // Calculate LTP hours
+                                const lHours = courseData.lecture_hours || 0;
+                                const tHours = courseData.tutorial_hours || 0;
+                                const pHours = courseData.practical_hours || 0;
+                                const totalHours = calculateLTPHours(courseData);
+
+                                return (
+                                    <div key={courseId} className="border rounded-lg p-3">
+                                        <div className="flex justify-between items-start mb-2">
+                                            <div className="flex-1">
+                                                <div className="flex items-center gap-2">
+                                                    <h3 className="font-medium">{courseData.course_detail?.course_name}</h3>
+                                                    <Badge variant="outline" className="text-xs">
+                                                        {courseData.course_detail?.course_id}
+                                                    </Badge>
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-1 mt-1">
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        Year {courseData.course_year}
+                                                    </Badge>
+                                                    <Badge variant="secondary" className="text-xs">
+                                                        Sem {courseData.course_semester}
+                                                    </Badge>
+                                                    <Badge variant="outline" className="text-xs bg-primary/5">
+                                                        L:{lHours} T:{tHours} P:{pHours} ({totalHours}h)
+                                                    </Badge>
+                                                    <Badge variant="outline" className="text-xs">
+                                                        For: {courseData.for_dept_detail.dept_name}
+                                                    </Badge>
+                                                </div>
+                                            </div>
+                                            <Badge variant={courseAssignments.length >= requiredTeachers ? "outline" : "destructive"} className="ml-2">
+                                                {courseAssignments.length}/{requiredTeachers} teachers
+                                            </Badge>
+                                        </div>
+
+                                        <div className="grid grid-cols-2 gap-2 mb-2">
+                                            <div className="bg-secondary/10 p-2 rounded-md flex items-center justify-between">
+                                                <div>
+                                                    <div className="text-xs text-muted-foreground">Teachers</div>
+                                                    <div className="font-medium">{courseAssignments.length}</div>
+                                                </div>
+                                                <div className={courseAssignments.length >= requiredTeachers ? "text-green-600 text-xs" : "text-red-600 text-xs"}>
+                                                    {courseAssignments.length >= requiredTeachers ? "Adequate" : "Need more"}
+                                                </div>
+                                            </div>
+                                            <div className="bg-secondary/10 p-2 rounded-md">
+                                                <div className="text-xs text-muted-foreground">Students</div>
+                                                <div className="font-medium">{studentCount}</div>
+                                                {deptStudentCount && courseData.for_dept_id === deptStudentCount.department_id && (
+                                                    <div className="text-xs text-muted-foreground">Dept. validated</div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {courseAssignments.length > 0 && (
+                                            <div className="mt-2 text-xs">
+                                                <div className="font-medium mb-1">Current Assignments</div>
+                                                <div className="border rounded overflow-hidden">
+                                                    <div className="grid grid-cols-3 bg-muted/30 p-1">
+                                                        <div className="font-medium">Teacher</div>
+                                                        <div className="font-medium text-center">Role</div>
+                                                        <div className="font-medium text-right">Students</div>
+                                                    </div>
+                                                    {courseAssignments.map(assignment => (
+                                                        <div key={assignment.id} className="grid grid-cols-3 p-1 border-t">
+                                                            <div className="truncate">
+                                                                {assignment.teacher_detail?.teacher_id?.first_name} {assignment.teacher_detail?.teacher_id?.last_name}
+                                                            </div>
+                                                            <div className="text-center">
+                                                                <Badge variant={assignment.is_assistant ? "outline" : "default"} className="text-xs">
+                                                                    {assignment.is_assistant ? "Assistant" : "Primary"}
+                                                                </Badge>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                {assignment.student_count || 0}
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     );
 } 
