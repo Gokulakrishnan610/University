@@ -999,7 +999,7 @@ export default function CreateTeacherCourseAssignment() {
                                             </div>
                                             <div className="bg-secondary/10 p-2 rounded-md">
                                                 <div className="text-xs text-muted-foreground">Students</div>
-                                                <div className="font-medium">{studentCount}</div>
+                                                <div className="font-medium">{studentCount - courseAssignments.reduce((sum, assignment) => sum + (assignment.student_count || 0), 0)}</div>
                                                 {deptStudentCount && courseData.for_dept_id === deptStudentCount.department_id && (
                                                     <div className="text-xs text-muted-foreground">
                                                         {getYearStudentCount(deptStudentCount, courseData.course_year) > 0 
