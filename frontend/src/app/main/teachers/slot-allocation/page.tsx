@@ -944,7 +944,7 @@ export default function SlotAllocationPage() {
                   return dept && self.findIndex((d: any) => d?.id === dept?.id) === index;
                 })
                 .map((dept: any, index: number) => (
-                  <SelectItem key={dept?.id} value={dept?.id?.toString() || `dept-${index}`}>
+                  <SelectItem key={dept?.id + `dept-${index}`} value={dept?.id?.toString() || `dept-${index}`}>
                     {dept?.dept_name}
                   </SelectItem>
                 ))}
