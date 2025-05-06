@@ -202,7 +202,7 @@ const ErrorResponseDisplay = ({
         <div className="max-h-[300px] overflow-y-auto">
           <div className="space-y-3">
             {errors.map((error, index) => (
-              <div key={index} className="p-3 bg-destructive/10 rounded-md border border-destructive/20">
+              <div key={`error-${error.teacher_id}-${error.slot_id}-${error.day_of_week}-${index}`} className="p-3 bg-destructive/10 rounded-md border border-destructive/20">
                 <div className="flex justify-between items-start">
                   <div className="font-medium text-sm text-destructive">
                     {error.action === 'create' ? 'Create' :
@@ -546,7 +546,7 @@ export default function SlotAllocationPage() {
         }
       });
     });
-    
+
     // Add the current assignment
     if (newSlot.type === 'A') {
       // Check if already at max for slot A

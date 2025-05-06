@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { GripVertical, AlertCircle, Info } from 'lucide-react';
 import { Teacher as TeacherType } from '@/action/teacher';
-import { DepartmentSummary, DAYS_OF_WEEK, SLOT_TYPES, RESTRICTED_DAYS } from '@/action/slot';
+import { DepartmentSummary } from '@/action/slot';
 import {
     Tooltip,
     TooltipContent,
@@ -196,8 +196,8 @@ export const DraggableTeacher = ({
                                     <div className="flex flex-wrap gap-1 mt-1">
                                         {assignedDayNames.map((day, idx) => (
                                             <Badge 
-                                                key={idx} 
-                                                variant={day === 'Saturday' || day === 'Sunday' ? "default" : "outline"} 
+                                                key={`day-${day}-${idx}`}
+                                                variant={day === 'Saturday' ? "default" : "outline"} 
                                                 className="text-[10px]"
                                             >
                                                 {day}
@@ -239,7 +239,7 @@ export const DraggableTeacher = ({
                                     <div className="font-medium">Slot assignments:</div>
                                     <ul className="list-disc pl-4 mt-1">
                                         {slotAssignments.map((assignment, idx) => (
-                                            <li key={idx}>{assignment}</li>
+                                            <li key={`assignment-${assignment}-${idx}`}>{assignment}</li>
                                         ))}
                                     </ul>
                                 </div>

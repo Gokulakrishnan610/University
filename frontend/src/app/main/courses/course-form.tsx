@@ -509,7 +509,7 @@ export default function CourseForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Course Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value} disabled={true}>
+                  <Select onValueChange={field.onChange} value={defaultValues?.course_type} disabled={true}>
                     <FormControl>
                       <SelectTrigger className="bg-muted/40">
                         <SelectValue placeholder="Select course type" />
