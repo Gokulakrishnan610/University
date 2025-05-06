@@ -240,9 +240,8 @@ export function RoomPreferenceForm({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="GENERAL">General</SelectItem>
-                      <SelectItem value="TL">Technical Lab</SelectItem>
-                      <SelectItem value="NTL">Non-Technical Lab</SelectItem>
+                      <SelectItem value="TL">Computer Lab</SelectItem>
+                      <SelectItem value="NTL">Core Lab</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormDescription>

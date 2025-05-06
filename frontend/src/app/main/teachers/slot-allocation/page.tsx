@@ -17,6 +17,7 @@ import { useGetTeachers, Teacher as TeacherType } from '@/action/teacher';
 import {
   SLOT_TYPES,
   DAYS_OF_WEEK,
+  RESTRICTED_DAYS,
   SlotOperation,
   TeacherSlotAssignment,
   useGetTeacherSlotAssignments,
@@ -201,7 +202,7 @@ const ErrorResponseDisplay = ({
         <div className="max-h-[300px] overflow-y-auto">
           <div className="space-y-3">
             {errors.map((error, index) => (
-              <div key={index} className="p-3 bg-destructive/10 rounded-md border border-destructive/20">
+              <div key={`error-${error.teacher_id}-${error.slot_id}-${error.day_of_week}-${index}`} className="p-3 bg-destructive/10 rounded-md border border-destructive/20">
                 <div className="flex justify-between items-start">
                   <div className="font-medium text-sm text-destructive">
                     {error.action === 'create' ? 'Create' :
@@ -250,6 +251,7 @@ export default function SlotAllocationPage() {
   const [showUnsavedChangesDialog, setShowUnsavedChangesDialog] = useState<boolean>(false);
   const [targetDayIndex, setTargetDayIndex] = useState<number | null>(null);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState<number | null>(null);
+  const [showConstraintsInfo, setShowConstraintsInfo] = useState<boolean>(true);
 
   // Use our enhanced batch assignments hook
   const {
@@ -473,66 +475,153 @@ export default function SlotAllocationPage() {
   };
 
   const assignTeacherToSlot = (slotId: number, teacherId: number) => {
-    // Check if the teacher is already at max days (5)
-    if ((teacherAssignmentCounts[teacherId] || 0) >= 5 &&
-      !isTeacherAssignedToDay(teacherId, currentDayIndex)) {
-      toast.error('This teacher is already assigned for 5 days, which is the maximum allowed.');
+    // Get the teacher object
+    const teacher = teachers.find((t: TeacherType) => t.id === teacherId);
+    if (!teacher) return;
+
+    // Check if teacher is already assigned for this day
+    if (isTeacherAssignedToDay(teacherId, currentDayIndex)) {
+      toast.error(`${getTeacherName(teacherId)} is already assigned to a slot on ${DAYS_OF_WEEK[currentDayIndex].label}`);
       return;
     }
 
-    // Check if the teacher is already assigned to another slot on this day
-    const existingAssignment = (slotAssignments[currentDayIndex] || []).find(
-      a => a.teacherId === teacherId
-    );
-
-    if (existingAssignment) {
-      toast.error('This teacher is already assigned to a slot on this day.');
+    // Check the 5-day week constraint
+    const assignedDaysCount = (teacherAssignmentCounts[teacherId] || 0);
+    const teacherAlreadyAssignedToThisDay = isTeacherAssignedToDay(teacherId, currentDayIndex);
+    
+    if (assignedDaysCount >= 5 && !teacherAlreadyAssignedToThisDay) {
+      toast.error(`${getTeacherName(teacherId)} already has assignments for 5 days`);
       return;
     }
 
-    // Check department distribution constraint (33%)
-    const teacher = teachers?.find((t: TeacherType) => t.id === teacherId);
-
-    if (teacher?.dept_id) {
-      const deptId = teacher.dept_id.id;
-      const deptTeachers = teachers?.filter((t: TeacherType) => t.dept_id?.id === deptId) || [];
-      const deptTeacherCount = deptTeachers.length;
-
-      // Calculate current dept teachers in this slot
-      const deptTeachersInSlot = (slotAssignments[currentDayIndex] || [])
-        .filter(a => {
-          const t = teachers?.find((t: TeacherType) => t.id === a.teacherId);
-          return t?.dept_id?.id === deptId && a.slotId === slotId;
-        }).length;
-
-      // 33% threshold (rounded up)
-      const maxAllowed = Math.ceil(deptTeacherCount * 0.33);
-
-      if (deptTeachersInSlot >= maxAllowed) {
-        toast.error(
-          `Cannot assign more than 33% of department teachers (${maxAllowed}) to the same slot type.`
-        );
+    // Check restricted days constraint (can only choose one of Monday or Saturday)
+    const isCurrentDayRestricted = RESTRICTED_DAYS.includes(currentDayIndex);
+    
+    if (isCurrentDayRestricted) {
+      // Check all days to see if teacher is already assigned to any restricted day
+      const hasRestrictedDay = Object.entries(slotAssignments).some(([dayStr, assignments]) => {
+        const day = parseInt(dayStr);
+        // Check if this is a restricted day (other than the current one) that has this teacher assigned
+        return RESTRICTED_DAYS.includes(day) && 
+               day !== currentDayIndex && 
+               assignments.some(a => a.teacherId === teacherId);
+      });
+      
+      if (hasRestrictedDay) {
+        const restrictedDays = {0: 'Monday', 5: 'Saturday'};
+        const otherDay = currentDayIndex === 0 ? restrictedDays[5] : restrictedDays[0];
+        toast.error(`${getTeacherName(teacherId)} already has an assignment on ${otherDay}. Teachers can only choose one of these days: Monday or Saturday.`);
         return;
       }
     }
 
-    // Add the new assignment
-    const newAssignments = [...(slotAssignments[currentDayIndex] || []), { teacherId, slotId }];
+    // GET SLOT TYPE FOR THE SELECTED SLOT
+    const newSlot = SLOT_TYPES.find(s => s.id === slotId);
+    if (!newSlot) {
+      toast.error(`Invalid slot selection`);
+      return;
+    }
 
+    // Make sure the slot type is valid
+    if (newSlot.type !== 'A' && newSlot.type !== 'B' && newSlot.type !== 'C') {
+      toast.error(`Invalid slot type: ${newSlot.type}`);
+      return;
+    }
+
+    // CHECK SLOT TYPE DISTRIBUTION ACROSS ALL DAYS
+    let slotTypeA = 0;
+    let slotTypeB = 0;
+    let slotTypeC = 0;
+    
+    // Count existing slot assignments across all days
+    Object.entries(slotAssignments).forEach(([dayStr, assignments]) => {
+      assignments.forEach(assignment => {
+        if (assignment.teacherId === teacherId) {
+          const assignedSlot = SLOT_TYPES.find(s => s.id === assignment.slotId);
+          if (assignedSlot) {
+            if (assignedSlot.type === 'A') slotTypeA++;
+            else if (assignedSlot.type === 'B') slotTypeB++;
+            else if (assignedSlot.type === 'C') slotTypeC++;
+          }
+        }
+      });
+    });
+
+    // Add the current assignment
+    if (newSlot.type === 'A') {
+      // Check if already at max for slot A
+      if (slotTypeA >= 2) {
+        toast.error(`Cannot assign more than 2 Slot A assignments to a teacher`);
+        return;
+      }
+      slotTypeA++;
+    } else if (newSlot.type === 'B') {
+      // Check if already at max for slot B
+      if (slotTypeB >= 2) {
+        toast.error(`Cannot assign more than 2 Slot B assignments to a teacher`);
+        return;
+      }
+      slotTypeB++;
+    } else if (newSlot.type === 'C') {
+      // Check if already at max for slot C
+      if (slotTypeC >= 2) {
+        toast.error(`Cannot assign more than 2 Slot C assignments to a teacher`);
+        return;
+      }
+      slotTypeC++;
+    }
+    
+    // If we're at 5 total assignments, ensure it's a valid combination
+    const totalAfterAssignment = slotTypeA + slotTypeB + slotTypeC;
+    
+    if (totalAfterAssignment === 5) {
+      // Valid combinations: A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2
+      const isValidDistribution = (
+        (slotTypeA === 2 && slotTypeB === 2 && slotTypeC === 1) ||
+        (slotTypeA === 1 && slotTypeB === 2 && slotTypeC === 2) ||
+        (slotTypeA === 2 && slotTypeB === 1 && slotTypeC === 2)
+      );
+      
+      if (!isValidDistribution) {
+        toast.error(`Invalid slot distribution. Current: A:${slotTypeA}, B:${slotTypeB}, C:${slotTypeC}. Valid distributions are: A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2.`);
+        return;
+      }
+    }
+
+    // Check department distribution constraint (33% per slot type)
+    if (teacher.dept_id) {
+      const deptId = teacher.dept_id.id;
+      
+      if (newSlot) {
+        const totalDeptTeachers = getDepartmentTeacherCount(deptId);
+        const teachersInThisSlot = getDepartmentTeachersInSlot(slotId, deptId);
+        
+        // Max teachers allowed is 33% of department size + 1 extra 
+        const maxTeachersPerSlot = Math.ceil(totalDeptTeachers * 0.33) + 1;
+        
+        if (teachersInThisSlot >= maxTeachersPerSlot) {
+          toast.error(`Maximum number of teachers (33% + 1) from ${teacher.dept_id.dept_name} already assigned to slot ${newSlot.name}`);
+          return;
+        }
+      }
+    }
+
+    // All checks passed, add to local state
+    const newAssignment: SlotAssignment = {
+      teacherId,
+      slotId
+    };
+
+    // Add to slot assignments
     setSlotAssignments(prev => ({
       ...prev,
-      [currentDayIndex]: newAssignments
+      [currentDayIndex]: [...(prev[currentDayIndex] || []), newAssignment]
     }));
 
     setHasUnsavedChanges(true);
 
-    // Update teacher day counts immediately
+    // Update teacher assignment counts in local state
     updateTeacherAssignmentCounts();
-
-    // Optional: Show success message
-    const teacherName = getTeacherName(teacherId);
-    const slotName = getSlotName(slotId);
-    toast.success(`Assigned ${teacherName} to ${slotName}`);
   };
 
   const getSlotName = (slotId: number): string => {
@@ -880,6 +969,48 @@ export default function SlotAllocationPage() {
           </Button>
         </div>
       </div>
+
+      {/* Constraints Information Box */}
+      {showConstraintsInfo && (
+        <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-md">
+          <div className="flex justify-between items-start">
+            <div className="flex items-start gap-3">
+              <Info className="h-5 w-5 text-blue-600 dark:text-blue-400 mt-0.5" />
+              <div>
+                <h3 className="font-medium text-blue-800 dark:text-blue-300">Teacher Slot Allocation Rules</h3>
+                <div className="mt-2 text-sm text-blue-700 dark:text-blue-400 space-y-1">
+                  <p className="flex gap-2 items-center">
+                    <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900">Slot Limit</Badge>
+                    Maximum 5 days per teacher with specific distribution:
+                  </p>
+                  <ul className="list-disc pl-10 pt-1 pb-1">
+                    <li>Slot A: 2 days, Slot B: 2 days, Slot C: 1 day, <b>OR</b></li>
+                    <li>Slot A: 1 day, Slot B: 2 days, Slot C: 2 days, <b>OR</b></li>
+                    <li>Slot A: 2 days, Slot B: 1 day, Slot C: 2 days</li>
+                  </ul>
+                  <p className="flex gap-2 items-center mt-2">
+                    <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900">Day Restriction</Badge>
+                    Teachers can choose only one of Monday OR Saturday (not both)
+                  </p>
+                  <p className="flex gap-2 items-center mt-2">
+                    <Badge variant="outline" className="bg-blue-100 dark:bg-blue-900">Department</Badge>
+                    Maximum 33% (+1) of department teachers can be assigned to the same slot type on a day
+                  </p>
+                </div>
+              </div>
+            </div>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="h-7 w-7 p-0 rounded-full"
+              onClick={() => setShowConstraintsInfo(false)}
+            >
+              <X className="h-4 w-4" />
+              <span className="sr-only">Dismiss</span>
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Day selection tabs */}
       <div className="flex mb-6 border-b">

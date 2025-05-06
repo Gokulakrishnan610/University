@@ -177,8 +177,15 @@ class DepartmentCoursesView(APIView):
         # Get courses owned by this department
         owned_courses = Course.objects.filter(course_id__course_dept_id=department_id)
         
-        # Get courses being taught by this department for other departments
-        teaching_courses = Course.objects.filter(teaching_dept_id=department_id).exclude(course_id__course_dept_id=department_id)
+        # Get all courses being taught by this department (including those we own)
+        all_teaching_courses = Course.objects.filter(teaching_dept_id=department_id)
+        
+        # For teaching tab - split into two categories:
+        # 1. Courses we teach for others (external courses)
+        external_teaching_courses = all_teaching_courses.exclude(course_id__course_dept_id=department_id)
+        
+        # 2. Courses we own AND teach (self courses) - these should appear in both owned and teaching
+        self_courses = all_teaching_courses.filter(course_id__course_dept_id=department_id)
         
         # Get courses owned by this department but taught by other departments
         receiving_courses = Course.objects.filter(
@@ -201,7 +208,11 @@ class DepartmentCoursesView(APIView):
         
         # Serialize the data
         owned_courses_serializer = CourseSerializer(owned_courses, many=True, context=context)
-        teaching_courses_serializer = CourseSerializer(teaching_courses, many=True, context=context)
+        
+        # For teaching tab, include both external courses and self-taught courses
+        teaching_courses_combined = list(external_teaching_courses) + list(self_courses)
+        teaching_courses_serializer = CourseSerializer(teaching_courses_combined, many=True, context=context)
+        
         receiving_courses_serializer = CourseSerializer(receiving_courses, many=True, context=context)
         for_dept_courses_serializer = CourseSerializer(for_dept_courses, many=True, context=context)
         
@@ -215,7 +226,7 @@ class DepartmentCoursesView(APIView):
             },
             "teaching_courses": {
                 "role": "teacher",
-                "description": "Courses taught by your department for other departments",
+                "description": "Courses taught by your department (including your own and others)",
                 "data": teaching_courses_serializer.data
             },
             "receiving_courses": {

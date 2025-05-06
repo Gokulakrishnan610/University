@@ -3,7 +3,7 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { GripVertical, AlertCircle, Info } from 'lucide-react';
 import { Teacher as TeacherType } from '@/action/teacher';
-import { DepartmentSummary, DAYS_OF_WEEK } from '@/action/slot';
+import { DepartmentSummary } from '@/action/slot';
 import {
     Tooltip,
     TooltipContent,
@@ -32,6 +32,11 @@ export const DraggableTeacher = ({
     const [assignedDayNames, setAssignedDayNames] = useState<string[]>([]);
     const [hasComplianceIssues, setHasComplianceIssues] = useState(false);
     const [slotAssignments, setSlotAssignments] = useState<string[]>([]);
+    const [slotDistribution, setSlotDistribution] = useState<{[key: string]: number}>({
+        A: 0, B: 0, C: 0
+    });
+    const [hasWeekendDay, setHasWeekendDay] = useState(false);
+    const [weekendDay, setWeekendDay] = useState<string>("");
 
     // Update local state when props change
     useEffect(() => {
@@ -51,6 +56,23 @@ export const DraggableTeacher = ({
 
             setAssignedDayNames(teacherDetails.assignedDayNames || []);
             setSlotAssignments(teacherDetails.assignments || []);
+            
+            // Calculate slot distribution
+            const slotDist: {[key: string]: number} = { A: 0, B: 0, C: 0 };
+            teacherDetails.assignments.forEach(assignment => {
+                const slotType = assignment.split('/')[0];
+                slotDist[slotType] = (slotDist[slotType] || 0) + 1;
+            });
+            setSlotDistribution(slotDist);
+            
+            // Check for Monday/Saturday restriction (can only have one)
+            const hasRestrictedDay = teacherDetails.assignedDayNames.filter(
+                day => day === 'Monday' || day === 'Saturday'
+            );
+            setHasWeekendDay(hasRestrictedDay.length > 0);
+            if (hasRestrictedDay.length > 0) {
+                setWeekendDay(hasRestrictedDay[0]);
+            }
         }
     }, [assignedDays, departmentSummary, teacher.id]);
 
@@ -75,6 +97,20 @@ export const DraggableTeacher = ({
     const getInitials = (firstName?: string, lastName?: string) => {
         if (!firstName && !lastName) return "";
         return `${firstName?.charAt(0) || ''}${lastName?.charAt(0) || ''}`.toUpperCase();
+    };
+
+    // Check if the slot distribution is valid for 5 days
+    const isValidSlotDistribution = () => {
+        if (localAssignedDays < 5) return true;
+        
+        const { A, B, C } = slotDistribution;
+        
+        // Valid combinations: A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2
+        return (
+            (A === 2 && B === 2 && C === 1) ||
+            (A === 1 && B === 2 && C === 2) ||
+            (A === 2 && B === 1 && C === 2)
+        );
     };
 
     // Get teacher-specific assignment distribution if available
@@ -133,15 +169,18 @@ export const DraggableTeacher = ({
         if (localAssignedDays >= 5) statusColor = "destructive";
         else if (localAssignedDays >= 3) statusColor = "warning";
 
+        // Check slot distribution validity
+        const isValidDistribution = isValidSlotDistribution();
+        
         return (
             <TooltipProvider>
                 <Tooltip>
                     <TooltipTrigger asChild>
-                        <Badge variant={statusColor as any} className="text-[10px] py-0 h-4">
+                        <Badge variant={!isValidDistribution && localAssignedDays === 5 ? "destructive" : statusColor as any} className="text-[10px] py-0 h-4">
                             {localAssignedDays}/5 days
-                            {hasComplianceIssues && isHOD && (
+                            {(hasComplianceIssues && isHOD) || (!isValidDistribution && localAssignedDays === 5) ? (
                                 <AlertCircle className="h-3 w-3 ml-1 text-destructive" />
-                            )}
+                            ) : null}
                         </Badge>
                     </TooltipTrigger>
                     <TooltipContent side="right" align="start" className="w-64 p-2">
@@ -156,18 +195,51 @@ export const DraggableTeacher = ({
                                     <div className="font-medium">Assigned to days:</div>
                                     <div className="flex flex-wrap gap-1 mt-1">
                                         {assignedDayNames.map((day, idx) => (
-                                            <Badge key={idx} variant="outline" className="text-[10px]">{day}</Badge>
+                                            <Badge 
+                                                key={`day-${day}-${idx}`}
+                                                variant={day === 'Saturday' ? "default" : "outline"} 
+                                                className="text-[10px]"
+                                            >
+                                                {day}
+                                            </Badge>
                                         ))}
                                     </div>
+                                    {hasWeekendDay && (
+                                        <div className="text-[10px] mt-1 italic">
+                                            Note: Only one of Monday or Saturday is allowed.
+                                        </div>
+                                    )}
                                 </div>
                             )}
+
+                            <div className="mt-2">
+                                <div className="font-medium">Slot distribution:</div>
+                                <div className="flex flex-wrap gap-1 mt-1">
+                                    {Object.entries(slotDistribution).map(([slotType, count]) => (
+                                        <Badge key={slotType} variant="outline" className="text-[10px]">
+                                            Slot {slotType}: {count}
+                                        </Badge>
+                                    ))}
+                                </div>
+                                {localAssignedDays === 5 && !isValidDistribution && (
+                                    <div className="text-[10px] mt-1 text-destructive">
+                                        Invalid distribution. Valid combinations are: 
+                                        A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2.
+                                    </div>
+                                )}
+                                {localAssignedDays < 5 && (
+                                    <div className="text-[10px] mt-1 italic">
+                                        Valid combinations for 5 days are: A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2.
+                                    </div>
+                                )}
+                            </div>
 
                             {slotAssignments && slotAssignments.length > 0 && (
                                 <div className="mt-2">
                                     <div className="font-medium">Slot assignments:</div>
                                     <ul className="list-disc pl-4 mt-1">
                                         {slotAssignments.map((assignment, idx) => (
-                                            <li key={idx}>{assignment}</li>
+                                            <li key={`assignment-${assignment}-${idx}`}>{assignment}</li>
                                         ))}
                                     </ul>
                                 </div>

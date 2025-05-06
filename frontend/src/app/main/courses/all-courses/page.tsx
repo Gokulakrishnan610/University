@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Card,
@@ -34,7 +34,13 @@ import {
   HelpCircle,
   ArrowLeftRight,
   Building,
-  CircleDot
+  CircleDot,
+  Info,
+  Share2,
+  Group,
+  AlignJustify,
+  LayoutGrid,
+  ListFilter
 } from 'lucide-react';
 import { useGetCurrentDepartmentCourses, Course } from '@/action/course';
 import { getRelationshipBadgeColor, getRelationshipShortName } from '@/lib/utils';
@@ -56,6 +62,116 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useGetCurrentDepartment } from '@/action/department';
+
+// Interface for a course with multiple roles
+interface UniqueCourse {
+  id: number;
+  course: Course;
+  courseId: string;
+  roles: {
+    role: string;
+    roleDescription: string;
+  }[];
+  relationshipTypes: string[];
+}
+
+// Component for displaying relationship tag similar to main courses page
+interface RelationshipTagProps {
+  course: Course;
+  currentDeptId: number;
+}
+
+const RelationshipTag = ({ course, currentDeptId }: RelationshipTagProps) => {
+  const ownerDeptId = course.course_detail.course_dept_detail.id;
+  const teacherDeptId = course.teaching_dept_id;
+  const forDeptId = course.for_dept_id;
+  const ownerDept = course.course_detail.course_dept_detail.dept_name;
+  const teacherDept = course.teaching_dept_detail.dept_name;
+  const forDept = course.for_dept_detail.dept_name;
+  
+  // Case 1: We own, other dept teaches for their students
+  if (ownerDeptId === currentDeptId && teacherDeptId !== currentDeptId && forDeptId === teacherDeptId) {
+    return (
+      <Badge variant="outline" className="bg-teal-50 text-teal-700 border-teal-200 dark:bg-teal-900/20 dark:text-teal-300">
+        <div className="flex items-center gap-1">
+          <BookOpen className="h-3 w-3" />
+          <span>We own, {teacherDept} teaches for their students</span>
+        </div>
+      </Badge>
+    );
+  }
+  
+  // Case 2: We own, we teach for our students (self-owned, self-taught)
+  if (ownerDeptId === currentDeptId && teacherDeptId === currentDeptId && forDeptId === currentDeptId) {
+    return (
+      <Badge variant="outline" className="bg-primary/10 text-primary border-primary/20">
+        <div className="flex items-center gap-1">
+          <CircleDot className="h-3 w-3" />
+          <span>We own, teach and take this course</span>
+        </div>
+      </Badge>
+    );
+  }
+  
+  // Case 3: We own, we teach for other department's students
+  if (ownerDeptId === currentDeptId && teacherDeptId === currentDeptId && forDeptId !== currentDeptId) {
+    return (
+      <Badge variant="outline" className="bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-900/20 dark:text-indigo-300">
+        <div className="flex items-center gap-1">
+          <School className="h-3 w-3" />
+          <span>We own and teach for {forDept} students</span>
+        </div>
+      </Badge>
+    );
+  }
+  
+  // Case 4: Other dept owns and teaches for our students
+  if (ownerDeptId !== currentDeptId && teacherDeptId === ownerDeptId && forDeptId === currentDeptId) {
+    return (
+      <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-900/20 dark:text-purple-300">
+        <div className="flex items-center gap-1">
+          <GraduationCap className="h-3 w-3" />
+          <span>{ownerDept} owns and teaches for our students</span>
+        </div>
+      </Badge>
+    );
+  }
+  
+  // Case 5: Other dept owns, we teach for our students
+  if (ownerDeptId !== currentDeptId && teacherDeptId === currentDeptId && forDeptId === currentDeptId) {
+    return (
+      <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 dark:bg-orange-900/20 dark:text-orange-300">
+        <div className="flex items-center gap-1">
+          <ArrowLeftRight className="h-3 w-3" />
+          <span>We teach {ownerDept}'s course for our students</span>
+        </div>
+      </Badge>
+    );
+  }
+  
+  // Case 6: Other dept owns, we teach for their students
+  if (ownerDeptId !== currentDeptId && teacherDeptId === currentDeptId && forDeptId !== currentDeptId) {
+    return (
+      <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-900/20 dark:text-amber-300">
+        <div className="flex items-center gap-1">
+          <Share2 className="h-3 w-3" />
+          <span>We teach {ownerDept}'s course for {forDept} students</span>
+        </div>
+      </Badge>
+    );
+  }
+  
+  // Default case
+  return (
+    <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300">
+      <div className="flex items-center gap-1">
+        <Info className="h-3 w-3" />
+        <span>Other relationship</span>
+      </div>
+    </Badge>
+  );
+};
 
 export default function AllCoursesPage() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,11 +181,13 @@ export default function AllCoursesPage() {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [relationshipFilter, setRelationshipFilter] = useState<string>('all');
   const [showFilterMenu, setShowFilterMenu] = useState<boolean>(false);
+  const [groupBy, setGroupBy] = useState<'none' | 'code' | 'name'>('none');
   
   const navigate = useNavigate();
   
   const { data: departmentData, isPending } = useGetCurrentDepartmentCourses();
-  
+  const { data: currentDepartment } = useGetCurrentDepartment();
+
   // Combine all courses from different roles
   const allOwnedCourses = departmentData?.owned_courses?.data || [];
   const allTeachingCourses = departmentData?.teaching_courses?.data || [];
@@ -78,17 +196,25 @@ export default function AllCoursesPage() {
   
   // Add role information to each course
   const coursesWithRoles = useMemo(() => {
-    const owned = allOwnedCourses.map(course => ({ 
-      ...course, 
-      userRole: 'owner',
-      roleDescription: 'We Own' 
-    }));
+    const owned = allOwnedCourses.map(course => { 
+      // Check if this is a self-taught course (we own and teach it)
+      const isSelfTaught = course.course_detail.course_dept_detail.id === course.teaching_dept_id;
+      return {
+        ...course, 
+        userRole: 'owner',
+        roleDescription: isSelfTaught ? 'We Own & Teach' : 'We Own' 
+      };
+    });
     
-    const teaching = allTeachingCourses.map(course => ({ 
-      ...course, 
-      userRole: 'teacher',
-      roleDescription: 'We Teach for Others' 
-    }));
+    const teaching = allTeachingCourses.map(course => { 
+      // Check if this is a self-taught course (we own it too)
+      const isSelfTaught = course.course_detail.course_dept_detail.id === course.teaching_dept_id;
+      return {
+        ...course, 
+        userRole: 'teacher',
+        roleDescription: isSelfTaught ? 'We Teach (Own)' : 'We Teach' 
+      };
+    });
     
     const receiving = allReceivingCourses.map(course => ({ 
       ...course, 
@@ -104,6 +230,49 @@ export default function AllCoursesPage() {
     
     return [...owned, ...teaching, ...receiving, ...forDept];
   }, [allOwnedCourses, allTeachingCourses, allReceivingCourses, allForDeptCourses]);
+  
+  // Process and group courses to eliminate redundancy
+  const uniqueCourses = useMemo(() => {
+    const courseMap = new Map<number, UniqueCourse>();
+    
+    // Process all courses with roles and group them by ID
+    coursesWithRoles.forEach(course => {
+      const courseId = course.id;
+      
+      if (!courseMap.has(courseId)) {
+        // Initialize a new unique course
+        courseMap.set(courseId, {
+          id: courseId,
+          course: course,
+          courseId: course.course_detail.course_id,
+          roles: [{
+            role: course.userRole,
+            roleDescription: course.roleDescription
+          }],
+          relationshipTypes: [course.relationship_type?.code || 'UNKNOWN']
+        });
+      } else {
+        // Add to existing course entry
+        const existingCourse = courseMap.get(courseId)!;
+        
+        // Add the role if not already present
+        if (!existingCourse.roles.some(r => r.role === course.userRole)) {
+          existingCourse.roles.push({
+            role: course.userRole,
+            roleDescription: course.roleDescription
+          });
+        }
+        
+        // Add the relationship type if not already present
+        const relType = course.relationship_type?.code || 'UNKNOWN';
+        if (!existingCourse.relationshipTypes.includes(relType)) {
+          existingCourse.relationshipTypes.push(relType);
+        }
+      }
+    });
+    
+    return Array.from(courseMap.values());
+  }, [coursesWithRoles]);
   
   // Count courses that are both owned and taught by the department
   const selfOwnedSelfTaughtCount = useMemo(() => {
@@ -130,51 +299,107 @@ export default function AllCoursesPage() {
   
   // Filter courses based on search query and all filters
   const filteredCourses = useMemo(() => {
-    let filtered = coursesWithRoles;
+    let filtered = uniqueCourses;
     
     // Apply role filter
     if (roleFilter !== 'all') {
-      filtered = filtered.filter(course => course.userRole === roleFilter);
+      filtered = filtered.filter(uniqueCourse => 
+        uniqueCourse.roles.some(r => r.role === roleFilter)
+      );
     }
     
     // Apply year filter
     if (yearFilter !== 'all') {
-      filtered = filtered.filter(course => course.course_year.toString() === yearFilter);
+      filtered = filtered.filter(uniqueCourse => 
+        uniqueCourse.course.course_year.toString() === yearFilter
+      );
     }
     
     // Apply semester filter
     if (semesterFilter !== 'all') {
-      filtered = filtered.filter(course => course.course_semester.toString() === semesterFilter);
+      filtered = filtered.filter(uniqueCourse => 
+        uniqueCourse.course.course_semester.toString() === semesterFilter
+      );
     }
     
     // Apply status filter
     if (statusFilter !== 'all') {
-      filtered = filtered.filter(course => course.teaching_status === statusFilter);
+      filtered = filtered.filter(uniqueCourse => 
+        uniqueCourse.course.teaching_status === statusFilter
+      );
     }
     
     // Apply relationship filter
     if (relationshipFilter !== 'all') {
-      filtered = filtered.filter(course => course.relationship_type?.code === relationshipFilter);
+      filtered = filtered.filter(uniqueCourse => 
+        uniqueCourse.relationshipTypes.includes(relationshipFilter)
+      );
     }
     
     // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
-      filtered = filtered.filter(course => 
-        course.course_detail.course_id.toLowerCase().includes(query) ||
-        course.course_detail.course_name.toLowerCase().includes(query) ||
-        course.teaching_dept_detail.dept_name.toLowerCase().includes(query) ||
-        course.for_dept_detail.dept_name.toLowerCase().includes(query) ||
-        course.course_detail.course_dept_detail.dept_name.toLowerCase().includes(query) ||
-        `year ${course.course_year}`.includes(query) ||
-        `sem ${course.course_semester}`.includes(query) ||
-        course.teaching_status.toLowerCase().includes(query) ||
-        (course.roleDescription && course.roleDescription.toLowerCase().includes(query))
-      );
+      filtered = filtered.filter(uniqueCourse => {
+        const course = uniqueCourse.course;
+        return (
+          course.course_detail.course_id.toLowerCase().includes(query) ||
+          course.course_detail.course_name.toLowerCase().includes(query) ||
+          course.teaching_dept_detail.dept_name.toLowerCase().includes(query) ||
+          course.for_dept_detail.dept_name.toLowerCase().includes(query) ||
+          course.course_detail.course_dept_detail.dept_name.toLowerCase().includes(query) ||
+          `year ${course.course_year}`.includes(query) ||
+          `sem ${course.course_semester}`.includes(query) ||
+          course.teaching_status.toLowerCase().includes(query) ||
+          uniqueCourse.roles.some(r => r.roleDescription.toLowerCase().includes(query))
+        );
+      });
     }
     
     return filtered;
-  }, [coursesWithRoles, searchQuery, roleFilter, yearFilter, semesterFilter, statusFilter, relationshipFilter]);
+  }, [uniqueCourses, searchQuery, roleFilter, yearFilter, semesterFilter, statusFilter, relationshipFilter]);
+  
+  // Helper function to get course prefix (e.g., "CS" from "CS101")
+  const getCoursePrefix = (courseId: string): string => {
+    const match = courseId.match(/^([A-Za-z]+)/);
+    return match ? match[0] : 'Other';
+  };
+  
+  // Helper function to get the first letter of course name
+  const getCourseFirstLetter = (name: string): string => {
+    return name.charAt(0).toUpperCase();
+  };
+  
+  // Group courses based on the selected grouping option
+  const groupedCourses = useMemo(() => {
+    if (groupBy === 'none') {
+      return { ungrouped: filteredCourses };
+    }
+    
+    const groups: Record<string, UniqueCourse[]> = {};
+    
+    filteredCourses.forEach(course => {
+      let groupKey = '';
+      
+      if (groupBy === 'code') {
+        // Use the full course code instead of just the prefix
+        groupKey = course.course.course_detail.course_id;
+      } else if (groupBy === 'name') {
+        // Use the full course name instead of just the first letter
+        groupKey = course.course.course_detail.course_name;
+      }
+      
+      if (!groups[groupKey]) {
+        groups[groupKey] = [];
+      }
+      
+      groups[groupKey].push(course);
+    });
+    
+    // Sort the keys
+    return Object.fromEntries(
+      Object.entries(groups).sort(([keyA], [keyB]) => keyA.localeCompare(keyB))
+    );
+  }, [filteredCourses, groupBy]);
   
   const handleNavigateToDetail = (courseId: number, e?: React.MouseEvent) => {
     if (e) {
@@ -248,9 +473,9 @@ export default function AllCoursesPage() {
   const getRoleFullDescription = (role: string) => {
     switch (role) {
       case 'owner':
-        return 'Your department created this course and controls its curriculum.';
+        return 'Your department created this course and controls its curriculum. This includes courses you also teach yourself.';
       case 'teacher':
-        return 'Your department teaches this course for students from other departments.';
+        return 'Your department provides faculty to teach this course. This includes both courses you own and courses from other departments.';
       case 'owner_not_teacher':
         return 'Your department created this course, but another department teaches it.';
       case 'learner':
@@ -266,7 +491,7 @@ export default function AllCoursesPage() {
         <CardHeader>
           <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-4">
             <div>
-              <CardTitle className="text-2xl">Departmental Course Relationships</CardTitle>
+              <CardTitle className="text-2xl">Departmental Courses</CardTitle>
               <CardDescription className="mt-1">
                 View all courses where your department has a role as Course Owner, Teaching Department, or For Students
               </CardDescription>
@@ -318,7 +543,8 @@ export default function AllCoursesPage() {
                             <SelectItem value="teacher">
                               <div className="flex items-center gap-2">
                                 <School className="h-4 w-4 text-orange-500" /> 
-                                <span>We Teach for Others</span>
+                                <span>We Teach</span>
+                                <span className="text-xs text-muted-foreground">(includes own & others)</span>
                               </div>
                             </SelectItem>
                             <SelectItem value="owner_not_teacher">
@@ -339,6 +565,46 @@ export default function AllCoursesPage() {
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p>Filter courses by your department's role in each course.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <Select 
+                          value={groupBy} 
+                          onValueChange={(value: 'none' | 'code' | 'name') => setGroupBy(value)}
+                        >
+                          <SelectTrigger className="w-[180px]">
+                            <SelectValue placeholder="Group by" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">
+                              <div className="flex items-center gap-2">
+                                <AlignJustify className="h-4 w-4" /> 
+                                <span>No Grouping</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="code">
+                              <div className="flex items-center gap-2">
+                                <ListFilter className="h-4 w-4" /> 
+                                <span>Group by Course Code</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="name">
+                              <div className="flex items-center gap-2">
+                                <Group className="h-4 w-4" /> 
+                                <span>Group by Course Name</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p>Group courses by identical course codes or names.</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
@@ -483,7 +749,7 @@ export default function AllCoursesPage() {
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
-                  <p>As <strong>Course Owner</strong>, your department creates the course, defines its content and curriculum, and maintains academic standards.</p>
+                  <p>As <strong>Course Owner</strong>, your department creates the course, defines its content and curriculum, and maintains academic standards. This includes courses you teach yourself.</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -493,15 +759,15 @@ export default function AllCoursesPage() {
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <School className="h-5 w-5 text-orange-500" />
-                        <h3 className="font-medium">We Teach for Others</h3>
+                        <h3 className="font-medium">We Teach</h3>
                       </div>
                       <Badge variant="outline" className="bg-background">{allTeachingCourses.length}</Badge>
                     </div>
-                    <p className="text-xs text-muted-foreground mt-1">Courses we teach but don't own</p>
+                    <p className="text-xs text-muted-foreground mt-1">Courses taught by your faculty (includes both your own and others' courses)</p>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent side="bottom" className="max-w-xs">
-                  <p>As <strong>Teaching Department</strong>, your faculty are responsible for delivering courses that are owned by other departments.</p>
+                  <p>As <strong>Teaching Department</strong>, your faculty are responsible for teaching courses. This includes both courses you own and courses owned by other departments.</p>
                 </TooltipContent>
               </Tooltip>
 
@@ -584,83 +850,151 @@ export default function AllCoursesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCourses.map((course) => (
-                    <TableRow 
-                      key={`${course.id}-${course.userRole}`} 
-                      className="cursor-pointer hover:bg-muted/50" 
-                      onClick={(e) => handleNavigateToDetail(course.id, e)}
-                    >
-                      <TableCell className="font-medium">{course.course_detail.course_id}</TableCell>
-                      <TableCell>{course.course_detail.course_name}</TableCell>
-                      <TableCell>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className={`flex items-center gap-1.5 py-0.5 px-1.5 rounded ${getRoleClass(course.userRole)}`}>
-                                {getRoleIcon(course.userRole)}
-                                <span>{course.roleDescription}</span>
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent side="right" className="max-w-xs">
-                              <p>{getRoleFullDescription(course.userRole)}</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <BookOpen className="h-3.5 w-3.5 text-blue-500" />
-                          <span>{course.course_detail.course_dept_detail.dept_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <School className="h-3.5 w-3.5 text-orange-500" />
-                          <span>{course.teaching_dept_detail.dept_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <GraduationCap className="h-3.5 w-3.5 text-purple-500" />
-                          <span>{course.for_dept_detail.dept_name}</span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant="outline" 
-                          className={getRelationshipBadgeColor(course.relationship_type?.code || 'UNKNOWN')}
+                  {Object.entries(groupedCourses).map(([groupKey, courses]) => (
+                    <React.Fragment key={groupKey}>
+                      {groupBy !== 'none' && (
+                        <TableRow className="bg-muted/30">
+                          <TableCell colSpan={10} className="py-2">
+                            <div className="flex items-center gap-2 font-medium">
+                              {groupBy === 'code' ? (
+                                <>
+                                  <Badge variant="outline" className="bg-primary/5 text-primary">
+                                    Course Code: <span className="font-bold ml-1">{groupKey}</span>
+                                  </Badge>
+                                  <span className="text-muted-foreground text-sm">
+                                    ({courses.length} {courses.length === 1 ? 'course' : 'courses'})
+                                  </span>
+                                </>
+                              ) : (
+                                <>
+                                  <Badge variant="outline" className="bg-primary/5 text-primary">
+                                    <span className="font-bold truncate max-w-xs">{groupKey}</span>
+                                  </Badge>
+                                  <span className="text-muted-foreground text-sm">
+                                    ({courses.length} {courses.length === 1 ? 'course' : 'courses'})
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {courses.map((uniqueCourse) => (
+                        <TableRow 
+                          key={uniqueCourse.id} 
+                          className="cursor-pointer hover:bg-muted/50" 
+                          onClick={(e) => handleNavigateToDetail(uniqueCourse.id, e)}
                         >
-                          {getRelationshipShortName(course.relationship_type?.code || 'UNKNOWN', course.userRole)}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>Year {course.course_year}, Sem {course.course_semester}</TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={
-                            course.teaching_status === 'active' ? 'default' : 
-                            course.teaching_status === 'inactive' ? 'secondary' : 
-                            'outline'
-                          }
-                          className={
-                            course.teaching_status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' :
-                            course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
-                            'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
-                          }
-                        >
-                          {course.teaching_status === 'active' ? 'Active' : 
-                           course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={(e) => handleNavigateToDetail(course.id, e)}
-                        >
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
+                          <TableCell className="font-medium">{uniqueCourse.course.course_detail.course_id}</TableCell>
+                          <TableCell>{uniqueCourse.course.course_detail.course_name}</TableCell>
+                          <TableCell>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  {/* Show primary role - prioritize owner over teacher over others */}
+                                  {(() => {
+                                    // Sort roles by priority
+                                    const sortedRoles = [...uniqueCourse.roles].sort((a, b) => {
+                                      const priority = { 'owner': 0, 'teacher': 1, 'owner_not_teacher': 2, 'learner': 3 };
+                                      return priority[a.role as keyof typeof priority] - priority[b.role as keyof typeof priority];
+                                    });
+                                    
+                                    const primaryRole = sortedRoles[0];
+                                    const isSelfTaught = uniqueCourse.course.course_detail.course_dept_detail.id === uniqueCourse.course.teaching_dept_id;
+                                    
+                                    return (
+                                      <div className={`flex items-center gap-1.5 px-2 py-1 rounded-md ${getRoleClass(primaryRole.role)}`}>
+                                        {getRoleIcon(primaryRole.role)}
+                                        <span>{primaryRole.roleDescription}</span>
+                                        {isSelfTaught && primaryRole.role === 'owner' && (
+                                          <Badge variant="outline" className="ml-1 bg-green-50 text-green-600 border-green-200 dark:bg-green-900/20 dark:text-green-400">
+                                            <CircleDot className="h-3 w-3 mr-1" />
+                                            <span className="text-xs">Self-taught</span>
+                                          </Badge>
+                                        )}
+                                        {uniqueCourse.roles.length > 1 && (
+                                          <Badge className="ml-1 bg-gray-100 text-gray-600 border-gray-300 dark:bg-gray-800 dark:text-gray-400">
+                                            +{uniqueCourse.roles.length - 1}
+                                          </Badge>
+                                        )}
+                                      </div>
+                                    );
+                                  })()}
+                                </TooltipTrigger>
+                                <TooltipContent side="right" className="max-w-xs">
+                                  <div className="space-y-2">
+                                    <p>This course has multiple roles:</p>
+                                    <ul className="space-y-1">
+                                      {uniqueCourse.roles.map((role, idx) => (
+                                        <li key={idx} className="flex items-center gap-2">
+                                          {getRoleIcon(role.role)}
+                                          <span>{role.roleDescription}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                    {uniqueCourse.course.course_detail.course_dept_detail.id === uniqueCourse.course.teaching_dept_id && (
+                                      <p className="text-sm text-green-600 dark:text-green-400">
+                                        <strong>Self-taught course:</strong> Your department both owns and teaches this course.
+                                      </p>
+                                    )}
+                                  </div>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <BookOpen className="h-3.5 w-3.5 text-blue-500" />
+                              <span>{uniqueCourse.course.course_detail.course_dept_detail.dept_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <School className="h-3.5 w-3.5 text-orange-500" />
+                              <span>{uniqueCourse.course.teaching_dept_detail.dept_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <GraduationCap className="h-3.5 w-3.5 text-purple-500" />
+                              <span>{uniqueCourse.course.for_dept_detail.dept_name}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {currentDepartment?.id && (
+                              <RelationshipTag course={uniqueCourse.course} currentDeptId={currentDepartment.id} />
+                            )}
+                          </TableCell>
+                          <TableCell>Year {uniqueCourse.course.course_year}, Sem {uniqueCourse.course.course_semester}</TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant={
+                                uniqueCourse.course.teaching_status === 'active' ? 'default' : 
+                                uniqueCourse.course.teaching_status === 'inactive' ? 'secondary' : 
+                                'outline'
+                              }
+                              className={
+                                uniqueCourse.course.teaching_status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' :
+                                uniqueCourse.course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
+                                'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
+                              }
+                            >
+                              {uniqueCourse.course.teaching_status === 'active' ? 'Active' : 
+                               uniqueCourse.course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              onClick={(e) => handleNavigateToDetail(uniqueCourse.id, e)}
+                            >
+                              View
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
@@ -668,7 +1002,8 @@ export default function AllCoursesPage() {
           )}
           
           <div className="mt-4 text-sm text-muted-foreground">
-            Showing {filteredCourses.length} of {coursesWithRoles.length} courses
+            Showing {filteredCourses.length} of {uniqueCourses.length} unique courses
+            {groupBy !== 'none' && ` (Grouped by ${groupBy === 'code' ? 'identical course codes' : 'identical course names'}, ${Object.keys(groupedCourses).length} groups)`}
           </div>
         </CardContent>
       </Card>

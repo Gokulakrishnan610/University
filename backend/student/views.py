@@ -147,3 +147,51 @@ class StudentStatsView(APIView):
                 {"detail": "You need to be an HOD to access student statistics."},
                 status=status.HTTP_403_FORBIDDEN
             )
+
+class DepartmentStudentCountView(APIView):
+    """
+    API view to get student count for a specific department
+    """
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request, dept_id):
+        try:
+            # Get department
+            try:
+                department = Department.objects.get(id=dept_id)
+            except Department.DoesNotExist:
+                return Response(
+                    {"detail": "Department not found."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Get students for this department
+            students = Student.objects.filter(dept_id=department)
+            student_count = students.count()
+            
+            # Get batch year-wise breakdown
+            batch_breakdown = students.values('batch').annotate(count=Count('id')).order_by('-batch')
+            
+            # Get year-wise breakdown
+            year_breakdown = students.values('year').annotate(count=Count('id')).order_by('year')
+            
+            # Get semester-wise breakdown
+            semester_breakdown = students.values('current_semester').annotate(count=Count('id')).order_by('current_semester')
+            
+            response_data = {
+                'department_id': dept_id,
+                'department_name': department.dept_name,
+                'total_students': student_count,
+                'batch_breakdown': batch_breakdown,
+                'year_breakdown': year_breakdown,
+                'semester_breakdown': semester_breakdown
+            }
+            
+            return Response(response_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )

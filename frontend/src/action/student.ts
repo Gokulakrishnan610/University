@@ -47,6 +47,15 @@ export interface CreateStudentRequest {
 
 export type UpdateStudentRequest = Partial<CreateStudentRequest>;
 
+export interface DepartmentStudentCount {
+  department_id: number;
+  department_name: string;
+  total_students: number;
+  batch_breakdown: { batch: number; count: number }[];
+  year_breakdown: { year: number; count: number }[];
+  semester_breakdown: { current_semester: number; count: number }[];
+}
+
 // Get all students
 export const useGetStudents = (
   page: number = 1,
@@ -192,5 +201,31 @@ export const useDeleteStudent = (id: number = 0, onSuccess?: () => void) => {
     },
     'students',
     onSuccess
+  );
+};
+
+// Get department student count
+export const useGetDepartmentStudentCount = (deptId: number) => {
+  return useQueryData<DepartmentStudentCount>(
+    ['department-student-count', deptId.toString()],
+    async () => {
+      try {
+        const response = await api.get(`/api/students/department/${deptId}/student-count/`);
+        return response.data as DepartmentStudentCount;
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          console.error('Failed to fetch department student count:', error.response.data);
+        }
+        return {
+          department_id: deptId,
+          department_name: '',
+          total_students: 0,
+          batch_breakdown: [],
+          year_breakdown: [],
+          semester_breakdown: []
+        };
+      }
+    },
+    !!deptId // Only enabled when deptId exists
   );
 }; 

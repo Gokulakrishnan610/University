@@ -2,6 +2,7 @@ from django.db import models
 from teacher.models import Teacher
 from django.core.exceptions import ValidationError
 from django.db.models import Count
+from collections import Counter
 
 # Create your models here.
 class Slot(models.Model):
@@ -45,7 +46,11 @@ class TeacherSlotAssignment(models.Model):
         (3, 'Thursday'),
         (4, 'Friday'),
         (5, 'Saturday'),
+        (6, 'Sunday'),
     ]
+    
+    # Update constraint to Saturday or Monday instead of weekend days
+    RESTRICTED_DAYS = [0, 5]  # Monday and Saturday
     
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name='slot_assignments')
     slot = models.ForeignKey(Slot, on_delete=models.CASCADE, related_name='teacher_assignments')
@@ -71,7 +76,7 @@ class TeacherSlotAssignment(models.Model):
         return f"{self.teacher} - {day_name} - {self.slot}"
     
     def clean(self):
-        # Check if teacher already has 5 days of slots assigned
+        # Check total assignments constraint (max 5 days)
         if not self.pk:  # Only check for new assignments
             teacher_assignments = TeacherSlotAssignment.objects.filter(teacher=self.teacher)
             unique_days = teacher_assignments.values('day_of_week').distinct().count()
@@ -91,6 +96,25 @@ class TeacherSlotAssignment(models.Model):
             raise ValidationError(
                 f"This teacher already has a slot assigned for this day."
             )
+        
+        # Check Saturday or Monday constraint - teacher can only choose one of these days
+        if self.day_of_week in self.RESTRICTED_DAYS:
+            restricted_day_assignments = TeacherSlotAssignment.objects.filter(
+                teacher=self.teacher,
+                day_of_week__in=self.RESTRICTED_DAYS
+            ).exclude(day_of_week=self.day_of_week).exclude(pk=self.pk if self.pk else None)
+            
+            if restricted_day_assignments.exists():
+                restricted_day = dict(self.DAYS_OF_WEEK)[restricted_day_assignments.first().day_of_week]
+                current_day = dict(self.DAYS_OF_WEEK)[self.day_of_week]
+                
+                raise ValidationError(
+                    f"This teacher already has a slot assigned for {restricted_day}. "
+                    f"Teachers can only choose one of these days: Monday or Saturday."
+                )
+        
+        # Check slot type distribution constraint
+        self.validate_slot_type_distribution()
         
         # Check department slot distribution constraint (33% per slot type)
         if self.teacher.dept_id:
@@ -117,12 +141,64 @@ class TeacherSlotAssignment(models.Model):
         
         return super().clean()
     
+    def validate_slot_type_distribution(self):
+        """
+        Validate that a teacher's slot choices follow the required distribution format:
+        Slot A, B, C must be chosen with a specific count totaling 5 days
+        """
+        # Get all assignments for this teacher including the current one
+        current_assignments = list(TeacherSlotAssignment.objects.filter(
+            teacher=self.teacher
+        ).exclude(pk=self.pk if self.pk else None).values_list('slot__slot_type', flat=True))
+        
+        # Add the new assignment's slot type
+        current_slot_type = self.slot.slot_type
+        current_assignments.append(current_slot_type)
+        
+        # Count occurrence of each slot type
+        slot_type_counts = Counter(current_assignments)
+        total_assignments = len(current_assignments)
+        
+        # Don't need to check if less than 5 assignments since they can be added incrementally
+        if total_assignments > 5:
+            raise ValidationError("Teacher cannot have more than 5 slot assignments in total.")
+        
+        # When we reach 5 assignments, ensure we have a valid combination
+        if total_assignments == 5:
+            # Valid combinations should match one of these patterns:
+            valid_combinations = [
+                # Format: {A: count, B: count, C: count}
+                {'A': 2, 'B': 2, 'C': 1},
+                {'A': 1, 'B': 2, 'C': 2},
+                {'A': 2, 'B': 1, 'C': 2}
+            ]
+            
+            # Check if current distribution matches any valid combination
+            if all(slot_type_counts.get(slot_type, 0) == count 
+                  for valid_combo in valid_combinations 
+                  for slot_type, count in valid_combo.items()):
+                return True
+            else:
+                slot_a_count = slot_type_counts.get('A', 0)
+                slot_b_count = slot_type_counts.get('B', 0)
+                slot_c_count = slot_type_counts.get('C', 0)
+                
+                raise ValidationError(
+                    f"Invalid slot distribution. Current distribution is: "
+                    f"A: {slot_a_count}, B: {slot_b_count}, C: {slot_c_count}. "
+                    f"Valid distributions for 5 days are: A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2."
+                )
+        
+        return True
+    
     @classmethod
     def validate_teacher_assignments(cls, teacher):
         """
         Validates that a teacher's slot assignments follow the rules:
         - Maximum 5 days per week
         - Department distribution constraints
+        - Slot type distribution constraint
+        - Saturday/Monday constraint - only one of these days allowed
         """
         assignments = cls.objects.filter(teacher=teacher)
         
@@ -133,6 +209,37 @@ class TeacherSlotAssignment(models.Model):
                 f"Teacher {teacher} has assignments for {unique_days} days. Maximum is 5 days per week."
             )
         
-        # Department distribution validation is handled during individual assignment creation
+        # Check Saturday/Monday constraint
+        restricted_days_assignments = assignments.filter(day_of_week__in=cls.RESTRICTED_DAYS)
+        if restricted_days_assignments.count() > 1:
+            raise ValidationError(
+                f"Teacher {teacher} has assignments for multiple restricted days. "
+                f"Only one of Monday or Saturday is allowed."
+            )
+        
+        # Check slot type distribution constraint for 5 days
+        if unique_days == 5:
+            slot_types = assignments.values_list('slot__slot_type', flat=True)
+            slot_type_counts = Counter(slot_types)
+            
+            valid_combinations = [
+                {'A': 2, 'B': 2, 'C': 1},
+                {'A': 1, 'B': 2, 'C': 2},
+                {'A': 2, 'B': 1, 'C': 2}
+            ]
+            
+            if not any(slot_type_counts.get(slot_type, 0) == count 
+                      for valid_combo in valid_combinations 
+                      for slot_type, count in valid_combo.items()):
+                
+                slot_a_count = slot_type_counts.get('A', 0)
+                slot_b_count = slot_type_counts.get('B', 0)
+                slot_c_count = slot_type_counts.get('C', 0)
+                
+                raise ValidationError(
+                    f"Teacher {teacher} has invalid slot distribution. "
+                    f"Current distribution is: A: {slot_a_count}, B: {slot_b_count}, C: {slot_c_count}. "
+                    f"Valid distributions for 5 days are: A-2/B-2/C-1, A-1/B-2/C-2, or A-2/B-1/C-2."
+                )
         
         return True
