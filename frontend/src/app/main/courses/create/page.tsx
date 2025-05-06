@@ -70,14 +70,14 @@ export default function CreateCoursePage() {
     setActiveTab('course'); // Switch to course tab after creating a master
   });
   
+  // Set default values when current department is available
   useEffect(() => {
     if (currentDepartment && currentDepartment.id) {
       // Set both for_dept_id and teaching_dept_id to the current department's ID
-      setCourseFormDefaults(prev => ({
-        ...prev,
+      setCourseFormDefaults({
         for_dept_id: currentDepartment.id,
         teaching_dept_id: currentDepartment.id,
-      }));
+      });
     }
   }, [currentDepartment]);
   
@@ -162,7 +162,6 @@ export default function CreateCoursePage() {
                     'course_id', 
                     'course_year', 
                     'course_semester', 
-                    'for_dept_id', 
                     'need_assist_teacher', 
                     'elective_type', 
                     'teaching_status'

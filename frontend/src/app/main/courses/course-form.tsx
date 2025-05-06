@@ -171,10 +171,19 @@ export default function CourseForm({
   }, [defaultValues, form]);
 
   const isFieldEditable = (fieldName: string): boolean => {
-    if (fieldName === 'teaching_dept_id') return false; // Always disable teaching department
-    if (isEdit) return true; // If editing, all other fields are editable
-    if (editableFields.length === 0) return true; 
-    return editableFields.includes(fieldName);
+    // Always disable teaching department
+    if (fieldName === 'teaching_dept_id') return false;
+    
+    // In create mode, disable for_dept_id
+    if (!isEdit && fieldName === 'for_dept_id') return false;
+    
+    // In edit mode, check if the field is in the editable fields list
+    if (isEdit) {
+      return editableFields.length === 0 || editableFields.includes(fieldName);
+    }
+    
+    // In create mode for other fields
+    return editableFields.length === 0 || editableFields.includes(fieldName);
   };
 
   // Add effect to handle course master selection
@@ -183,7 +192,7 @@ export default function CourseForm({
       if (name === 'course_id' && value.course_id) {
         const selectedCourse:any = initialCourseMasters.find(course => course.id === value.course_id);
         if (selectedCourse) {
-          // Set values for pre-populated fields
+          // Set values for pre-populated fields from CourseMaster
           form.setValue('lecture_hours', selectedCourse.lecture_hours);
           form.setValue('tutorial_hours', selectedCourse.tutorial_hours);
           form.setValue('practical_hours', selectedCourse.practical_hours);
@@ -192,7 +201,10 @@ export default function CourseForm({
           form.setValue('is_zero_credit_course', selectedCourse.is_zero_credit_course);
           form.setValue('regulation', selectedCourse.regulation);
           
-          // Disable pre-populated fields
+          // NOTE: We don't set department values here to preserve the current user's department
+          // settings that were initialized from defaultValues
+
+          // Update form with validation
           form.setValue('lecture_hours', selectedCourse.lecture_hours, { shouldValidate: true, shouldDirty: true });
           form.setValue('tutorial_hours', selectedCourse.tutorial_hours, { shouldValidate: true, shouldDirty: true });
           form.setValue('practical_hours', selectedCourse.practical_hours, { shouldValidate: true, shouldDirty: true });
@@ -318,8 +330,6 @@ export default function CourseForm({
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Department Information</h3>
           <div className="grid grid-cols-2 gap-4">
-
-            {defaultValues?.for_dept_id && (
             <FormField
               control={form.control}
               name="for_dept_id"
@@ -328,7 +338,7 @@ export default function CourseForm({
                   <FormLabel>For Department</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))} 
-                    value={defaultValues?.for_dept_id ? defaultValues?.for_dept_id.toString() : ''}
+                    value={field.value ? field.value.toString() : ''}
                     disabled={!isFieldEditable('for_dept_id')}
                   >
                     <FormControl>
@@ -345,13 +355,14 @@ export default function CourseForm({
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Department whose students will take this course as part of their curriculum
+                    {!isEdit 
+                      ? "When creating a course, it is assigned to your department's students by default."
+                      : "Department whose students will take this course as part of their curriculum"}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
-            />)}
-            {defaultValues?.teaching_dept_id && (
+            />
             <FormField
               control={form.control}
               name="teaching_dept_id"
@@ -360,7 +371,7 @@ export default function CourseForm({
                   <FormLabel>Teaching Department</FormLabel>
                   <Select 
                     onValueChange={(value) => field.onChange(parseInt(value))} 
-                    value={defaultValues?.teaching_dept_id ? defaultValues?.teaching_dept_id.toString() : ''}
+                    value={field.value ? field.value.toString() : ''}
                     disabled={!isFieldEditable('teaching_dept_id')}
                   >
                     <FormControl>
@@ -377,13 +388,12 @@ export default function CourseForm({
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Department that will provide faculty to teach this course
+                    Your department is automatically set as the teaching department. Use resource allocation to request changes.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
-            )}  
           </div>
         </div>
         

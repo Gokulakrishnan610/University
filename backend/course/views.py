@@ -161,17 +161,17 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
                 # Owner department - full rights (edit and delete)
                 is_owner = user_dept.id == course.course_id.course_dept_id.id
                 
-                # Teaching department - limited edit rights, no delete
+                # Teaching department - now has both edit and delete rights
                 is_teacher = user_dept.id == course.teaching_dept_id.id if course.teaching_dept_id else False
                 
                 # For department - no edit or delete rights
                 is_learner = user_dept.id == course.for_dept_id.id if course.for_dept_id else False
                 
-                # If DELETE, only owner can delete
-                if self.request.method == 'DELETE' and not is_owner:
+                # If DELETE, allow both owner and teaching department to delete
+                if self.request.method == 'DELETE' and not (is_owner or is_teacher):
                     self.permission_denied(
                         self.request,
-                        message="Only the owner department's HOD can delete this course."
+                        message="Only the owner or teaching department's HOD can delete this course."
                     )
                 
                 # If EDIT (PUT/PATCH), only owner or teacher can edit

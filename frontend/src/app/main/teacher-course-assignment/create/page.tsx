@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router';
 import { useGetTeachers, Teacher, useGetTeacherAvailability, TeacherAvailability } from '@/action/teacher';
 import { useGetCourses, Course } from '@/action/course';
 import { useGetTeacherCourseAssignments, useCreateTeacherCourseAssignment } from '@/action/teacherCourse';
-import { useGetDepartmentStudentCount } from '@/action/student';
+import { useGetDepartmentStudentCount, DepartmentStudentCount } from '@/action/student';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Combobox, ComboboxOption } from '@/components/ui/combobox';
@@ -257,6 +257,14 @@ export default function CreateTeacherCourseAssignment() {
     const firstCourseDeptId = firstCourseId ? getForDeptId(firstCourseId) : null;
     const { data: deptStudentCount } = useGetDepartmentStudentCount(firstCourseDeptId || 0);
 
+    // Get student counts for a specific year from department data
+    const getYearStudentCount = (deptStudentData: DepartmentStudentCount | undefined, year: number): number => {
+        if (!deptStudentData) return 0;
+        
+        const yearData = deptStudentData.year_breakdown.find((y: { year: number; count: number }) => y.year === year);
+        return yearData?.count || 0;
+    };
+
     // Get student count for a course from for_dept
     const getStudentCountForCourse = (courseId: string | number) => {
         if (!courseId || !availableCourses) return 0;
@@ -267,7 +275,17 @@ export default function CreateTeacherCourseAssignment() {
         // If we have department student count data and this course is from that department,
         // use the more accurate department student count
         if (deptStudentCount && course.for_dept_id === deptStudentCount.department_id) {
-            return deptStudentCount.total_students;
+            // First try to get year-specific student count
+            const yearStudents = getYearStudentCount(deptStudentCount, course.course_year);
+            if (yearStudents > 0) {
+                return yearStudents;
+            }
+            
+            // If no year-specific data, use department total with estimation
+            if (deptStudentCount.total_students > 0) {
+                // Rough estimate: divide total by 4 years (assuming 4-year programs)
+                return Math.round(deptStudentCount.total_students / 4);
+            }
         }
         
         // Fallback to course's no_of_students field
@@ -347,6 +365,7 @@ export default function CreateTeacherCourseAssignment() {
         setSelectedCourse('');
     };
 
+    // Handle course change with enhanced validation
     const handleCourseChange = (value: string, index: number) => {
         const assignments = form.watch("assignments");
         const newAssignments = [...assignments];
@@ -354,18 +373,71 @@ export default function CreateTeacherCourseAssignment() {
         // Update the course ID
         newAssignments[index].course_id = value;
 
-        // Set the student count from for_dept
-        const studentCount = getStudentCountForCourse(value);
-        newAssignments[index].no_of_students = studentCount;
-
-        // Check if course needs assistant teacher
-        const selectedCourse = courses.find(c => c.id.toString() === value);
-        newAssignments[index].show_assistant_option = selectedCourse?.need_assist_teacher || false;
+        // If we have a valid course selection
+        if (value) {
+            const selectedCourseData = courses.find(c => c.id.toString() === value);
+            if (selectedCourseData) {
+                // Get the for_dept_id to fetch department student data
+                const forDeptId = selectedCourseData.for_dept_id;
+                
+                // Set default student count from course
+                let studentCount = selectedCourseData.no_of_students || 0;
+                
+                // If we have department data for this course's department
+                if (deptStudentCount && forDeptId === deptStudentCount.department_id) {
+                    // Get year-specific student count
+                    const yearStudentCount = getYearStudentCount(deptStudentCount, selectedCourseData.course_year);
+                    
+                    if (yearStudentCount > 0) {
+                        // If we have year-specific data, use it
+                        studentCount = yearStudentCount;
+                        toast.info(`Using ${yearStudentCount} students from year ${selectedCourseData.course_year} data`, {
+                            duration: 3000,
+                        });
+                    } else {
+                        // Otherwise use total department count
+                        studentCount = deptStudentCount.total_students;
+                        toast.info(`Using total department student count: ${studentCount}`, {
+                            duration: 3000,
+                        });
+                    }
+                } else if (selectedCourseData.no_of_students <= 0) {
+                    // If course has no student count, use default
+                    studentCount = 70;
+                    toast.info('No department data available, using default student count', {
+                        duration: 3000,
+                    });
+                }
+                
+                // Update the student count
+                newAssignments[index].no_of_students = studentCount;
+                
+                // Check if course needs assistant teacher
+                newAssignments[index].show_assistant_option = selectedCourseData.need_assist_teacher || false;
+            }
+        }
 
         form.setValue("assignments", newAssignments);
 
         // Update selected courses state for UI filtering
         setSelectedCourses(newAssignments.map(a => a.course_id).filter(id => !!id));
+        
+        // If this is the first course changed, update selectedCourse for stats display
+        if (index === 0) {
+            setSelectedCourse(value);
+            
+            // If we have a valid course with a for_dept_id that's different from our current deptStudentCount
+            const selectedCourseData = courses.find(c => c.id.toString() === value);
+            if (selectedCourseData && 
+                selectedCourseData.for_dept_id && 
+                (!deptStudentCount || selectedCourseData.for_dept_id !== deptStudentCount.department_id)) {
+                
+                // Trigger a refetch of department data for this specific course's department
+                // This will automatically update our student counts when the data arrives
+                const { refetch } = useGetDepartmentStudentCount(selectedCourseData.for_dept_id);
+                refetch();
+            }
+        }
     };
 
     const onSubmit = async (data: TeacherCourseFormValues) => {
@@ -390,18 +462,42 @@ export default function CreateTeacherCourseAssignment() {
             }
 
             // Validate student count against departmental data if available
-            const deptId = selectedCourseData.for_dept_id;
-            if (deptStudentCount && deptId === deptStudentCount.department_id) {
-                const maxExpectedStudents = deptStudentCount.total_students;
+            const forDeptId = selectedCourseData.for_dept_id;
+            
+            if (deptStudentCount && forDeptId === deptStudentCount.department_id) {
+                const totalStudents = deptStudentCount.total_students;
+                const yearStudents = getYearStudentCount(deptStudentCount, selectedCourseData.course_year);
                 
-                // Check if student count exceeds department total
-                if (assignment.no_of_students > maxExpectedStudents) {
-                    errors.push(`Assignment ${index + 1}: Student count (${assignment.no_of_students}) exceeds the total students in ${deptStudentCount.department_name} department (${maxExpectedStudents})`);
+                // Prioritize year-specific validation if available
+                if (yearStudents > 0) {
+                    // Check if student count exceeds year total
+                    if (assignment.no_of_students > yearStudents * 1.2) { // Allow 20% buffer
+                        errors.push(`Assignment ${index + 1}: Student count (${assignment.no_of_students}) exceeds the expected students in year ${selectedCourseData.course_year} (${yearStudents})`);
+                    }
+                } else if (totalStudents > 0) {
+                    // Fall back to total department validation
+                    // Calculate expected students per year (rough estimate)
+                    const avgYearSize = totalStudents / 4; // Assuming 4 year programs
+                    
+                    if (assignment.no_of_students > avgYearSize * 1.5) { // Allow 50% buffer for this rough estimate
+                        errors.push(`Assignment ${index + 1}: Student count (${assignment.no_of_students}) seems too high given department size (${totalStudents} total students)`);
+                    }
                 }
                 
-                // Check if our assignment is reasonable given department size
-                if (assignment.no_of_students < 10 && maxExpectedStudents > 100) {
-                    errors.push(`Assignment ${index + 1}: Student count (${assignment.no_of_students}) seems too low for ${deptStudentCount.department_name} department with ${maxExpectedStudents} students`);
+                // For all department validations, check minimum
+                if (assignment.no_of_students < 1) {
+                    errors.push(`Assignment ${index + 1}: Student count must be at least 1`);
+                }
+                
+                // Also look at per-teacher limit
+                const requiredTeachers = calculateRequiredTeachers(assignment.no_of_students);
+                
+                // Find existing assignments for this course
+                const existingAssignments = assignments.filter(a => a.course_detail?.id.toString() === assignment.course_id);
+                
+                // If this is a new assignment and we exceed teacher requirements, warn
+                if (existingAssignments.length >= requiredTeachers) {
+                    errors.push(`Warning: Course "${selectedCourseData.course_detail?.course_name}" already has ${existingAssignments.length} teachers assigned, which meets the calculated requirement of ${requiredTeachers} teachers based on student count.`);
                 }
             }
         }
@@ -905,7 +1001,11 @@ export default function CreateTeacherCourseAssignment() {
                                                 <div className="text-xs text-muted-foreground">Students</div>
                                                 <div className="font-medium">{studentCount}</div>
                                                 {deptStudentCount && courseData.for_dept_id === deptStudentCount.department_id && (
-                                                    <div className="text-xs text-muted-foreground">Dept. validated</div>
+                                                    <div className="text-xs text-muted-foreground">
+                                                        {getYearStudentCount(deptStudentCount, courseData.course_year) > 0 
+                                                            ? `Based on Year ${courseData.course_year} data` 
+                                                            : "Based on dept. estimate"}
+                                                    </div>
                                                 )}
                                             </div>
                                         </div>
