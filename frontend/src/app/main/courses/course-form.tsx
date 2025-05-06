@@ -157,7 +157,7 @@ export default function CourseForm({
         teaching_dept_id: 0,
         need_assist_teacher: false,
         regulation: "R2019",
-        course_type: "T",
+        course_type: "LoT",
         elective_type: "NE",
         lab_type: "NULL",
         is_zero_credit_course: false,
@@ -521,7 +521,7 @@ export default function CourseForm({
               />
             )}
             
-            {defaultValues?.course_type !== undefined && (
+            {(
               <FormField
                 control={form.control}
                 name="course_type"
@@ -530,7 +530,7 @@ export default function CourseForm({
                     <FormLabel>Course Type</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      value={defaultValues.course_type || ''}
+                      value={field.value || ''}
                       disabled={true}
                     >
                       <FormControl>
