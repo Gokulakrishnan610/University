@@ -1092,9 +1092,9 @@ export default function SlotAllocationPage() {
 
           {/* Slot columns */}
           <div className="col-span-3 grid grid-cols-3 gap-4">
-            {SLOT_TYPES.map((slot) => (
+            {SLOT_TYPES.map((slot, index) => (
               <SlotColumn
-                key={slot.id}
+                key={index}
                 slot={slot}
                 assignedTeachers={getTeachersForSlot(slot.id)}
                 onRemove={removeTeacherFromSlot}
