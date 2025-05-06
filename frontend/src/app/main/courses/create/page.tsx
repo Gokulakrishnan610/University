@@ -77,6 +77,9 @@ export default function CreateCoursePage() {
       setCourseFormDefaults({
         for_dept_id: currentDepartment.id,
         teaching_dept_id: currentDepartment.id,
+        // Set default values for regulation and course_type so they will render
+        regulation: "R2019",
+        course_type: "T"
       });
     }
   }, [currentDepartment]);

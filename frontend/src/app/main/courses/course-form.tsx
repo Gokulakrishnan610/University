@@ -330,70 +330,74 @@ export default function CourseForm({
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Department Information</h3>
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="for_dept_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>For Department</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(parseInt(value))} 
-                    value={field.value ? field.value.toString() : ''}
-                    disabled={!isFieldEditable('for_dept_id')}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id.toString()}>
-                          {dept.dept_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    {!isEdit 
-                      ? "When creating a course, it is assigned to your department's students by default."
-                      : "Department whose students will take this course as part of their curriculum"}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="teaching_dept_id"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Teaching Department</FormLabel>
-                  <Select 
-                    onValueChange={(value) => field.onChange(parseInt(value))} 
-                    value={field.value ? field.value.toString() : ''}
-                    disabled={!isFieldEditable('teaching_dept_id')}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select department" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {departments.map((dept) => (
-                        <SelectItem key={dept.id} value={dept.id.toString()}>
-                          {dept.dept_name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormDescription>
-                    Your department is automatically set as the teaching department. Use resource allocation to request changes.
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {defaultValues?.for_dept_id !== undefined && (
+              <FormField
+                control={form.control}
+                name="for_dept_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>For Department</FormLabel>
+                    <Select 
+                      onValueChange={(value) => field.onChange(parseInt(value))} 
+                      value={defaultValues.for_dept_id ? defaultValues.for_dept_id.toString() : ''}
+                      disabled={!isFieldEditable('for_dept_id')}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id.toString()}>
+                            {dept.dept_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      {!isEdit 
+                        ? "When creating a course, it is assigned to your department's students by default."
+                        : "Department whose students will take this course as part of their curriculum"}
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+            {defaultValues?.teaching_dept_id !== undefined && (
+              <FormField
+                control={form.control}
+                name="teaching_dept_id"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Teaching Department</FormLabel>
+                    <Select 
+                      onValueChange={(value) => field.onChange(parseInt(value))} 
+                      value={defaultValues.teaching_dept_id ? defaultValues.teaching_dept_id.toString() : ''}
+                      disabled={!isFieldEditable('teaching_dept_id')}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select department" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {departments.map((dept) => (
+                          <SelectItem key={dept.id} value={dept.id.toString()}>
+                            {dept.dept_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      Your department is automatically set as the teaching department. Use resource allocation to request changes.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
         </div>
         
@@ -491,50 +495,62 @@ export default function CourseForm({
           </div>
           
           <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="regulation"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Regulation</FormLabel>
-                  <Select onValueChange={field.onChange} value={defaultValues?.regulation} disabled={true}>
-                    <FormControl>
-                      <SelectTrigger className="bg-muted/40">
-                        <SelectValue placeholder="Select regulation" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="R2019">R2019</SelectItem>
-                      <SelectItem value="R2023">R2023</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {defaultValues?.regulation !== undefined && (
+              <FormField
+                control={form.control}
+                name="regulation"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Regulation</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value || ''} 
+                      disabled={true}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-muted/40">
+                          <SelectValue placeholder="Select regulation" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="R2019">R2019</SelectItem>
+                        <SelectItem value="R2023">R2023</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
             
-            <FormField
-              control={form.control}
-              name="course_type"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Course Type</FormLabel>
-                  <Select onValueChange={field.onChange} value={defaultValues?.course_type} disabled={true}>
-                    <FormControl>
-                      <SelectTrigger className="bg-muted/40">
-                        <SelectValue placeholder="Select course type" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="T">Theory</SelectItem>
-                      <SelectItem value="L">Lab</SelectItem>
-                      <SelectItem value="LoT">Lab and Theory</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {defaultValues?.course_type !== undefined && (
+              <FormField
+                control={form.control}
+                name="course_type"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Course Type</FormLabel>
+                    <Select 
+                      onValueChange={field.onChange} 
+                      value={field.value || ''} 
+                      disabled={true}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="bg-muted/40">
+                          <SelectValue placeholder="Select course type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="T">Theory</SelectItem>
+                        <SelectItem value="L">Lab</SelectItem>
+                        <SelectItem value="LoT">Lab and Theory</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
           </div>
         </div>
         
