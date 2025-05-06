@@ -171,9 +171,6 @@ export default function CourseForm({
   }, [defaultValues, form]);
 
   const isFieldEditable = (fieldName: string): boolean => {
-    // Always disable teaching department
-    if (fieldName === 'teaching_dept_id') return false;
-    
     // In create mode, disable for_dept_id
     if (!isEdit && fieldName === 'for_dept_id') return false;
     
@@ -248,6 +245,7 @@ export default function CourseForm({
       setPage(newPage);
     }
   };
+  
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8 py-4">
@@ -303,7 +301,7 @@ export default function CourseForm({
                 <FormItem>
                   <FormLabel>Year</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} disabled={!isFieldEditable('course_year')} />
+                    <Input type="number" {...field} disabled={false} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -317,7 +315,7 @@ export default function CourseForm({
                 <FormItem>
                   <FormLabel>Semester</FormLabel>
                   <FormControl>
-                    <Input type="number" {...field} disabled={!isFieldEditable('course_semester')} />
+                    <Input type="number" {...field} disabled={false} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -532,7 +530,7 @@ export default function CourseForm({
                     <FormLabel>Course Type</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
-                      value={field.value || ''} 
+                      value={defaultValues.course_type || ''}
                       disabled={true}
                     >
                       <FormControl>
