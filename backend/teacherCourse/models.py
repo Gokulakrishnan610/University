@@ -76,9 +76,9 @@ class TeacherCourse(models.Model):
         if course_master.course_type == 'T':  # Theory
             return course_master.lecture_hours + course_master.tutorial_hours
         elif course_master.course_type == 'LoT':  # Lab and Theory
-            return course_master.lecture_hours + course_master.tutorial_hours + course_master.practical_hours
+            return course_master.lecture_hours + course_master.tutorial_hours + course_master.practical_hours * 2
         elif course_master.course_type == 'L':  # Lab only
-            return course_master.practical_hours
+            return course_master.practical_hours * 2
         return 0
     
     def save(self, *args, **kwargs):

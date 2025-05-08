@@ -19,7 +19,7 @@ class TeacherResource(resources.ModelResource):
         model = Teacher
         fields = (
             'id',
-            'email',
+            'teacher_id__email',
             'teacher_id__first_name',
             'teacher_id__last_name',
             'dept_id',
@@ -72,7 +72,7 @@ class TeacherAdmin(ImportExportModelAdmin, ModelAdmin):
     
     def teacher_name(self, obj):
         """Display teacher's full name"""
-        return f"{obj.teacher_id.first_name} {obj.teacher_id.last_name}"
+        return f"{obj}"
     teacher_name.short_description = 'Teacher Name'
 
     def get_readonly_fields(self, request, obj=None):

@@ -25,7 +25,7 @@ for i in rooms:
     elif 'D' in i.room_number:
         i.block = 'D Block'
         i.save()
-    elif 'K' in i.room_number:
+    elif 'K' in i.room_number:`
         i.block = "K Block"
         i.save()
     elif 'TIFAC' in i.room_number:
@@ -39,4 +39,4 @@ for i in rooms:
         i.save()
     elif 'WS' in i.room_number:
         i.block = "Workshop Shed"
-        i.save()
+        i.save()`
