@@ -79,6 +79,14 @@ class CourseMasterListAPIView(generics.ListCreateAPIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             data['course_dept_id'] = department_id
+
+        course_id = data.get('course_id')
+        if course_id:
+            if self.get_queryset().filter(course_id=course_id).exists():
+                return Response({
+                    "status": "error",
+                    "detail": f"Course with course_id '{course_id}' already exists."
+                }, status=status.HTTP_400_BAD_REQUEST)
         
         # Set default values for new fields if not provided
         if 'is_zero_credit_course' not in data:

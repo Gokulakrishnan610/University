@@ -160,7 +160,7 @@ export const useGetRelatedCourses = (courseId: number) => {
 };
 
 // Create a new course master
-export const useCreateCourseMaster = (onSuccess?: () => void) => {
+export const useCreateCourseMaster = (onSuccess?: () => void, onError?: (error: Error) => void) => {
   return useMutationData(
     ['createCourseMaster'],
     async (data: CreateCourseMasterRequest) => {
@@ -173,16 +173,18 @@ export const useCreateCourseMaster = (onSuccess?: () => void) => {
       } catch (error) {
         if (axios.isAxiosError(error) && error.response) {
           console.error('Course master creation error:', error.response.data);
-          return {
-            status: error.response.status,
-            data: error.response.data.message || error.response.data.detail || 'Failed to create course master',
-          };
+          throw new Error(
+            error.response.data.message ||
+              error.response.data.detail ||
+              'Failed to create course master'
+          );
         }
         throw error;
       }
     },
     'course-masters',
-    onSuccess
+    onSuccess,
+    onError
   );
 };
 
