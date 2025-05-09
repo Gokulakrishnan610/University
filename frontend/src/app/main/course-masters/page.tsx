@@ -56,7 +56,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useGetCurrentDepartment } from '@/action/department';
-import { 
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -68,6 +68,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { toast } from 'sonner';
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 // Stat card component
 interface StatCardProps {
@@ -113,22 +114,22 @@ export default function CourseMastersPage() {
     departmentFilter,
     courseTypeFilter
   );
-  
+
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
   const { data: statsData, isPending: loadingStats } = useGetCourseMasterStats();
   const { data: currentDepartment, isPending: loadingCurrentDept } = useGetCurrentDepartment();
-  
+
   const departments = departmentsData || [];
   const courseMasters = courseMastersData?.results || [];
   const totalCount = courseMastersData?.count || 0;
-  
+
   const totalPages = Math.ceil(totalCount / pageSize);
-  
+
   // Effect to reset page when filters change
   useEffect(() => {
     setPage(1);
   }, [searchTerm, departmentFilter, courseTypeFilter]);
-  
+
   const { mutate: deleteCourse, isPending: isDeleting } = useDeleteCourseMaster(
     courseToDelete || 0,
     () => {
@@ -139,27 +140,27 @@ export default function CourseMastersPage() {
       setCourseToDelete(null);
     }
   );
-  
+
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSearchTerm(e.target.value);
   };
-  
+
   const handleClearSearch = () => {
     if (searchTerm) {
       setSearchTerm('');
     }
   };
-  
+
   const handlePageChange = (newPage: number) => {
     if (newPage > 0 && newPage <= totalPages) {
       setPage(newPage);
     }
   };
-  
+
   const handleViewDetails = (id: number) => {
     navigate(`/course-masters/${id}`);
   };
-  
+
   const getCourseTypeLabel = (type: string) => {
     switch (type) {
       case 'T': return 'Theory';
@@ -168,7 +169,7 @@ export default function CourseMastersPage() {
       default: return type;
     }
   };
-  
+
   const getCourseTypeBadgeClass = (type: string) => {
     switch (type) {
       case 'T': return 'bg-blue-500/10 text-blue-500 border-blue-200';
@@ -177,10 +178,10 @@ export default function CourseMastersPage() {
       default: return 'bg-primary/10 text-primary';
     }
   };
-  
+
   // Check if the current department is the owner of the course master
   const canCreateCourse = !loadingCurrentDept && currentDepartment && currentDepartment.id !== undefined;
-  
+
   const canEditOrDelete = (course: CourseMaster) => {
     // If permissions are available, use them
     if (course.permissions) {
@@ -189,38 +190,41 @@ export default function CourseMastersPage() {
         canDelete: course.permissions.can_delete
       };
     }
-    
+
     // Otherwise, fallback to checking if current department is the owner
-    const isDeptOwner = !loadingCurrentDept && 
-      currentDepartment && 
+    const isDeptOwner = !loadingCurrentDept &&
+      currentDepartment &&
       course.course_dept_id === currentDepartment.id;
-      
+
     return {
       canEdit: isDeptOwner,
       canDelete: isDeptOwner
     };
   };
-  
+
   const handleCreateCourse = () => {
     navigate('/courses/create');
   };
-  
+
   const handleEditCourse = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     navigate(`/course-masters/${id}/edit`);
   };
-  
+
   const handleDeleteCourse = (id: number, e: React.MouseEvent) => {
     e.stopPropagation();
     setCourseToDelete(id);
   };
-  
+
   const confirmDelete = () => {
     if (courseToDelete) {
       deleteCourse({});
     }
   };
-  
+
+  // Add scroll restoration
+  useScrollRestoration('course-masters-page');
+
   return (
     <div className="space-y-6">
       <Card className="shadow-md border-t-4 border-t-primary">
@@ -257,7 +261,7 @@ export default function CourseMastersPage() {
             Browse and manage all courses in the university catalog
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="px-6 pb-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -290,7 +294,7 @@ export default function CourseMastersPage() {
               color="border-l-red-500"
             />
           </div>
-          
+
           {/* Search and Filters */}
           <Card className="mb-6">
             <CardHeader className="py-4">
@@ -348,7 +352,7 @@ export default function CourseMastersPage() {
                       ))}
                     </SelectContent>
                   </Select>
-                  
+
                   <Select value={courseTypeFilter} onValueChange={setCourseTypeFilter}>
                     <SelectTrigger>
                       <SelectValue placeholder="Course Type" />
@@ -364,7 +368,7 @@ export default function CourseMastersPage() {
               </div>
             </CardContent>
           </Card>
-          
+
           {/* Course List */}
           <div className="relative">
             {loadingCourseMasters ? (
@@ -396,8 +400,8 @@ export default function CourseMastersPage() {
                             <div className="flex flex-col items-center justify-center gap-2">
                               <BookMarked className="h-8 w-8 text-muted-foreground/60" />
                               <p>No course masters found</p>
-                              <Button 
-                                variant="link" 
+                              <Button
+                                variant="link"
                                 onClick={() => {
                                   setSearchTerm('');
                                   setDepartmentFilter('all');
@@ -412,11 +416,11 @@ export default function CourseMastersPage() {
                       ) : (
                         courseMasters.map((course) => {
                           const { canEdit, canDelete } = canEditOrDelete(course);
-                          const isOwned = course.permissions?.is_owner || 
+                          const isOwned = course.permissions?.is_owner ||
                             (!loadingCurrentDept && currentDepartment && course.course_dept_id === currentDepartment.id);
-                          
+
                           return (
-                            <TableRow 
+                            <TableRow
                               key={course.id}
                               className="cursor-pointer hover:bg-accent/50"
                               onClick={() => handleViewDetails(course.id)}
@@ -472,7 +476,7 @@ export default function CourseMastersPage() {
                                   >
                                     View
                                   </Button>
-                                  
+
                                   {canEdit ? (
                                     <Button
                                       variant="default"
@@ -503,7 +507,7 @@ export default function CourseMastersPage() {
                                       </Tooltip>
                                     </TooltipProvider>
                                   )}
-                                  
+
                                   {canDelete && (
                                     <AlertDialog open={courseToDelete === course.id} onOpenChange={(open) => !open && setCourseToDelete(null)}>
                                       <AlertDialogTrigger asChild>
@@ -520,7 +524,7 @@ export default function CourseMastersPage() {
                                         <AlertDialogHeader>
                                           <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                                           <AlertDialogDescription>
-                                            This will permanently delete the course master "{course.course_name}". 
+                                            This will permanently delete the course master "{course.course_name}".
                                             This action cannot be undone.
                                           </AlertDialogDescription>
                                         </AlertDialogHeader>
@@ -553,7 +557,7 @@ export default function CourseMastersPage() {
                     </TableBody>
                   </Table>
                 </div>
-                
+
                 {/* Pagination */}
                 {totalPages > 1 && (
                   <div className="flex items-center justify-between mt-4">

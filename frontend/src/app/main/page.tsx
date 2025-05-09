@@ -33,7 +33,7 @@ export default function Dashboard() {
       <Route path="/profile" element={<Profile />} />
       <Route path="/setting" element={<Setting />} />
       <Route path="/courses" element={<CourseManagement />} />
-      <Route path="/courses/create" element={<CreateCoursePage/>} />
+      <Route path="/courses/create" element={<CreateCoursePage />} />
       <Route path="/courses/all-courses" element={<AllCoursesPage />} />
       <Route path="/courses/allocations" element={<AllocationManagementPage />} />
       <Route path="/courses/:id" element={<CourseDetails />} />

@@ -70,6 +70,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 // Stat item component
 interface StatItemProps {
@@ -214,6 +215,9 @@ export default function CourseDetails() {
     setShowDeleteDialog(false);
   };
 
+  // Add scroll restoration
+  useScrollRestoration(`course-detail-${id}`);
+
   if (isLoading || !course) {
     return (
       <div className="py-6 max-w-5xl mx-auto">
@@ -309,6 +313,7 @@ export default function CourseDetails() {
               </div>
             </div>
             <div className="flex gap-2">
+              {/* Edit button - only for owner and teaching departments */}
               {canEdit && (
                 <Button
                   className="flex gap-1.5 items-center"
@@ -317,6 +322,19 @@ export default function CourseDetails() {
                   <Pencil className="h-4 w-4" /> Edit Course
                 </Button>
               )}
+
+              {/* Edit Course Master button - only for course owners */}
+              {userRoles.includes('owner') && (
+                <Button
+                  variant="outline"
+                  className="flex gap-1.5 items-center"
+                  onClick={() => navigate(`/course-masters/${course.course_id}/edit`)}
+                >
+                  <BookOpen className="h-4 w-4" /> Edit Course Catalog
+                </Button>
+              )}
+
+              {/* Reassign button - only for owner department */}
               {userRoles.includes('owner') && (
                 <Button
                   variant="outline"
@@ -326,6 +344,8 @@ export default function CourseDetails() {
                   <ArrowLeftRight className="h-4 w-4" /> Reassign Teaching
                 </Button>
               )}
+
+              {/* Request reassignment - only for teaching department */}
               {userRoles.includes('teacher') && !userRoles.includes('owner') && (
                 <Button
                   variant="outline"
@@ -335,6 +355,8 @@ export default function CourseDetails() {
                   <ArrowLeftRight className="h-4 w-4" /> Request Reassignment
                 </Button>
               )}
+
+              {/* Delete button - for all three departments with permission */}
               {canDelete && (
                 <Button
                   variant="destructive"
@@ -426,7 +448,7 @@ export default function CourseDetails() {
                         tooltipContent="The Course Owner department creates the course, defines its content and curriculum, and maintains academic standards."
                         isCurrent={userRoles.includes('owner')}
                       />
-                      
+
                       <RoleCard
                         icon={School}
                         title="Teaching Department"
@@ -436,7 +458,7 @@ export default function CourseDetails() {
                         tooltipContent="The Teaching Department provides faculty to teach the course, handles the course delivery, and is responsible for instruction."
                         isCurrent={userRoles.includes('teacher')}
                       />
-                      
+
                       <RoleCard
                         icon={GraduationCap}
                         title="For Students"
@@ -448,7 +470,7 @@ export default function CourseDetails() {
                       />
                     </div>
                   </div>
-                  
+
                   <Card>
                     <CardHeader className="py-4">
                       <CardTitle className="text-lg flex items-center gap-2">
@@ -470,7 +492,7 @@ export default function CourseDetails() {
                             <h3 className="text-sm font-medium text-muted-foreground">Course Type</h3>
                             <div className="mt-1 flex flex-wrap gap-2">
                               <Badge variant="outline">
-                                {course .course_type === 'T' ? 'Theory' :
+                                {course.course_type === 'T' ? 'Theory' :
                                   course.course_type === 'L' ? 'Lab' :
                                     course.course_type === 'LoT' ? 'Lab & Theory' : course.course_type}
                               </Badge>
@@ -534,7 +556,30 @@ export default function CourseDetails() {
                   <CardContent className="pt-6">
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                       <div>
-                        <h3 className="font-medium text-base mb-3">Course Structure</h3>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="font-medium text-base">Course Structure</h3>
+                          {userRoles.includes('owner') && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 text-primary flex items-center gap-1.5"
+                              onClick={() => navigate(`/course-masters/${course.course_id}/edit`)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                              Edit Catalog
+                            </Button>
+                          )}
+                        </div>
+                        {userRoles.includes('owner') && (
+                          <div className="p-3 mb-4 bg-blue-50 border border-blue-200 rounded-md">
+                            <div className="flex items-start gap-2">
+                              <Info className="h-4 w-4 mt-0.5 text-blue-500" />
+                              <p className="text-xs text-blue-800">
+                                As the course owner, you can edit these course master details by clicking the 'Edit Catalog' button.
+                              </p>
+                            </div>
+                          </div>
+                        )}
                         <div className="space-y-4">
                           <div className="flex justify-between items-center p-3 bg-muted/30 rounded-lg">
                             <div className="flex items-center gap-2">
@@ -650,7 +695,7 @@ export default function CourseDetails() {
                           </div>
                         </div>
                       </div>
-                      
+
                       {course.course_detail.course_dept_detail.id === course.teaching_dept_id && (
                         <div className="p-4 rounded-lg border border-green-200 bg-green-50/50 dark:bg-green-950/20 dark:border-green-900/30">
                           <div className="flex items-center gap-2">
@@ -667,29 +712,29 @@ export default function CourseDetails() {
                 </Card>
               </TabsContent>
 
-                <TabsContent value="room-preferences" className="mt-4">
-                  <Card>
-                    <CardHeader className="py-4">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <LayoutGrid className="h-5 w-5 text-primary" />
-                        Room Preferences
-                      </CardTitle>
-                      <CardDescription>
-                        Manage room preferences for this course
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="pb-6">
-                      <div className="text-center py-6">
-                        <Button onClick={() => navigate(`/courses/${courseId}/room-preferences`)}>
-                          Manage Room Preferences
-                        </Button>
-                        <p className="text-sm text-muted-foreground mt-2">
-                          Click to view and manage room preferences for this course
-                        </p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </TabsContent>
+              <TabsContent value="room-preferences" className="mt-4">
+                <Card>
+                  <CardHeader className="py-4">
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <LayoutGrid className="h-5 w-5 text-primary" />
+                      Room Preferences
+                    </CardTitle>
+                    <CardDescription>
+                      Manage room preferences for this course
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="pb-6">
+                    <div className="text-center py-6">
+                      <Button onClick={() => navigate(`/courses/${courseId}/room-preferences`)}>
+                        Manage Room Preferences
+                      </Button>
+                      <p className="text-sm text-muted-foreground mt-2">
+                        Click to view and manage room preferences for this course
+                      </p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </Tabs>
           </div>
         </CardContent>
@@ -709,6 +754,13 @@ export default function CourseDetails() {
               </DialogDescription>
             </DialogHeader>
 
+            <div className="p-3 bg-blue-50 border border-blue-200 rounded-md mb-4 text-blue-800 text-sm">
+              <div className="flex items-start gap-2">
+                <Info className="h-4 w-4 mt-0.5 text-blue-500" />
+                <p>Department assignments (For Department and Teaching Department) cannot be changed here. Use the Course Reassignment feature to request changes to these assignments.</p>
+              </div>
+            </div>
+
             <CourseForm
               departments={departments}
               courseMasters={courseMasters}
@@ -719,6 +771,7 @@ export default function CourseDetails() {
               submitLabel="Save Changes"
               isEdit={true}
               editableFields={editableFields}
+              userRoles={userRoles}
             />
           </ScrollArea>
         </DialogContent>
