@@ -152,35 +152,42 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
             
             # Get user's department (if HOD)
             user_dept = None
-            print("Heere")
             try:
                 user_dept = Department.objects.get(hod_id=user)
             except Department.DoesNotExist:
                 pass
-            print("After exception")
+            
             if user_dept:
                 # Owner department - full rights (edit and delete)
                 is_owner = user_dept.id == course.course_id.course_dept_id.id
                 
-                # Teaching department - now has both edit and delete rights
+                # Teaching department - has edit and delete rights
                 is_teacher = user_dept.id == course.teaching_dept_id.id if course.teaching_dept_id else False
                 
-                # For department - no edit or delete rights
+                # For department - only has delete rights, no edit rights
                 is_learner = user_dept.id == course.for_dept_id.id if course.for_dept_id else False
                 
-                # If DELETE, allow both owner and teaching department to delete
-                if self.request.method == 'DELETE' and not (is_owner or is_teacher):
+                # If DELETE, allow owner, teaching, or for department to delete
+                if self.request.method == 'DELETE' and not (is_owner or is_teacher or is_learner):
                     self.permission_denied(
                         self.request,
-                        message="Only the owner or teaching department's HOD can delete this course."
+                        message="Only the owner, teaching, or for department's HOD can delete this course."
                     )
                 
                 # If EDIT (PUT/PATCH), only owner or teacher can edit
-                if self.request.method in ['PUT', 'PATCH'] and not (is_owner or is_teacher):
-                    self.permission_denied(
-                        self.request,
-                        message="Only the owner or teaching department's HOD can edit this course."
-                    )
+                if self.request.method in ['PUT', 'PATCH']:
+                    if not (is_owner or is_teacher):
+                        self.permission_denied(
+                            self.request,
+                            message="Only the owner or teaching department's HOD can edit this course."
+                        )
+                    
+                    # Restrict changing of department assignments regardless of role
+                    if 'for_dept_id' in self.request.data or 'teaching_dept_id' in self.request.data:
+                        self.permission_denied(
+                            self.request,
+                            message="Department assignments cannot be changed through this interface. Use course reassignment instead."
+                        )
             else:
                 # Not an HOD of any department
                 self.permission_denied(
@@ -258,12 +265,12 @@ class CourseDetailView(generics.RetrieveUpdateDestroyAPIView):
                 if is_owner:
                     allowed_fields = [
                         'course_year', 'course_semester',
-                        'for_dept_id', 'teaching_dept_id', 'need_assist_teacher',
+                        'need_assist_teacher',
                         'elective_type', 'lab_type', 'teaching_status', 'no_of_students'
                     ]
                 elif is_teacher:
                     # Teaching department can edit more than just teaching_status
-                    allowed_fields = ['teaching_status', 'no_of_students', 'course_year', 'course_semester']
+                    allowed_fields = ['teaching_status', 'no_of_students', 'course_year', 'course_semester', 'need_assist_teacher']
                 
                 # Only keep allowed fields
                 if not is_owner:  # Owner can edit all fields

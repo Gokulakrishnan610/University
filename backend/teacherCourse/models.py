@@ -39,16 +39,21 @@ class TeacherCourse(models.Model):
         if self.teacher_id.is_industry_professional or self.teacher_id.teacher_role == 'POP':
             self.requires_special_scheduling = True
             
-        assigned_courses = TeacherCourse.objects.filter(
-            teacher_id=self.teacher_id
-        )
+        # Get all assigned courses for this teacher, excluding the current instance if it already exists
+        if self.pk:  # If this instance is already saved (update case)
+            assigned_courses = TeacherCourse.objects.filter(
+                teacher_id=self.teacher_id
+            ).exclude(pk=self.pk)
+        else:  # New instance (create case)
+            assigned_courses = TeacherCourse.objects.filter(
+                teacher_id=self.teacher_id
+            )
 
         # Calculate weekly hours based on course type
         weekly_hours = self.calculate_weekly_hours()
         total_hours_assigned = sum(course.calculate_weekly_hours() for course in assigned_courses if course.course_id)
         
-        if total_hours_assigned + weekly_hours > self.teacher_id.teacher_working_hours:
-            raise ValidationError("Teacher working hour limit exceeded")
+        self._workload_exceeded = (total_hours_assigned + weekly_hours > self.teacher_id.teacher_working_hours)
         
         # Check if industry professional has availability slots defined
         if self.teacher_id.is_industry_professional and self.teacher_id.availability_type == 'limited':
@@ -76,8 +81,10 @@ class TeacherCourse(models.Model):
         if course_master.course_type == 'T':  # Theory
             return course_master.lecture_hours + course_master.tutorial_hours
         elif course_master.course_type == 'LoT':  # Lab and Theory
-            return course_master.lecture_hours + course_master.tutorial_hours + course_master.practical_hours * 2
+            # Practical hours are counted double for workload
+            return course_master.lecture_hours + course_master.tutorial_hours + (course_master.practical_hours * 2)
         elif course_master.course_type == 'L':  # Lab only
+            # Practical hours are counted double for workload
             return course_master.practical_hours * 2
         return 0
     

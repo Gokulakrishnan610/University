@@ -19,11 +19,7 @@ class TeacherResource(resources.ModelResource):
         model = Teacher
         fields = (
             'id',
-<<<<<<< HEAD
-            'teacher_id__email',
-=======
             'email',
->>>>>>> 84d8f54141e04ee38771eb5fecbab339d625044d
             'teacher_id__first_name',
             'teacher_id__last_name',
             'dept_id',
