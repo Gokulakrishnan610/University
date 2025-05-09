@@ -27,6 +27,13 @@ import { DepartmentDetails, Course } from '@/action/course';
 import { useDebounce } from '@/hooks/useDebounce';
 import { SearchableDropdown, DropdownOption } from '@/components/ui/searchable-dropdown';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Pencil } from 'lucide-react';
 
 // Form schema for course creation and editing
 export const courseFormSchema = z.object({
@@ -67,6 +74,7 @@ export interface CourseFormProps {
   isLoadingCourseMasters?: boolean;
   currentPage?: number;
   totalPages?: number;
+  userRoles?: string[];
 }
 
 export default function CourseForm({
@@ -84,7 +92,8 @@ export default function CourseForm({
   onPageChange,
   isLoadingCourseMasters,
   currentPage = 1,
-  totalPages: parentTotalPages = 1
+  totalPages: parentTotalPages = 1,
+  userRoles
 }: CourseFormProps) {
 
   const [searchTermState, setSearchTermState] = useState(searchTerm || '');
@@ -97,13 +106,13 @@ export default function CourseForm({
       onSearchChange(debouncedSearchTerm);
     }
   }, [debouncedSearchTerm, onSearchChange, searchTerm]);
-  
+
   useEffect(() => {
     if (onPageChange && page !== currentPage) {
       onPageChange(page);
     }
   }, [page, onPageChange, currentPage]);
-  
+
   useEffect(() => {
     if (currentPage !== page) {
       setPage(currentPage);
@@ -111,9 +120,9 @@ export default function CourseForm({
   }, [currentPage]);
   const totalResults = initialCourseMasters?.length || 0;
   const calculatedTotalPages = Math.ceil(totalResults / pageSize);
-  
+
   const totalPages = parentTotalPages || calculatedTotalPages;
-  
+
   const courseOptions: DropdownOption[] = initialCourseMasters?.map((course) => ({
     value: course.id.toString(),
     label: `${course.course_id} - ${course.course_name} (${course.course_dept_detail.dept_name})`
@@ -166,7 +175,7 @@ export default function CourseForm({
         // Override with provided default values
         ...defaultValues
       });
-      
+
       console.log('Reset form with defaultValues:', defaultValues);
     }
   }, [defaultValues, form]);
@@ -174,12 +183,12 @@ export default function CourseForm({
   const isFieldEditable = (fieldName: string): boolean => {
     // In create mode, disable for_dept_id
     if (!isEdit && fieldName === 'for_dept_id') return false;
-    
+
     // In edit mode, check if the field is in the editable fields list
     if (isEdit) {
       return editableFields.length === 0 || editableFields.includes(fieldName);
     }
-    
+
     // In create mode for other fields
     return editableFields.length === 0 || editableFields.includes(fieldName);
   };
@@ -189,7 +198,7 @@ export default function CourseForm({
     const subscription = form.watch((value, { name }) => {
       console.log('Form value changed:', name, value);
       if (name === 'course_id' && value.course_id) {
-        const selectedCourse:any = initialCourseMasters.find(course => course.id === value.course_id);
+        const selectedCourse: any = initialCourseMasters.find(course => course.id === value.course_id);
         if (selectedCourse) {
           console.log('Selected course:', selectedCourse);
           // Set values for pre-populated fields from CourseMaster
@@ -200,7 +209,7 @@ export default function CourseForm({
           form.setValue('course_type', selectedCourse.course_type);
           form.setValue('is_zero_credit_course', selectedCourse.is_zero_credit_course);
           form.setValue('regulation', selectedCourse.regulation);
-          
+
           // NOTE: We don't set department values here to preserve the current user's department
           // settings that were initialized from defaultValues
 
@@ -223,7 +232,7 @@ export default function CourseForm({
     if (isEdit && defaultValues?.course_id) {
       values.course_id = defaultValues.course_id;
     }
-    
+
     // Remove fields that don't exist in the Course model anymore
     // These fields are now in CourseMaster and should not be submitted
     const submissionValues = {
@@ -237,18 +246,18 @@ export default function CourseForm({
       is_zero_credit_course: undefined,
       lab_type: undefined
     };
-    
+
     onSubmit(submissionValues as z.infer<typeof courseFormSchema>);
   };
 
-  
+
   // Function to handle page changes properly
   const handlePageChange = (newPage: number) => {
     if (newPage > 0 && (newPage <= totalPages || totalPages === 0)) {
       setPage(newPage);
     }
   };
-  
+
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-8 py-4">
@@ -292,7 +301,7 @@ export default function CourseForm({
             </div>
           </div>
         )}
-        
+
         {/* Basic Course Information */}
         <div className="space-y-4 ">
           <h3 className="text-lg font-medium">Basic Course Information</h3>
@@ -310,7 +319,7 @@ export default function CourseForm({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="course_semester"
@@ -326,7 +335,7 @@ export default function CourseForm({
             />
           </div>
         </div>
-        
+
         {/* Department Information */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Department Information</h3>
@@ -338,10 +347,10 @@ export default function CourseForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>For Department</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(parseInt(value))} 
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value))}
                       value={defaultValues.for_dept_id ? defaultValues.for_dept_id.toString() : ''}
-                      disabled={!isFieldEditable('for_dept_id')}
+                      disabled={true}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -357,7 +366,7 @@ export default function CourseForm({
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      {!isEdit 
+                      {!isEdit
                         ? "When creating a course, it is assigned to your department's students by default."
                         : "Department whose students will take this course as part of their curriculum"}
                     </FormDescription>
@@ -373,10 +382,10 @@ export default function CourseForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Teaching Department</FormLabel>
-                    <Select 
-                      onValueChange={(value) => field.onChange(parseInt(value))} 
+                    <Select
+                      onValueChange={(value) => field.onChange(parseInt(value))}
                       value={defaultValues.teaching_dept_id ? defaultValues.teaching_dept_id.toString() : ''}
-                      disabled={!isFieldEditable('teaching_dept_id')}
+                      disabled={true}
                     >
                       <FormControl>
                         <SelectTrigger>
@@ -401,14 +410,36 @@ export default function CourseForm({
             )}
           </div>
         </div>
-        
+
         {/* Course Structure - Read Only */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-lg font-medium">Course Structure</h3>
-            <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Read-only</span>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded-full">Read-only</span>
+              {isEdit && defaultValues?.course_id && userRoles?.includes('owner') && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1"
+                        onClick={() => window.open(`/course-masters/${defaultValues.course_id}/edit`, '_blank')}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        Edit Master
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Edit course master details as the course owner</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
           </div>
-          
+
           <div className="p-4 bg-amber-50 text-amber-800 rounded-md border border-amber-200 mb-4">
             <p className="text-sm">The following fields are managed in CourseMaster and cannot be edited here.</p>
           </div>
@@ -427,7 +458,7 @@ export default function CourseForm({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="tutorial_hours"
@@ -441,7 +472,7 @@ export default function CourseForm({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="practical_hours"
@@ -456,7 +487,7 @@ export default function CourseForm({
               )}
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             <FormField
               control={form.control}
@@ -471,7 +502,7 @@ export default function CourseForm({
                 </FormItem>
               )}
             />
-            
+
             <FormField
               control={form.control}
               name="is_zero_credit_course"
@@ -494,7 +525,7 @@ export default function CourseForm({
               )}
             />
           </div>
-          
+
           <div className="grid grid-cols-2 gap-4">
             {defaultValues?.regulation !== undefined && (
               <FormField
@@ -503,9 +534,9 @@ export default function CourseForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Regulation</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={defaultValues?.regulation || ''} 
+                    <Select
+                      onValueChange={field.onChange}
+                      value={defaultValues?.regulation || ''}
                       disabled={true}
                     >
                       <FormControl>
@@ -523,7 +554,7 @@ export default function CourseForm({
                 )}
               />
             )}
-            
+
             {(
               <FormField
                 control={form.control}
@@ -531,9 +562,9 @@ export default function CourseForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Course Type</FormLabel>
-                    <Select 
-                      onValueChange={field.onChange} 
-                      value={field.value || defaultValues?.course_type  || ''}
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || defaultValues?.course_type || ''}
                       disabled={true}
                     >
                       <FormControl>
@@ -554,7 +585,7 @@ export default function CourseForm({
             )}
           </div>
         </div>
-        
+
         {/* Course Classification */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Course Classification</h3>
@@ -606,7 +637,7 @@ export default function CourseForm({
             />
           </div>
         </div>
-        
+
         {/* Additional Settings */}
         <div className="space-y-4">
           <h3 className="text-lg font-medium">Additional Settings</h3>
@@ -633,7 +664,7 @@ export default function CourseForm({
             />
           </div>
         </div>
-        
+
         <div className="flex justify-end gap-2 pt-4">
           <Button type="button" variant="outline" onClick={onCancel}>
             Cancel

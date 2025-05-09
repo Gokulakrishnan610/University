@@ -39,54 +39,57 @@ class TeacherCourseListView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         user = self.request.user    
-        
+        response_warning = None
         # Admin users can create assignments for any department
         if user.is_superuser or user.is_staff:
             try:
-                # Check if teacher has resigned
                 teacher_to_assign = serializer.validated_data['teacher_id']
                 if teacher_to_assign.resignation_status == 'resigned':
                     raise serializers.ValidationError(
                         {"teacher_id": "Cannot assign a resigned teacher to courses."}
                     )
-                    
-                serializer.save()
+                instance = serializer.save()
+                # Check for workload warning
+                if hasattr(serializer, '_workload_exceeded') and serializer._workload_exceeded:
+                    response_warning = f"Warning: Teacher workload limit exceeded. Assignment created, but total workload is above allowed hours."
+                self._response_warning = response_warning
                 return
             except ValidationError as e:
                 raise serializers.ValidationError(e.message_dict if hasattr(e, 'message_dict') else str(e))
-        
-        # For non-admin users, follow existing HOD-based permissions
         try:
             teacher = Teacher.objects.get(teacher_id=user)
-            
             teacher_to_assign = serializer.validated_data['teacher_id']
             course = serializer.validated_data['course_id']
-            
-            # Check if teacher has resigned
             if teacher_to_assign.resignation_status == 'resigned':
                 raise serializers.ValidationError(
                     {"teacher_id": "Cannot assign a resigned teacher to courses."}
                 )
-                
             if teacher.teacher_role != 'HOD':
                 raise serializers.ValidationError(
                     {"detail": "Only HOD or admin can create teacher course assignments."}
                 )
-            
-            # HOD can only assign teachers and courses from their own department
             if teacher_to_assign.dept_id != teacher.dept_id or course.teaching_dept_id != teacher.dept_id:
                 raise serializers.ValidationError(
-                    "You can only assign teachers and courses from your own department"
+                    {"detail": "You can only assign teachers and courses from your own department"}
                 )
-                
             try:
-                serializer.save()
+                instance = serializer.save()
+                if hasattr(serializer, '_workload_exceeded') and serializer._workload_exceeded:
+                    response_warning = f"Warning: Teacher workload limit exceeded. Assignment created, but total workload is above allowed hours."
+                self._response_warning = response_warning
             except ValidationError as e:
                 raise serializers.ValidationError(e.message_dict if hasattr(e, 'message_dict') else str(e))
         except Teacher.DoesNotExist:
             raise serializers.ValidationError(
                 {"detail": "Teacher profile not found. Cannot create assignments."}
             )
+
+    def create(self, request, *args, **kwargs):
+        response = super().create(request, *args, **kwargs)
+        warning = getattr(self, '_response_warning', None)
+        if warning:
+            response.data['warning'] = warning
+        return response
 
 class TeacherCourseDetailView(generics.RetrieveUpdateDestroyAPIView):
     authentication_classes = [IsAuthenticated]

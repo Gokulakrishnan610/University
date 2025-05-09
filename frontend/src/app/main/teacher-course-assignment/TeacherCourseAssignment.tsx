@@ -33,15 +33,15 @@ interface CourseWorkloadProps {
     showTotal?: boolean;
 }
 
-const CourseWorkload: React.FC<CourseWorkloadProps> = ({ 
-    lecture = 0, 
-    tutorial = 0, 
+const CourseWorkload: React.FC<CourseWorkloadProps> = ({
+    lecture = 0,
+    tutorial = 0,
     practical = 0,
     showTotal = true
 }) => {
     const adjustedPractical = practical * 2;
     const totalHours = lecture + tutorial + adjustedPractical;
-    
+
     return (
         <div>
             {showTotal && (
@@ -194,9 +194,9 @@ export function TeacherCourseAssignment() {
             const courseName = assignment.course_detail?.course_detail?.course_name || 'Unknown Course';
             const courseCode = assignment.course_detail?.course_detail?.course_id || 'Unknown Code';
             const department = assignment.course_detail?.teaching_dept_detail?.dept_name || 'Unknown Department';
-            
+
             const key = `${courseId}`;
-            
+
             if (!grouped[key]) {
                 grouped[key] = {
                     courseId: courseId || 0,
@@ -208,11 +208,11 @@ export function TeacherCourseAssignment() {
                     isExpanded: expandedCourses.has(key)
                 };
             }
-            
+
             grouped[key].assignments.push(assignment);
             grouped[key].studentCount += assignment.student_count || 0;
         });
-        
+
         return Object.values(grouped).sort((a, b) => a.courseName.localeCompare(b.courseName));
     }, [filteredAssignments, expandedCourses]);
 
@@ -281,7 +281,7 @@ export function TeacherCourseAssignment() {
                 const practicalHours = a.course_detail?.practical_hours || 0;
                 const adjustedWorkload = lectureHours + tutorialHours + (practicalHours * 2);
                 const rawHours = lectureHours + tutorialHours + practicalHours;
-                
+
                 return [
                     `"${a.teacher_detail?.teacher_id?.first_name || ''} ${a.teacher_detail?.teacher_id?.last_name || ''}"`,
                     `"${a.course_detail?.course_detail?.course_name || ''}"`,
@@ -311,7 +311,7 @@ export function TeacherCourseAssignment() {
         if (studentCount <= 70) {
             return 1; // One teacher can handle up to 70 students
         }
-        
+
         // Each 70 students (or fraction) requires one teacher
         return Math.ceil(studentCount / 70);
     };
@@ -319,19 +319,19 @@ export function TeacherCourseAssignment() {
     // Calculate adjusted workload with practical hours counted as double
     const calculateAdjustedWorkload = (assignment: TCAssignment) => {
         if (!assignment.course_detail) return 0;
-        
+
         const lectureHours = assignment.course_detail.lecture_hours || 0;
         const tutorialHours = assignment.course_detail.tutorial_hours || 0;
         // Practical hours are counted double for workload
         const practicalHours = (assignment.course_detail.practical_hours || 0) * 2;
-        
+
         return lectureHours + tutorialHours + practicalHours;
     };
 
     const handleCourseSelect = (courseId: number) => {
         const newSelectedId = courseId === selectedCourseId ? null : courseId;
         setSelectedCourseId(newSelectedId);
-        
+
         // If selecting a course, ensure its group is expanded
         if (newSelectedId) {
             setExpandedCourses(prev => {
@@ -668,28 +668,22 @@ export function TeacherCourseAssignment() {
 
                                             {/* Teacher requirements */}
                                             <div className="bg-secondary/10 p-3 rounded-md">
-                                                <div className="text-sm text-muted-foreground">Teacher Requirements</div>
+                                                <div className="text-sm text-muted-foreground">Teacher Assignments</div>
                                                 <div className="flex items-end gap-1">
                                                     <div className="font-medium text-xl">
-                                                        {courseStats.total_teachers} / {calculateRequiredTeachers(
-                                                            courseStats.teachers.reduce((sum, t) => sum + (t.student_count || 0), 0)
-                                                        )}
+                                                        {courseStats.total_teachers}
                                                     </div>
                                                     <div className="text-sm text-muted-foreground ml-1 mb-0.5">
                                                         teachers assigned
                                                     </div>
                                                 </div>
-                                                {courseStats.total_teachers < calculateRequiredTeachers(
-                                                    courseStats.teachers.reduce((sum, t) => sum + (t.student_count || 0), 0)
-                                                ) ? (
+                                                {courseStats.total_teachers === 0 ? (
                                                     <Badge variant="destructive" className="mt-1">
-                                                        Requires {calculateRequiredTeachers(
-                                                            courseStats.teachers.reduce((sum, t) => sum + (t.student_count || 0), 0)
-                                                        ) - courseStats.total_teachers} more teachers
+                                                        No teachers assigned
                                                     </Badge>
                                                 ) : (
                                                     <Badge variant="outline" className="mt-1 bg-green-50">
-                                                        Sufficient teachers
+                                                        Teacher(s) assigned
                                                     </Badge>
                                                 )}
                                             </div>
@@ -698,12 +692,9 @@ export function TeacherCourseAssignment() {
                                         {/* Year-specific student count comparison */}
                                         <div className="p-3 bg-primary/5 rounded-lg border border-primary/20">
                                             <div className="flex justify-between items-center mb-2">
-                                                <h4 className="text-sm font-medium">Teacher Requirements</h4>
-                                                <Badge variant={
-                                                    (courseStats.total_teachers >= calculateRequiredTeachers(104)) ?
-                                                        "outline" : "destructive"
-                                                }>
-                                                    {courseStats.total_teachers} / {calculateRequiredTeachers(104)} teachers
+                                                <h4 className="text-sm font-medium">Teacher Assignments</h4>
+                                                <Badge variant={courseStats.total_teachers === 0 ? "destructive" : "outline"}>
+                                                    {courseStats.total_teachers} teacher(s)
                                                 </Badge>
                                             </div>
                                             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -725,20 +716,11 @@ export function TeacherCourseAssignment() {
                                                 </div>
                                             </div>
                                             <div className="text-sm bg-secondary/10 p-2 mt-2 rounded">
-                                                {(courseStats.total_teachers >= calculateRequiredTeachers(104)) ?
-                                                    <span className="text-green-600 font-medium">Adequate</span> :
-                                                    <span className="text-red-600 font-medium">Inadequate</span>} teacher staffing for this course.
+                                                {courseStats.total_teachers > 0 ?
+                                                    <span className="text-green-600 font-medium">Teacher(s) assigned</span> :
+                                                    <span className="text-red-600 font-medium">No teachers assigned</span>} to this course.
                                                 <br />
-                                                {calculateRequiredTeachers(104) === 1 ? (
-                                                    <span className="text-xs">This course has 104 students, which is within the capacity of a single teacher (up to 70 students).</span>
-                                                ) : (
-                                                    <span className="text-xs">This course has 104 students, requiring {calculateRequiredTeachers(104)} teachers based on workload capacity.</span>
-                                                )}
-                                                {courseStats.total_teachers > 0 && courseStats.total_teachers < calculateRequiredTeachers(104) && (
-                                                    <span className="block mt-1 text-xs text-amber-600">
-                                                        Currently {courseStats.total_teachers} teacher(s) assigned. Need {calculateRequiredTeachers(104) - courseStats.total_teachers} more.
-                                                    </span>
-                                                )}
+                                                <span className="text-xs">This course has {courseStats.teachers.reduce((sum, t) => sum + (t.student_count || 0), 0)} total students.</span>
                                             </div>
                                         </div>
 
@@ -821,7 +803,7 @@ export function TeacherCourseAssignment() {
                                     className={`border rounded-md overflow-hidden ${selectedCourseId === courseGroup.courseId ? 'border-primary shadow-sm' : ''}`}
                                 >
                                     <CollapsibleTrigger asChild>
-                                        <div 
+                                        <div
                                             className={`flex items-center justify-between p-4 cursor-pointer hover:bg-muted/50 ${selectedCourseId === courseGroup.courseId ? 'bg-primary/10' : ''}`}
                                         >
                                             <div className="flex items-center gap-2">
@@ -862,8 +844,8 @@ export function TeacherCourseAssignment() {
                                                     )}
                                                 </div>
                                                 <div className="flex items-center gap-2">
-                                                    <Button 
-                                                        variant="outline" 
+                                                    <Button
+                                                        variant="outline"
                                                         size="sm"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -872,8 +854,8 @@ export function TeacherCourseAssignment() {
                                                     >
                                                         View Stats
                                                     </Button>
-                                                    <Button 
-                                                        variant="outline" 
+                                                    <Button
+                                                        variant="outline"
                                                         size="sm"
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -930,11 +912,17 @@ export function TeacherCourseAssignment() {
                                                         <TableCell>{assignment.semester || 'N/A'}</TableCell>
                                                         <TableCell>
                                                             {assignment.course_detail && (
-                                                                <CourseWorkload
-                                                                    lecture={assignment.course_detail.lecture_hours || 0}
-                                                                    tutorial={assignment.course_detail.tutorial_hours || 0}
-                                                                    practical={assignment.course_detail.practical_hours || 0}
-                                                                />
+                                                                <div key={assignment.id} className="flex justify-between items-center p-2 bg-muted/30 rounded-md">
+                                                                    <div>
+                                                                        <p className="font-medium">{assignment.course_detail?.course_detail?.course_name}</p>
+                                                                        <p className="text-xs text-muted-foreground">
+                                                                            L:{assignment.course_detail.lecture_hours || 0} T:{assignment.course_detail.tutorial_hours || 0} P:{assignment.course_detail.practical_hours || 0}×2={assignment.course_detail.practical_hours ? assignment.course_detail.practical_hours * 2 : 0}
+                                                                        </p>
+                                                                    </div>
+                                                                    <Badge variant="secondary">
+                                                                        {assignment.course_detail.practical_hours ? assignment.course_detail.practical_hours * 2 : 0} hrs
+                                                                    </Badge>
+                                                                </div>
                                                             )}
                                                         </TableCell>
                                                         <TableCell className="text-right">

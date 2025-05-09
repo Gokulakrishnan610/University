@@ -44,8 +44,8 @@ import {
   Bell,
   ChevronDown
 } from 'lucide-react';
-import { 
-  useGetCurrentDepartmentCourses, 
+import {
+  useGetCurrentDepartmentCourses,
   Course,
   CourseMaster
 } from '@/action/course';
@@ -68,6 +68,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { useScrollRestoration } from '@/hooks/useScrollRestoration';
 
 // Stats card component for the dashboard
 interface StatCardProps {
@@ -108,14 +109,14 @@ interface RelationshipTagProps {
   forDeptId: number;
 }
 
-const RelationshipTag = ({ 
-  ownerDept, 
-  teacherDept, 
-  forDept, 
-  currentDeptId, 
-  ownerDeptId, 
-  teacherDeptId, 
-  forDeptId 
+const RelationshipTag = ({
+  ownerDept,
+  teacherDept,
+  forDept,
+  currentDeptId,
+  ownerDeptId,
+  teacherDeptId,
+  forDeptId
 }: RelationshipTagProps) => {
   // Case 1: We own, other dept teaches for their students
   if (ownerDeptId === currentDeptId && teacherDeptId !== currentDeptId && forDeptId === teacherDeptId) {
@@ -128,7 +129,7 @@ const RelationshipTag = ({
       </Badge>
     );
   }
-  
+
   // Case 2: We own, we teach for our students (self-owned, self-taught)
   if (ownerDeptId === currentDeptId && teacherDeptId === currentDeptId && forDeptId === currentDeptId) {
     return (
@@ -140,7 +141,7 @@ const RelationshipTag = ({
       </Badge>
     );
   }
-  
+
   // Case 3: We own, we teach for other department's students
   if (ownerDeptId === currentDeptId && teacherDeptId === currentDeptId && forDeptId !== currentDeptId) {
     return (
@@ -152,7 +153,7 @@ const RelationshipTag = ({
       </Badge>
     );
   }
-  
+
   // Case 4: Other dept owns and teaches for our students
   if (ownerDeptId !== currentDeptId && teacherDeptId === ownerDeptId && forDeptId === currentDeptId) {
     return (
@@ -164,7 +165,7 @@ const RelationshipTag = ({
       </Badge>
     );
   }
-  
+
   // Case 5: Other dept owns, we teach for our students
   if (ownerDeptId !== currentDeptId && teacherDeptId === currentDeptId && forDeptId === currentDeptId) {
     return (
@@ -176,7 +177,7 @@ const RelationshipTag = ({
       </Badge>
     );
   }
-  
+
   // Case 6: Other dept owns, we teach for their students
   if (ownerDeptId !== currentDeptId && teacherDeptId === currentDeptId && forDeptId !== currentDeptId) {
     return (
@@ -188,7 +189,7 @@ const RelationshipTag = ({
       </Badge>
     );
   }
-  
+
   // Default case
   return (
     <Badge variant="outline" className="bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-900/20 dark:text-gray-300">
@@ -211,14 +212,14 @@ interface CompactRelationshipTagProps {
   forDeptId: number;
 }
 
-const CompactRelationshipTag = ({ 
-  ownerDept, 
-  teacherDept, 
-  forDept, 
-  currentDeptId, 
-  ownerDeptId, 
-  teacherDeptId, 
-  forDeptId 
+const CompactRelationshipTag = ({
+  ownerDept,
+  teacherDept,
+  forDept,
+  currentDeptId,
+  ownerDeptId,
+  teacherDeptId,
+  forDeptId
 }: CompactRelationshipTagProps) => {
   // Case 1: We own, other dept teaches for their students
   if (ownerDeptId === currentDeptId && teacherDeptId !== currentDeptId && forDeptId === teacherDeptId) {
@@ -229,7 +230,7 @@ const CompactRelationshipTag = ({
       </div>
     );
   }
-  
+
   // Case 2: We own, we teach for our students (self-owned, self-taught)
   if (ownerDeptId === currentDeptId && teacherDeptId === currentDeptId && forDeptId === currentDeptId) {
     return (
@@ -239,7 +240,7 @@ const CompactRelationshipTag = ({
       </div>
     );
   }
-  
+
   // Case 3: We own, we teach for other department's students
   if (ownerDeptId === currentDeptId && teacherDeptId === currentDeptId && forDeptId !== currentDeptId) {
     return (
@@ -249,7 +250,7 @@ const CompactRelationshipTag = ({
       </div>
     );
   }
-  
+
   // Case 4: Other dept owns and teaches for our students
   if (ownerDeptId !== currentDeptId && teacherDeptId === ownerDeptId && forDeptId === currentDeptId) {
     return (
@@ -259,7 +260,7 @@ const CompactRelationshipTag = ({
       </div>
     );
   }
-  
+
   // Case 5: Other dept owns, we teach for our students
   if (ownerDeptId !== currentDeptId && teacherDeptId === currentDeptId && forDeptId === currentDeptId) {
     return (
@@ -269,7 +270,7 @@ const CompactRelationshipTag = ({
       </div>
     );
   }
-  
+
   // Case 6: Other dept owns, we teach for their students
   if (ownerDeptId !== currentDeptId && teacherDeptId === currentDeptId && forDeptId !== currentDeptId) {
     return (
@@ -279,7 +280,7 @@ const CompactRelationshipTag = ({
       </div>
     );
   }
-  
+
   // Default case
   return (
     <div className="flex items-center gap-1">
@@ -300,61 +301,64 @@ export default function CourseManagementPage() {
   const [showAddCourseMasterDialog, setShowAddCourseMasterDialog] = useState(false);
   const [defaultDeptId, setDefaultDeptId] = useState<number | undefined>(undefined);
   const navigate = useNavigate();
-  
+
+  // Add scroll restoration
+  useScrollRestoration('courses-page');
+
   const { data: departmentData, isPending, refetch } = useGetCurrentDepartmentCourses();
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
   const { data: currentDepartment, isPending: loadingCurrentDept } = useGetCurrentDepartment();
   const { data: courseNotifications } = useGetCourseNotifications();
-  
+
   const notificationCount = courseNotifications?.data?.length || 0;
-  
+
   const departments = departmentsData || [];
-  
+
   // Set default department ID when current department is loaded
   useEffect(() => {
     if (currentDepartment && currentDepartment.id) {
       setDefaultDeptId(currentDepartment.id);
     }
   }, [currentDepartment]);
-  
+
   const allOwnedCourses = departmentData?.owned_courses?.data || [];
   const allTeachingCourses = departmentData?.teaching_courses?.data || [];
   const allReceivingCourses = departmentData?.receiving_courses?.data || [];
   const allForDeptCourses = departmentData?.for_dept_courses?.data || [];
-  
+
   // Filter courses based on selected relationship type
   const filterByRelationship = (course: Course, currentDeptId: number | undefined, relationshipFilter: string) => {
     if (relationshipFilter === 'all') return true;
-    
+
     const ownerDeptId = course.course_detail.course_dept_detail.id;
     const teacherDeptId = course.teaching_dept_detail.id;
     const forDeptId = course.for_dept_detail.id;
-    
+
     switch (relationshipFilter) {
       case 'self-owned-self-taught':
-        return ownerDeptId === currentDeptId && 
-               teacherDeptId === currentDeptId; 
-               // Note: We've removed the forDeptId check to include both cases 
-               // where courses are taught for our own students or others' students
+        return ownerDeptId === currentDeptId &&
+          teacherDeptId === currentDeptId;
+      // Note: We've removed the forDeptId check to include both cases 
+      // where courses are taught for our own students or others' students
       case 'own-teach-others':
-        return ownerDeptId === currentDeptId && 
-               teacherDeptId === currentDeptId && 
-               forDeptId !== currentDeptId;
+        return ownerDeptId === currentDeptId &&
+          teacherDeptId === currentDeptId &&
+          forDeptId !== currentDeptId;
       case 'own-others-teach':
-        return ownerDeptId === currentDeptId && 
-               teacherDeptId !== currentDeptId;
+        return ownerDeptId === currentDeptId &&
+          teacherDeptId !== currentDeptId;
       case 'others-own-we-teach-for-us':
-        return ownerDeptId !== currentDeptId && 
-               teacherDeptId === currentDeptId && 
-               forDeptId === currentDeptId;
+        return ownerDeptId !== currentDeptId &&
+          teacherDeptId === currentDeptId &&
+          forDeptId === currentDeptId;
       case 'others-own-we-teach-for-them':
-        return ownerDeptId !== currentDeptId && 
-               teacherDeptId === currentDeptId && 
-               forDeptId !== currentDeptId;
+        return ownerDeptId !== currentDeptId &&
+          teacherDeptId === currentDeptId &&
+          forDeptId !== currentDeptId;
       case 'others-own-teach':
-        return ownerDeptId !== currentDeptId && 
-               teacherDeptId !== currentDeptId && 
-               forDeptId === currentDeptId;
+        return ownerDeptId !== currentDeptId &&
+          teacherDeptId !== currentDeptId &&
+          forDeptId === currentDeptId;
       default:
         return true;
     }
@@ -365,19 +369,19 @@ export default function CourseManagementPage() {
   const teachingCoursesRole = departmentData?.teaching_courses?.role || 'teacher';
   const receivingCoursesRole = departmentData?.receiving_courses?.role || 'owner_not_teacher';
   const forDeptCoursesRole = departmentData?.for_dept_courses?.role || 'learner';
-  
+
   // Get descriptions
   const ownedCoursesDescription = departmentData?.owned_courses?.description || 'Courses created and maintained by our department';
   const teachingCoursesDescription = departmentData?.teaching_courses?.description || 'Courses our department teaches, including both courses we own and courses from other departments';
   const receivingCoursesDescription = departmentData?.receiving_courses?.description || 'Our courses that are taught by faculty from other departments';
   const forDeptCoursesDescription = departmentData?.for_dept_courses?.description || 'External courses our students take';
-  
+
   // Filter courses based on search query
   const filterCourses = (courses: Course[]) => {
     if (!searchQuery.trim()) return courses;
-    
+
     const query = searchQuery.toLowerCase().trim();
-    return courses.filter(course => 
+    return courses.filter(course =>
       course.course_detail.course_id.toLowerCase().includes(query) ||
       course.course_detail.course_name.toLowerCase().includes(query) ||
       course.teaching_dept_detail.dept_name.toLowerCase().includes(query) ||
@@ -388,24 +392,24 @@ export default function CourseManagementPage() {
       (course.relationship_type?.description.toLowerCase().includes(query))
     );
   };
-  
+
   // Apply filters using useMemo to avoid unnecessary recalculations
   const ownedCourses = useMemo(() => filterCourses(allOwnedCourses), [allOwnedCourses, searchQuery]);
   const teachingCourses = useMemo(() => filterCourses(allTeachingCourses), [allTeachingCourses, searchQuery]);
   const receivingCourses = useMemo(() => filterCourses(allReceivingCourses), [allReceivingCourses, searchQuery]);
   const forDeptCourses = useMemo(() => filterCourses(allForDeptCourses), [allForDeptCourses, searchQuery]);
-  
+
   // Count courses that are both owned and taught by the department
   const selfOwnedSelfTaughtCount = useMemo(() => {
-    return allOwnedCourses.filter(course => 
+    return allOwnedCourses.filter(course =>
       course.course_detail.course_dept_detail.id === course.teaching_dept_id
     ).length;
   }, [allOwnedCourses]);
-  
+
   // Group owned courses by course master ID
   const groupedOwnedCourses = useMemo(() => {
     const grouped: Record<number, GroupedCourse> = {};
-    
+
     // First, group the courses by course master ID
     ownedCourses.forEach(course => {
       const masterID = course.course_detail.id;
@@ -415,17 +419,17 @@ export default function CourseManagementPage() {
           instances: []
         };
       }
-      
+
       grouped[masterID].instances.push(course);
     });
-    
+
     return Object.values(grouped);
   }, [ownedCourses]);
-  
+
   // Group teaching courses by course master ID
   const groupedTeachingCourses = useMemo(() => {
     const grouped: Record<number, GroupedCourse> = {};
-    
+
     // Group by course master ID
     teachingCourses.forEach(course => {
       const masterID = course.course_detail.id;
@@ -435,17 +439,17 @@ export default function CourseManagementPage() {
           instances: []
         };
       }
-      
+
       grouped[masterID].instances.push(course);
     });
-    
+
     return Object.values(grouped);
   }, [teachingCourses]);
-  
+
   // Group receiving courses by course master ID
   const groupedReceivingCourses = useMemo(() => {
     const grouped: Record<number, GroupedCourse> = {};
-    
+
     // Group by course master ID
     receivingCourses.forEach(course => {
       const masterID = course.course_detail.id;
@@ -455,17 +459,17 @@ export default function CourseManagementPage() {
           instances: []
         };
       }
-      
+
       grouped[masterID].instances.push(course);
     });
-    
+
     return Object.values(grouped);
   }, [receivingCourses]);
-  
+
   // Group forDept courses by course master ID
   const groupedForDeptCourses = useMemo(() => {
     const grouped: Record<number, GroupedCourse> = {};
-    
+
     // Group by course master ID
     forDeptCourses.forEach(course => {
       const masterID = course.course_detail.id;
@@ -475,21 +479,21 @@ export default function CourseManagementPage() {
           instances: []
         };
       }
-      
+
       grouped[masterID].instances.push(course);
     });
-    
+
     return Object.values(grouped);
   }, [forDeptCourses]);
-  
+
   const handleNavigateToCreateCourse = () => {
     navigate('/courses/create');
   };
-  
+
   const handleOpenCreateCourseMasterDialog = () => {
     setShowAddCourseMasterDialog(true);
   };
-  
+
   const handleNavigateToDetail = (courseId: number, e?: React.MouseEvent) => {
     // If triggered by an event (like a button click), stop propagation
     if (e) {
@@ -498,11 +502,11 @@ export default function CourseManagementPage() {
     // Navigate to course detail page
     navigate(`/courses/${courseId}`);
   };
-  
+
   const handleClearSearch = () => {
     setSearchQuery('');
   };
-  
+
   // Now let's add a dropdown for relationship types
   // First, define the relationship types
   interface RelationshipType {
@@ -568,7 +572,7 @@ export default function CourseManagementPage() {
         <Info className="h-4 w-4 text-primary" />
         Course Relationship Types
       </h3>
-      
+
       <div className="flex gap-2 items-center">
         <Label htmlFor="relationshipFilter" className="text-sm whitespace-nowrap">Filter by type:</Label>
         <Select value={selectedRelationshipFilter} onValueChange={setSelectedRelationshipFilter}>
@@ -591,11 +595,10 @@ export default function CourseManagementPage() {
     </div>
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 mt-4">
       {relationshipTypes.map(type => (
-        <div 
-          key={type.id} 
-          className={`rounded-lg p-3 border ${
-            selectedRelationshipFilter === type.id ? 'ring-2 ring-primary/20' : ''
-          }`}
+        <div
+          key={type.id}
+          className={`rounded-lg p-3 border ${selectedRelationshipFilter === type.id ? 'ring-2 ring-primary/20' : ''
+            }`}
           onClick={() => setSelectedRelationshipFilter(
             selectedRelationshipFilter === type.id ? 'all' : type.id
           )}
@@ -618,158 +621,160 @@ export default function CourseManagementPage() {
 
   // Filter the groups based on selected relationship type
   // Add this to the TabsContent for the owned courses tab
-  {isPending ? (
-    <div className="text-center py-8 text-muted-foreground">
-      <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
-      <p>Loading course data...</p>
-    </div>
-  ) : groupedOwnedCourses.length === 0 ? (
-    <div className="text-center py-8 text-muted-foreground">
-      {searchQuery ? (
-        <>No courses match your search. <Button variant="link" className="p-0 h-auto" onClick={handleClearSearch}>Clear filter</Button></>
-      ) : (
-        "No owned courses found. Create your first course."
-      )}
-    </div>
-  ) : (
-    <div className="space-y-4 p-4">
-      {groupedOwnedCourses
-        .filter(groupedCourse => {
-          if (selectedRelationshipFilter === 'all') return true;
-          
-          if (groupedCourse.instances.length === 0) return false;
-          const course = groupedCourse.instances[0];
-          
-          return filterByRelationship(course, currentDepartment?.id, selectedRelationshipFilter);
-        })
-        .map((groupedCourse) => (
-          <Card key={groupedCourse.courseDetail.id} className="overflow-hidden border-blue-100 dark:border-blue-900/40 shadow-sm">
-            <CardHeader className="bg-blue-50/50 dark:bg-blue-950/30 px-6 py-3">
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <BookOpen className="h-5 w-5 text-blue-500" />
-                    <div>
-                      <h3 className="font-medium text-base">
-                        {groupedCourse.courseDetail.course_id}: {groupedCourse.courseDetail.course_name}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {groupedCourse.courseDetail.credits} credits • {
-                          groupedCourse.courseDetail.course_type === 'T' ? 'Theory' : 
-                          groupedCourse.courseDetail.course_type === 'L' ? 'Lab' : 
-                          'Lab & Theory'
-                        } • Regulation: {groupedCourse.courseDetail.regulation}
-                      </p>
-                    </div>
-                  </div>
-                  <Badge variant="outline" className="bg-blue-100/50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
-                    {groupedCourse.instances.length} instances
-                  </Badge>
-                </div>
-                
-                {groupedCourse.instances.length > 0 && (
-                  <RelationshipTag
-                    ownerDept={groupedCourse.courseDetail.course_dept_detail.dept_name}
-                    teacherDept={groupedCourse.instances[0].teaching_dept_detail.dept_name}
-                    forDept={groupedCourse.instances[0].for_dept_detail.dept_name}
-                    currentDeptId={currentDepartment?.id || 0}
-                    ownerDeptId={groupedCourse.courseDetail.course_dept_detail.id}
-                    teacherDeptId={groupedCourse.instances[0].teaching_dept_detail.id}
-                    forDeptId={groupedCourse.instances[0].for_dept_detail.id}
-                  />
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="px-0 py-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Teaching Department</TableHead>
-                    <TableHead>For Students Of</TableHead>
-                    <TableHead>Year & Semester</TableHead>
-                    <TableHead>Relationship</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {groupedCourse.instances.map((course) => (
-                    <TableRow 
-                      key={course.id} 
-                      className="cursor-pointer hover:bg-muted/50" 
-                      onClick={(e) => handleNavigateToDetail(course.id, e)}
-                    >
-                      <TableCell>
-                        {course.teaching_dept_detail.id === currentDepartment?.id ? (
-                          <Badge variant="outline" className="bg-green-50 text-green-600 border-green-100 dark:bg-green-900/30 dark:text-green-400">
-                            Self-Taught
-                          </Badge>
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <School className="h-3.5 w-3.5 text-orange-500" />
-                            <span>{course.teaching_dept_detail.dept_name}</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        {course.for_dept_detail.id === currentDepartment?.id ? (
-                          <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/30 dark:text-purple-400">
-                            Our Students
-                          </Badge>
-                        ) : (
-                          <div className="flex items-center gap-1">
-                            <GraduationCap className="h-3.5 w-3.5 text-purple-500" />
-                            <span>{course.for_dept_detail.dept_name}</span>
-                          </div>
-                        )}
-                      </TableCell>
-                      <TableCell>Year {course.course_year}, Sem {course.course_semester}</TableCell>
-                      <TableCell>
-                        <CompactRelationshipTag
-                          ownerDept={course.course_detail.course_dept_detail.dept_name}
-                          teacherDept={course.teaching_dept_detail.dept_name}
-                          forDept={course.for_dept_detail.dept_name}
-                          currentDeptId={currentDepartment?.id || 0}
-                          ownerDeptId={course.course_detail.course_dept_detail.id}
-                          teacherDeptId={course.teaching_dept_detail.id}
-                          forDeptId={course.for_dept_detail.id}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={
-                            course.teaching_status === 'active' ? 'default' : 
-                            course.teaching_status === 'inactive' ? 'secondary' : 
-                            'outline'
-                          }
-                          className={
-                            course.teaching_status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' :
-                            course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
-                            'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
-                          }
-                        >
-                          {course.teaching_status === 'active' ? 'Active' : 
-                          course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Button 
-                          size="sm" 
-                          variant="outline"
-                          onClick={(e) => handleNavigateToDetail(course.id, e)}
-                        >
-                          View
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        ))}
+  {
+    isPending ? (
+      <div className="text-center py-8 text-muted-foreground">
+        <Loader2 className="h-6 w-6 animate-spin mx-auto mb-2" />
+        <p>Loading course data...</p>
       </div>
-    )}
+    ) : groupedOwnedCourses.length === 0 ? (
+      <div className="text-center py-8 text-muted-foreground">
+        {searchQuery ? (
+          <>No courses match your search. <Button variant="link" className="p-0 h-auto" onClick={handleClearSearch}>Clear filter</Button></>
+        ) : (
+          "No owned courses found. Create your first course."
+        )}
+      </div>
+    ) : (
+      <div className="space-y-4 p-4">
+        {groupedOwnedCourses
+          .filter(groupedCourse => {
+            if (selectedRelationshipFilter === 'all') return true;
+
+            if (groupedCourse.instances.length === 0) return false;
+            const course = groupedCourse.instances[0];
+
+            return filterByRelationship(course, currentDepartment?.id, selectedRelationshipFilter);
+          })
+          .map((groupedCourse) => (
+            <Card key={groupedCourse.courseDetail.id} className="overflow-hidden border-blue-100 dark:border-blue-900/40 shadow-sm">
+              <CardHeader className="bg-blue-50/50 dark:bg-blue-950/30 px-6 py-3">
+                <div className="flex flex-col gap-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <BookOpen className="h-5 w-5 text-blue-500" />
+                      <div>
+                        <h3 className="font-medium text-base">
+                          {groupedCourse.courseDetail.course_id}: {groupedCourse.courseDetail.course_name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          {groupedCourse.courseDetail.credits} credits • {
+                            groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
+                              groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
+                                'Lab & Theory'
+                          } • Regulation: {groupedCourse.courseDetail.regulation}
+                        </p>
+                      </div>
+                    </div>
+                    <Badge variant="outline" className="bg-blue-100/50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-800">
+                      {groupedCourse.instances.length} instances
+                    </Badge>
+                  </div>
+
+                  {groupedCourse.instances.length > 0 && (
+                    <RelationshipTag
+                      ownerDept={groupedCourse.courseDetail.course_dept_detail.dept_name}
+                      teacherDept={groupedCourse.instances[0].teaching_dept_detail.dept_name}
+                      forDept={groupedCourse.instances[0].for_dept_detail.dept_name}
+                      currentDeptId={currentDepartment?.id || 0}
+                      ownerDeptId={groupedCourse.courseDetail.course_dept_detail.id}
+                      teacherDeptId={groupedCourse.instances[0].teaching_dept_detail.id}
+                      forDeptId={groupedCourse.instances[0].for_dept_detail.id}
+                    />
+                  )}
+                </div>
+              </CardHeader>
+              <CardContent className="px-0 py-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Teaching Department</TableHead>
+                      <TableHead>For Students Of</TableHead>
+                      <TableHead>Year & Semester</TableHead>
+                      <TableHead>Relationship</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {groupedCourse.instances.map((course) => (
+                      <TableRow
+                        key={course.id}
+                        className="cursor-pointer hover:bg-muted/50"
+                        onClick={(e) => handleNavigateToDetail(course.id, e)}
+                      >
+                        <TableCell>
+                          {course.teaching_dept_detail.id === currentDepartment?.id ? (
+                            <Badge variant="outline" className="bg-green-50 text-green-600 border-green-100 dark:bg-green-900/30 dark:text-green-400">
+                              Self-Taught
+                            </Badge>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <School className="h-3.5 w-3.5 text-orange-500" />
+                              <span>{course.teaching_dept_detail.dept_name}</span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          {course.for_dept_detail.id === currentDepartment?.id ? (
+                            <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-100 dark:bg-purple-900/30 dark:text-purple-400">
+                              Our Students
+                            </Badge>
+                          ) : (
+                            <div className="flex items-center gap-1">
+                              <GraduationCap className="h-3.5 w-3.5 text-purple-500" />
+                              <span>{course.for_dept_detail.dept_name}</span>
+                            </div>
+                          )}
+                        </TableCell>
+                        <TableCell>Year {course.course_year}, Sem {course.course_semester}</TableCell>
+                        <TableCell>
+                          <CompactRelationshipTag
+                            ownerDept={course.course_detail.course_dept_detail.dept_name}
+                            teacherDept={course.teaching_dept_detail.dept_name}
+                            forDept={course.for_dept_detail.dept_name}
+                            currentDeptId={currentDepartment?.id || 0}
+                            ownerDeptId={course.course_detail.course_dept_detail.id}
+                            teacherDeptId={course.teaching_dept_detail.id}
+                            forDeptId={course.for_dept_detail.id}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={
+                              course.teaching_status === 'active' ? 'default' :
+                                course.teaching_status === 'inactive' ? 'secondary' :
+                                  'outline'
+                            }
+                            className={
+                              course.teaching_status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' :
+                                course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
+                                  'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
+                            }
+                          >
+                            {course.teaching_status === 'active' ? 'Active' :
+                              course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e) => handleNavigateToDetail(course.id, e)}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          ))}
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
@@ -781,21 +786,21 @@ export default function CourseManagementPage() {
               <CardTitle className="text-2xl">Course Management</CardTitle>
             </div>
             <div className="flex gap-2">
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => navigate('/courses/allocations')}
                 className="flex items-center gap-1.5"
               >
                 <ArrowLeftRight className="h-4 w-4" />
                 <span>Resource Allocations</span>
               </Button>
-              <Button 
-                variant="outline" 
+              <Button
+                variant="outline"
                 onClick={() => navigate('/courses/all-courses')}
                 className="flex items-center gap-1.5"
               >
-                  <ListFilter className="h-4 w-4" />
-                  <span>View All Courses</span>
+                <ListFilter className="h-4 w-4" />
+                <span>View All Courses</span>
               </Button>
               <Button variant="outline" onClick={() => navigate('/course-masters')}>
                 <BookOpen className="h-4 w-4" />
@@ -807,7 +812,7 @@ export default function CourseManagementPage() {
             Manage courses for your department, including those you own, teach, and your students take
           </CardDescription>
         </CardHeader>
-        
+
         <CardContent className="px-6 pb-6">
           {/* Department Role Dashboard - More Compact */}
           <div className="mb-6">
@@ -829,37 +834,37 @@ export default function CourseManagementPage() {
                 </TooltipProvider>
               </div>
             </div>
-            
+
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-              <StatCard 
-                title="Course Owner" 
+              <StatCard
+                title="Course Owner"
                 icon={<BookOpen className="h-5 w-5 text-blue-500" />}
                 color="bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-900"
                 count={allOwnedCourses.length}
                 total={allOwnedCourses.length}
                 description="Courses created and maintained by your department"
               />
-              
-              <StatCard 
-                title="Teaching Department" 
+
+              <StatCard
+                title="Teaching Department"
                 icon={<School className="h-5 w-5 text-orange-500" />}
                 color="bg-orange-50 border-orange-200 dark:bg-orange-950/30 dark:border-orange-900"
                 count={allTeachingCourses.length}
                 total={allTeachingCourses.length}
                 description="Courses taught by your faculty (includes both your own and others' courses)"
               />
-              
-              <StatCard 
-                title="For Our Students" 
+
+              <StatCard
+                title="For Our Students"
                 icon={<GraduationCap className="h-5 w-5 text-purple-500" />}
                 color="bg-purple-50 border-purple-200 dark:bg-purple-950/30 dark:border-purple-900"
                 count={allForDeptCourses.length}
                 total={allForDeptCourses.length}
                 description="External courses taken by your department's students"
               />
-              
-              <StatCard 
-                title="Self-Taught Courses" 
+
+              <StatCard
+                title="Self-Taught Courses"
                 icon={<CircleDot className="h-5 w-5 text-green-500" />}
                 color="bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-900"
                 count={selfOwnedSelfTaughtCount}
@@ -868,7 +873,7 @@ export default function CourseManagementPage() {
               />
             </div>
           </div>
-          
+
           {/* Department Role Information - Collapsible */}
           <div className="mb-6">
             <Collapsible className="p-2 bg-muted/30 rounded-lg border">
@@ -903,7 +908,7 @@ export default function CourseManagementPage() {
                         <p>The <strong>Course Owner</strong> department creates the course, defines its content and curriculum, and maintains academic standards. These are courses where your department is the originating department.</p>
                       </TooltipContent>
                     </Tooltip>
-                    
+
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-start gap-2 cursor-help p-2 hover:bg-muted/50 rounded-md transition-colors">
@@ -920,7 +925,7 @@ export default function CourseManagementPage() {
                         <p>The <strong>Teaching Department</strong> provides faculty to teach courses. This includes both courses your department owns and teaches itself (self-taught) and courses owned by other departments.</p>
                       </TooltipContent>
                     </Tooltip>
-                    
+
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-start gap-2 cursor-help p-2 hover:bg-muted/50 rounded-md transition-colors">
@@ -937,7 +942,7 @@ export default function CourseManagementPage() {
                         <p>These are courses <strong>owned by your department</strong> but <strong>taught by faculty from other departments</strong>. Your department creates and maintains the curriculum, but another department handles the teaching.</p>
                       </TooltipContent>
                     </Tooltip>
-                    
+
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <div className="flex items-start gap-2 cursor-help p-2 hover:bg-muted/50 rounded-md transition-colors">
@@ -968,7 +973,7 @@ export default function CourseManagementPage() {
                   <Info className="h-4 w-4 text-primary" />
                   <h3 className="text-sm font-medium">Course Relationship Types</h3>
                 </div>
-                
+
                 <div className="flex items-center gap-2 mt-2 md:mt-0">
                   <Label htmlFor="relationshipFilter" className="text-sm whitespace-nowrap hidden md:inline">Filter by type:</Label>
                   <Select value={selectedRelationshipFilter} onValueChange={setSelectedRelationshipFilter}>
@@ -995,15 +1000,14 @@ export default function CourseManagementPage() {
                   </CollapsibleTrigger>
                 </div>
               </div>
-              
+
               <CollapsibleContent className="mt-2">
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {relationshipTypes.map(type => (
-                    <div 
-                      key={type.id} 
-                      className={`rounded-lg p-3 border ${
-                        selectedRelationshipFilter === type.id ? 'ring-2 ring-primary/20' : ''
-                      }`}
+                    <div
+                      key={type.id}
+                      className={`rounded-lg p-3 border ${selectedRelationshipFilter === type.id ? 'ring-2 ring-primary/20' : ''
+                        }`}
                       onClick={() => setSelectedRelationshipFilter(
                         selectedRelationshipFilter === type.id ? 'all' : type.id
                       )}
@@ -1062,7 +1066,7 @@ export default function CourseManagementPage() {
                   </Badge>
                 </TabsTrigger>
               </TabsList>
-              
+
               <div className="flex items-center justify-between mb-4 gap-2">
                 <div className="relative w-full max-w-sm">
                   <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground " />
@@ -1089,7 +1093,7 @@ export default function CourseManagementPage() {
                 </Button>
               </div>
             </div>
-            
+
             {/* Owned Courses Tab */}
             <TabsContent value="owned">
               <Card>
@@ -1143,39 +1147,39 @@ export default function CourseManagementPage() {
                         {groupedOwnedCourses
                           .filter(groupedCourse => {
                             if (selectedRelationshipFilter === 'all') return true;
-                            
+
                             // Get the first instance to check relationship type
                             if (groupedCourse.instances.length === 0) return false;
                             const course = groupedCourse.instances[0];
-                            
+
                             // Check which relationship type matches
                             const ownerDeptId = course.course_detail.course_dept_detail.id;
                             const teacherDeptId = course.teaching_dept_detail.id;
                             const forDeptId = course.for_dept_detail.id;
-                            
+
                             switch (selectedRelationshipFilter) {
                               case 'self-owned-self-taught':
-                                return ownerDeptId === currentDepartment?.id && 
-                                       teacherDeptId === currentDepartment?.id;
+                                return ownerDeptId === currentDepartment?.id &&
+                                  teacherDeptId === currentDepartment?.id;
                               case 'own-teach-others':
-                                return ownerDeptId === currentDepartment?.id && 
-                                       teacherDeptId === currentDepartment?.id && 
-                                       forDeptId !== currentDepartment?.id;
+                                return ownerDeptId === currentDepartment?.id &&
+                                  teacherDeptId === currentDepartment?.id &&
+                                  forDeptId !== currentDepartment?.id;
                               case 'own-others-teach':
-                                return ownerDeptId === currentDepartment?.id && 
-                                       teacherDeptId !== currentDepartment?.id;
+                                return ownerDeptId === currentDepartment?.id &&
+                                  teacherDeptId !== currentDepartment?.id;
                               case 'others-own-we-teach-for-us':
-                                return ownerDeptId !== currentDepartment?.id && 
-                                       teacherDeptId === currentDepartment?.id && 
-                                       forDeptId === currentDepartment?.id;
+                                return ownerDeptId !== currentDepartment?.id &&
+                                  teacherDeptId === currentDepartment?.id &&
+                                  forDeptId === currentDepartment?.id;
                               case 'others-own-we-teach-for-them':
-                                return ownerDeptId !== currentDepartment?.id && 
-                                       teacherDeptId === currentDepartment?.id && 
-                                       forDeptId !== currentDepartment?.id;
+                                return ownerDeptId !== currentDepartment?.id &&
+                                  teacherDeptId === currentDepartment?.id &&
+                                  forDeptId !== currentDepartment?.id;
                               case 'others-own-teach':
-                                return ownerDeptId !== currentDepartment?.id && 
-                                       teacherDeptId !== currentDepartment?.id && 
-                                       forDeptId === currentDepartment?.id;
+                                return ownerDeptId !== currentDepartment?.id &&
+                                  teacherDeptId !== currentDepartment?.id &&
+                                  forDeptId === currentDepartment?.id;
                               default:
                                 return true;
                             }
@@ -1193,9 +1197,9 @@ export default function CourseManagementPage() {
                                         </h3>
                                         <p className="text-sm text-muted-foreground">
                                           {groupedCourse.courseDetail.credits} credits • {
-                                            groupedCourse.courseDetail.course_type === 'T' ? 'Theory' : 
-                                            groupedCourse.courseDetail.course_type === 'L' ? 'Lab' : 
-                                            'Lab & Theory'
+                                            groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
+                                              groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
+                                                'Lab & Theory'
                                           } • Regulation: {groupedCourse.courseDetail.regulation}
                                         </p>
                                       </div>
@@ -1204,7 +1208,7 @@ export default function CourseManagementPage() {
                                       {groupedCourse.instances.length} instances
                                     </Badge>
                                   </div>
-                                  
+
                                   {groupedCourse.instances.length > 0 && (
                                     <RelationshipTag
                                       ownerDept={groupedCourse.courseDetail.course_dept_detail.dept_name}
@@ -1232,9 +1236,9 @@ export default function CourseManagementPage() {
                                   </TableHeader>
                                   <TableBody>
                                     {groupedCourse.instances.map((course) => (
-                                      <TableRow 
-                                        key={course.id} 
-                                        className="cursor-pointer hover:bg-muted/50" 
+                                      <TableRow
+                                        key={course.id}
+                                        className="cursor-pointer hover:bg-muted/50"
                                         onClick={(e) => handleNavigateToDetail(course.id, e)}
                                       >
                                         <TableCell>
@@ -1274,25 +1278,25 @@ export default function CourseManagementPage() {
                                           />
                                         </TableCell>
                                         <TableCell>
-                                          <Badge 
+                                          <Badge
                                             variant={
-                                              course.teaching_status === 'active' ? 'default' : 
-                                              course.teaching_status === 'inactive' ? 'secondary' : 
-                                              'outline'
+                                              course.teaching_status === 'active' ? 'default' :
+                                                course.teaching_status === 'inactive' ? 'secondary' :
+                                                  'outline'
                                             }
                                             className={
                                               course.teaching_status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' :
-                                              course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
-                                              'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
+                                                course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
+                                                  'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
                                             }
                                           >
-                                            {course.teaching_status === 'active' ? 'Active' : 
-                                            course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
+                                            {course.teaching_status === 'active' ? 'Active' :
+                                              course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
                                           </Badge>
                                         </TableCell>
                                         <TableCell className="text-right">
-                                          <Button 
-                                            size="sm" 
+                                          <Button
+                                            size="sm"
                                             variant="outline"
                                             onClick={(e) => handleNavigateToDetail(course.id, e)}
                                           >
@@ -1384,9 +1388,9 @@ export default function CourseManagementPage() {
                                       </div>
                                       <p className="text-sm text-muted-foreground">
                                         {groupedCourse.courseDetail.credits} credits • {
-                                          groupedCourse.courseDetail.course_type === 'T' ? 'Theory' : 
-                                          groupedCourse.courseDetail.course_type === 'L' ? 'Lab' : 
-                                          'Lab & Theory'
+                                          groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
+                                            groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
+                                              'Lab & Theory'
                                         } • Regulation: {groupedCourse.courseDetail.regulation}
                                       </p>
                                     </div>
@@ -1395,7 +1399,7 @@ export default function CourseManagementPage() {
                                     {groupedCourse.instances.length} instances
                                   </Badge>
                                 </div>
-                                
+
                                 {groupedCourse.instances.length > 0 && (
                                   <RelationshipTag
                                     ownerDept={groupedCourse.courseDetail.course_dept_detail.dept_name}
@@ -1422,9 +1426,9 @@ export default function CourseManagementPage() {
                                 </TableHeader>
                                 <TableBody>
                                   {groupedCourse.instances.map((course) => (
-                                    <TableRow 
-                                      key={course.id} 
-                                      className="cursor-pointer hover:bg-muted/50" 
+                                    <TableRow
+                                      key={course.id}
+                                      className="cursor-pointer hover:bg-muted/50"
                                       onClick={(e) => handleNavigateToDetail(course.id, e)}
                                     >
                                       <TableCell>
@@ -1452,25 +1456,25 @@ export default function CourseManagementPage() {
                                         />
                                       </TableCell>
                                       <TableCell>
-                                        <Badge 
+                                        <Badge
                                           variant={
-                                            course.teaching_status === 'active' ? 'default' : 
-                                            course.teaching_status === 'inactive' ? 'secondary' : 
-                                            'outline'
+                                            course.teaching_status === 'active' ? 'default' :
+                                              course.teaching_status === 'inactive' ? 'secondary' :
+                                                'outline'
                                           }
                                           className={
                                             course.teaching_status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' :
-                                            course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
-                                            'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
+                                              course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
+                                                'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
                                           }
                                         >
-                                          {course.teaching_status === 'active' ? 'Active' : 
-                                          course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
+                                          {course.teaching_status === 'active' ? 'Active' :
+                                            course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button 
-                                          size="sm" 
+                                        <Button
+                                          size="sm"
                                           variant="outline"
                                           onClick={(e) => handleNavigateToDetail(course.id, e)}
                                         >
@@ -1554,9 +1558,9 @@ export default function CourseManagementPage() {
                                       </h3>
                                       <p className="text-sm text-muted-foreground">
                                         {groupedCourse.courseDetail.credits} credits • {
-                                          groupedCourse.courseDetail.course_type === 'T' ? 'Theory' : 
-                                          groupedCourse.courseDetail.course_type === 'L' ? 'Lab' : 
-                                          'Lab & Theory'
+                                          groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
+                                            groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
+                                              'Lab & Theory'
                                         } • Regulation: {groupedCourse.courseDetail.regulation}
                                       </p>
                                     </div>
@@ -1565,7 +1569,7 @@ export default function CourseManagementPage() {
                                     {groupedCourse.instances.length} instances
                                   </Badge>
                                 </div>
-                                
+
                                 {groupedCourse.instances.length > 0 && (
                                   <RelationshipTag
                                     ownerDept={groupedCourse.courseDetail.course_dept_detail.dept_name}
@@ -1593,9 +1597,9 @@ export default function CourseManagementPage() {
                                 </TableHeader>
                                 <TableBody>
                                   {groupedCourse.instances.map((course) => (
-                                    <TableRow 
-                                      key={course.id} 
-                                      className="cursor-pointer hover:bg-muted/50" 
+                                    <TableRow
+                                      key={course.id}
+                                      className="cursor-pointer hover:bg-muted/50"
                                       onClick={(e) => handleNavigateToDetail(course.id, e)}
                                     >
                                       <TableCell>
@@ -1629,25 +1633,25 @@ export default function CourseManagementPage() {
                                         />
                                       </TableCell>
                                       <TableCell>
-                                        <Badge 
+                                        <Badge
                                           variant={
-                                            course.teaching_status === 'active' ? 'default' : 
-                                            course.teaching_status === 'inactive' ? 'secondary' : 
-                                            'outline'
+                                            course.teaching_status === 'active' ? 'default' :
+                                              course.teaching_status === 'inactive' ? 'secondary' :
+                                                'outline'
                                           }
                                           className={
                                             course.teaching_status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' :
-                                            course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
-                                            'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
+                                              course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
+                                                'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
                                           }
                                         >
-                                          {course.teaching_status === 'active' ? 'Active' : 
-                                          course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
+                                          {course.teaching_status === 'active' ? 'Active' :
+                                            course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button 
-                                          size="sm" 
+                                        <Button
+                                          size="sm"
                                           variant="outline"
                                           onClick={(e) => handleNavigateToDetail(course.id, e)}
                                         >
@@ -1739,9 +1743,9 @@ export default function CourseManagementPage() {
                                       </div>
                                       <p className="text-sm text-muted-foreground">
                                         {groupedCourse.courseDetail.credits} credits • {
-                                          groupedCourse.courseDetail.course_type === 'T' ? 'Theory' : 
-                                          groupedCourse.courseDetail.course_type === 'L' ? 'Lab' : 
-                                          'Lab & Theory'
+                                          groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
+                                            groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
+                                              'Lab & Theory'
                                         } • Regulation: {groupedCourse.courseDetail.regulation}
                                       </p>
                                     </div>
@@ -1750,7 +1754,7 @@ export default function CourseManagementPage() {
                                     {groupedCourse.instances.length} instances
                                   </Badge>
                                 </div>
-                                
+
                                 {groupedCourse.instances.length > 0 && (
                                   <RelationshipTag
                                     ownerDept={groupedCourse.courseDetail.course_dept_detail.dept_name}
@@ -1777,9 +1781,9 @@ export default function CourseManagementPage() {
                                 </TableHeader>
                                 <TableBody>
                                   {groupedCourse.instances.map((course) => (
-                                    <TableRow 
-                                      key={course.id} 
-                                      className="cursor-pointer hover:bg-muted/50" 
+                                    <TableRow
+                                      key={course.id}
+                                      className="cursor-pointer hover:bg-muted/50"
                                       onClick={(e) => handleNavigateToDetail(course.id, e)}
                                     >
                                       <TableCell>
@@ -1807,25 +1811,25 @@ export default function CourseManagementPage() {
                                         />
                                       </TableCell>
                                       <TableCell>
-                                        <Badge 
+                                        <Badge
                                           variant={
-                                            course.teaching_status === 'active' ? 'default' : 
-                                            course.teaching_status === 'inactive' ? 'secondary' : 
-                                            'outline'
+                                            course.teaching_status === 'active' ? 'default' :
+                                              course.teaching_status === 'inactive' ? 'secondary' :
+                                                'outline'
                                           }
                                           className={
                                             course.teaching_status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' :
-                                            course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
-                                            'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
+                                              course.teaching_status === 'inactive' ? 'bg-gray-500/10 text-gray-500 hover:bg-gray-500/20 border-gray-500/20' :
+                                                'bg-amber-500/10 text-amber-500 hover:bg-amber-500/20 border-amber-500/20'
                                           }
                                         >
-                                          {course.teaching_status === 'active' ? 'Active' : 
-                                          course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
+                                          {course.teaching_status === 'active' ? 'Active' :
+                                            course.teaching_status === 'inactive' ? 'Inactive' : 'Pending'}
                                         </Badge>
                                       </TableCell>
                                       <TableCell className="text-right">
-                                        <Button 
-                                          size="sm" 
+                                        <Button
+                                          size="sm"
                                           variant="outline"
                                           onClick={(e) => handleNavigateToDetail(course.id, e)}
                                         >
@@ -1848,7 +1852,7 @@ export default function CourseManagementPage() {
           </Tabs>
         </CardContent>
       </Card>
-      
+
     </div>
   );
 } 

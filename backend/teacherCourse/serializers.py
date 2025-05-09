@@ -62,9 +62,7 @@ class TeacherCourseSerializer(serializers.ModelSerializer):
         if course_id and course_id.course_id:
             current_course_hours = course_id.course_id.credits
         
-        if total_hours_assigned + current_course_hours > teacher_id.teacher_working_hours:
-            raise serializers.ValidationError(
-                f"Teacher working hour limit exceeded. Current total: {total_hours_assigned}, New course credits: {current_course_hours}, Limit: {teacher_id.teacher_working_hours}"
-            )
+        # Set a flag indicating workload is exceeded, but don't prevent assignment creation
+        self._workload_exceeded = (total_hours_assigned + current_course_hours > teacher_id.teacher_working_hours)
 
         return data

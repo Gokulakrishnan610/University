@@ -8,7 +8,7 @@ const TeacherCourseAssignmentSchema = z.object({
     teacher_id: z.number().optional(),
     course_id: z.number().optional(),
     semester: z.number().optional(),
-    academic_year: z.number().optional(), 
+    academic_year: z.number().optional(),
     student_count: z.number().optional()
 });
 
@@ -122,7 +122,7 @@ export const useCreateTeacherCourseAssignment = (onSuccess?: () => void) => {
                 is_assistant: data.is_assistant || false,
                 preferred_availability_slots: data.preferred_availability_slots || []
             };
-            
+
             const response = await api.post('/api/teacher-courses/', payload);
             return response.data;
         },
@@ -152,6 +152,6 @@ export const useGetTeacherCourseAssignmentsByTeacher = (teacherId: number) => {
             const response = await api.get(`/api/teacher-courses/teacher/${teacherId}/`);
             return response.data as TeacherCourseAssignment[];
         },
-        enabled: !!teacherId 
+        enabled: !!teacherId
     });
 }; 

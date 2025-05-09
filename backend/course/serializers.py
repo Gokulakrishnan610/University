@@ -93,26 +93,26 @@ class CourseSerializer(serializers.ModelSerializer):
         # Teaching department - limited edit rights, now also has delete rights
         is_teacher = user_dept.id == teaching_dept_id if teaching_dept_id else False
         
-        # For department - no edit or delete rights
+        # For department - only delete rights, no edit rights
         is_learner = user_dept.id == for_dept_id if for_dept_id else False
-        
-        # Owner or teaching department can delete
-        can_delete = is_owner or is_teacher
         
         # Owner or teaching department can edit
         can_edit = is_owner or is_teacher
         
+        # Owner, teaching department, or for department can delete
+        can_delete = is_owner or is_teacher or is_learner
+        
         # Determine which fields can be edited based on role
         editable_fields = []
         if is_owner:
-            # Owner can edit all fields except those now in CourseMaster
+            # Owner can edit all fields except those now in CourseMaster and dept assignments
             editable_fields = [
                 'course_year', 'course_semester',
-                'for_dept_id', 'teaching_dept_id',
+                'need_assist_teacher',
                 'elective_type', 'lab_type', 'teaching_status'
             ]
         elif is_teacher:
-            editable_fields = ['teaching_status', 'course_year', 'course_semester','need_assist_teacher']
+            editable_fields = ['teaching_status', 'course_year', 'course_semester', 'need_assist_teacher']
         
         return {
             'can_edit': can_edit,
