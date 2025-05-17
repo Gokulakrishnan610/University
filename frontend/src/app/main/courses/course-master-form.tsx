@@ -35,6 +35,7 @@ const courseMasterFormSchema = z.object({
   credits: z.coerce.number().min(0, "Credits cannot be negative"),
   regulation: z.string().min(1, "Regulation is required"),
   course_type: z.enum(["T", "L", "LoT"]),
+  degree_type: z.enum(["BE", "BTECH", "ME", "MTECH", "MBA", "MCA"]),
   is_zero_credit_course: z.boolean().default(false),
 });
 
@@ -69,6 +70,7 @@ export default function CourseMasterForm({
       credits: 3,
       regulation: "R2019",
       course_type: "T",
+      degree_type: "BE",
       is_zero_credit_course: false,
       ...defaultValues
     }
@@ -263,25 +265,51 @@ export default function CourseMasterForm({
 
           <FormField
             control={form.control}
-            name="is_zero_credit_course"
+            name="degree_type"
             render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                <div className="space-y-0.5">
-                  <FormLabel>Zero Credit Course</FormLabel>
-                  <FormDescription>
-                    Indicate if this is a zero credit course
-                  </FormDescription>
-                </div>
-                <FormControl>
-                  <Switch
-                    checked={field.value}
-                    onCheckedChange={field.onChange}
-                  />
-                </FormControl>
+              <FormItem>
+                <FormLabel>Degree Type</FormLabel>
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select degree type" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="BE">Bachelor of Engineering</SelectItem>
+                    <SelectItem value="BTECH">Bachelor of Technology</SelectItem>
+                    <SelectItem value="ME">Master of Engineering</SelectItem>
+                    <SelectItem value="MTECH">Master of Technology</SelectItem>
+                    <SelectItem value="MBA">Master of Business Administration</SelectItem>
+                    <SelectItem value="MCA">Master of Computer Applications</SelectItem>
+                  </SelectContent>
+                </Select>
+                <FormMessage />
               </FormItem>
             )}
           />
         </div>
+
+        <FormField
+          control={form.control}
+          name="is_zero_credit_course"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+              <div className="space-y-0.5">
+                <FormLabel>Zero Credit Course</FormLabel>
+                <FormDescription>
+                  Indicate if this is a zero credit course
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
         
         <div className="flex justify-end gap-3 pt-3">
           <Button

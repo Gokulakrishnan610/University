@@ -121,10 +121,18 @@ class User(AbstractUser):
             'last_name': self.last_name,
             'gender': self.gender,
             'user_type': user_type,
+            'token': token,
             'detail': 'Login successful!',
         }, status=status.HTTP_200_OK)
 
-        response.set_cookie(key='token', value=token, samesite='Lax', httponly=True, secure=False, domain=settings.COOKIE_DOMAIN)
+        response.set_cookie(
+            key='token', 
+            value=token, 
+            samesite='None',
+            httponly=True, 
+            secure=True,
+            domain=settings.COOKIE_DOMAIN
+        )
         return response
 
 class ForgetPassword(models.Model):

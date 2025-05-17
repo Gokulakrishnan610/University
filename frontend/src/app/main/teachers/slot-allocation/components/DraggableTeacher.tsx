@@ -60,7 +60,7 @@ export const DraggableTeacher = ({
             // Calculate slot distribution
             const slotDist: {[key: string]: number} = { A: 0, B: 0, C: 0 };
             teacherDetails.assignments.forEach(assignment => {
-                const slotType = assignment.split('/')[0];
+                const [slotType, day] = assignment.split('/');
                 slotDist[slotType] = (slotDist[slotType] || 0) + 1;
             });
             setSlotDistribution(slotDist);
@@ -251,9 +251,11 @@ export const DraggableTeacher = ({
                                         <AlertCircle className="h-3 w-3 mr-1" />
                                         Compliance Issues
                                     </div>
-                                    <div className="text-[10px] mt-1">
-                                        This teacher is part of a group that exceeds the 33% department constraint.
-                                    </div>
+                                    <ul className="list-disc pl-4 mt-1">
+                                        {departmentSummary?.compliance.issues.map((issue, idx) => (
+                                            <li key={`issue-${idx}`}>{issue}</li>
+                                        ))}
+                                    </ul>
                                 </div>
                             )}
                         </div>
@@ -267,18 +269,18 @@ export const DraggableTeacher = ({
         <div
             ref={setNodeRef}
             style={style}
+            className={`flex items-center justify-between p-2 bg-background rounded-md border
+                ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}
+                ${atMaxDays ? 'opacity-50' : ''}
+                ${isAssigned ? 'border-primary/50 bg-primary/5' : 'border-border'}
+                transition-all duration-200`}
             {...attributes}
             {...listeners}
-            className={`p-3 mb-2 border rounded-md flex items-center justify-between shadow-sm transition-all
-        ${isDragging ? 'bg-primary/5 border-primary/30' : ''}
-        ${isAssigned || atMaxDays
-                    ? 'bg-muted/20 border-dashed opacity-60 cursor-not-allowed'
-                    : 'bg-card hover:border-primary/30 hover:bg-primary/5 cursor-grab active:cursor-grabbing touch-manipulation'
-                }`}
         >
-            <div className="flex items-center space-x-3">
-                <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarFallback className="bg-primary/10 text-primary">
+            <div className="flex items-center gap-2">
+                <GripVertical className="h-4 w-4 text-muted-foreground" />
+                <Avatar className="h-7 w-7">
+                    <AvatarFallback className="bg-primary/10 text-primary text-xs">
                         {getInitials(teacher.teacher_id?.first_name, teacher.teacher_id?.last_name)}
                     </AvatarFallback>
                 </Avatar>
@@ -286,17 +288,28 @@ export const DraggableTeacher = ({
                     <div className="font-medium text-sm">
                         {teacher.teacher_id?.first_name} {teacher.teacher_id?.last_name}
                     </div>
-                    <div className="text-xs text-muted-foreground truncate max-w-[180px]">
-                        {teacher.staff_code || 'No staff code'}
-                        {localAssignedDays > 0 && (
-                            <span className="ml-2 text-xs">
-                                {getDaysLabel()}
-                            </span>
-                        )}
+                    <div className="text-xs text-muted-foreground">
+                        {teacher.staff_code}
                     </div>
                 </div>
             </div>
-            <GripVertical className={`h-5 w-5 ${isAssigned || atMaxDays ? 'text-muted-foreground/30' : 'text-muted-foreground'}`} />
+            <div className="flex items-center gap-2">
+                {getDaysLabel()}
+                {isHOD && (
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Badge variant="outline" className="text-[10px] py-0 h-4">
+                                    HOD
+                                </Badge>
+                            </TooltipTrigger>
+                            <TooltipContent side="left">
+                                <p className="text-xs">Head of Department</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                )}
+            </div>
         </div>
     );
 };

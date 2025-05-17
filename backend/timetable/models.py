@@ -72,3 +72,44 @@ class TimetableChange(models.Model):
     
     def __str__(self):
         return f"Change for {self.original_timetable} - {self.status}"
+
+class TimetableGenerationConfig(models.Model):
+    """
+    Configuration for timetable generation process (currently disabled)
+    """
+    DIVISION_CHOICES = [
+        ('A', 'Division A (8 AM - 3 PM)'),
+        ('B', 'Division B (10 AM - 5 PM)'),
+        ('C', 'Division C (12 PM - 7 PM)'),
+    ]
+    
+    name = models.CharField(max_length=100)
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='timetable_configs')
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+    
+    # Configuration parameters
+    max_teacher_slots_per_day = models.IntegerField(default=5)
+    enable_lunch_breaks = models.BooleanField(default=True)
+    enable_lab_consecutive = models.BooleanField(default=True)
+    enable_student_conflicts = models.BooleanField(default=True)
+    enable_staggered_schedule = models.BooleanField(default=False)
+    min_course_instances = models.IntegerField(default=1)
+    
+    # Department-Division mapping
+    division_assignment = models.CharField(max_length=1, choices=DIVISION_CHOICES, default='A')
+    
+    # Solver timeout (in seconds)
+    solver_timeout = models.IntegerField(default=600)
+    
+    # Generation status
+    is_generated = models.BooleanField(default=False)
+    generation_started_at = models.DateTimeField(null=True, blank=True)
+    generation_completed_at = models.DateTimeField(null=True, blank=True)
+    generation_log = models.TextField(blank=True)
+    
+    class Meta:
+        db_table = 'timetable_generation_config'
+    
+    def __str__(self):
+        return self.name

@@ -14,7 +14,7 @@ export const authService = {
     
     // Extract token and user data based on response structure
     if (response.data) {
-      // Store token
+      // Store token in localStorage to use with Authorization header
       if (response.data.token) {
         localStorage.setItem('token', response.data.token);
       } else if (response.data.data && response.data.data.token) {

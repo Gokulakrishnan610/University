@@ -6,9 +6,8 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { useMutation } from '@tanstack/react-query';
-import { studentProfileApi, api } from '@/services/api';
-import { Sun, Moon, Bell, BellOff, Eye, EyeOff, Globe, Server } from 'lucide-react';
-import { ApiConnectionTester } from '@/components/global/ApiConnectionTester';
+import { studentProfileApi } from '@/services/api';
+import { Sun, Moon, Bell, BellOff, Eye, EyeOff } from 'lucide-react';
 
 // Preferences interface
 interface UserPreferences {
@@ -346,28 +345,6 @@ export default function SettingsPage() {
                 {isChangingPassword ? 'Changing Password...' : 'Change Password'}
               </Button>
             </form>
-          </CardContent>
-        </Card>
-
-        {/* Add API Connection Settings Card */}
-        <Card className="md:col-span-2 mt-6">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Server className="h-5 w-5" />
-              API Connection Settings
-            </CardTitle>
-            <CardDescription>
-              Configure and test connections to the university API server
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <Globe className="h-4 w-4" />
-                <span>Current API URL: {api.defaults.baseURL}</span>
-              </div>
-              <ApiConnectionTester />
-            </div>
           </CardContent>
         </Card>
       </div>

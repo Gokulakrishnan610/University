@@ -6,10 +6,11 @@ import api from "./api";
 export interface Slot {
   id: number;
   slot_name: string;
-  slot_type: string;
-  slot_type_display: string;
   slot_start_time: string;
   slot_end_time: string;
+  is_active: boolean;
+  description?: string;
+  type: string;
 }
 
 export interface TeacherSlotAssignment {
@@ -18,12 +19,15 @@ export interface TeacherSlotAssignment {
   slot: Slot;
   day_of_week: number;
   day_name?: string;
+  slot_type: string;
+  slot_type_display?: string;
 }
 
 export interface SlotOperation {
   action: 'create' | 'update' | 'delete';
   slot_id: number;
   day_of_week: number;
+  slot_type: string;
 }
 
 export interface DepartmentSummary {
@@ -184,6 +188,7 @@ export const useSaveBatchTeacherSlotAssignments = (onSuccess?: () => void) => {
         teacher_id: number,
         slot_id: number,
         day_of_week: number,
+        slot_type: string,
         action: 'create' | 'update' | 'delete'
       }>
     }) => {
@@ -210,33 +215,33 @@ export const useSaveBatchTeacherSlotAssignments = (onSuccess?: () => void) => {
 
 // Validate slot distribution against the 33% rule
 export const validateSlotDistribution = (
-  assignments: { slotId: number, teacherId: number }[],
+  assignments: { slotId: number, teacherId: number, slotType: string }[],
   totalTeachers: number,
   departmentId?: number
 ): { isValid: boolean; message?: string } => {
-  // Count teachers per slot
-  const teachersPerSlot: Record<number, number> = {};
+  // Count teachers per slot type
+  const teachersPerSlotType: Record<string, number> = {};
 
-  // Initialize counts for all slots
+  // Initialize counts for all slot types
   SLOT_TYPES.forEach(slot => {
-    teachersPerSlot[slot.id] = 0;
+    teachersPerSlotType[slot.type] = 0;
   });
 
   // Count assignments
   assignments.forEach(assignment => {
-    teachersPerSlot[assignment.slotId] = (teachersPerSlot[assignment.slotId] || 0) + 1;
+    teachersPerSlotType[assignment.slotType] = (teachersPerSlotType[assignment.slotType] || 0) + 1;
   });
 
-  // Calculate the target number per slot (33% of total)
-  const targetPerSlot = Math.ceil(totalTeachers * 0.33);
+  // Calculate the target number per slot type (33% of total)
+  const targetPerSlotType = Math.ceil(totalTeachers * 0.33);
 
-  // Check if any slot exceeds the target
-  for (const slotId in teachersPerSlot) {
-    if (teachersPerSlot[slotId] > targetPerSlot) {
-      const slotName = SLOT_TYPES.find(s => s.id === Number(slotId))?.name || `Slot ${slotId}`;
+  // Check if any slot type exceeds the target
+  for (const slotType in teachersPerSlotType) {
+    if (teachersPerSlotType[slotType] > targetPerSlotType) {
+      const slotName = SLOT_TYPES.find(s => s.type === slotType)?.name || `Slot ${slotType}`;
       return {
         isValid: false,
-        message: `Slot ${slotName} has ${teachersPerSlot[slotId]} teachers assigned. Maximum allowed is ${targetPerSlot} (33% of total).`
+        message: `Slot ${slotName} has ${teachersPerSlotType[slotType]} teachers assigned. Maximum allowed is ${targetPerSlotType} (33% of total).`
       };
     }
   }

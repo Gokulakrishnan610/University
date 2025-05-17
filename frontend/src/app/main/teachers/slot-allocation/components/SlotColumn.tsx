@@ -24,10 +24,11 @@ export const SlotColumn = ({
     deptInfo = null
 }: SlotColumnProps) => {
     const { setNodeRef, isOver } = useDroppable({
-        id: `slot-${slot.id}`,
+        id: `slot-${slot.type}`,
         data: {
             type: 'slot',
-            slot
+            slot,
+            slotType: slot.type
         }
     });
 

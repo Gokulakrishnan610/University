@@ -91,6 +91,25 @@ export interface CreatePlaceholderTeacherRequest {
   placeholder_description: string;
 }
 
+export interface CreateUserRequest {
+  email: string;
+  first_name: string;
+  last_name: string;
+  password: string;
+  phone_number?: string;
+  gender?: string;
+}
+
+export interface CreateTeacherWithUserRequest {
+  user: CreateUserRequest;
+  dept_id: number;
+  staff_code?: string;
+  teacher_role: string;
+  teacher_specialisation?: string;
+  teacher_working_hours: number;
+  availability_type?: 'regular' | 'limited';
+}
+
 // Get all teachers
 export const useGetTeachers = () => {
   return useQueryData(
@@ -403,6 +422,59 @@ export const useDeleteAvailability = (id: number, teacherId: number, onSuccess?:
       ['teacher-availability', teacherId.toString()], 
       ['my-availability']
     ],
+    onSuccess
+  );
+};
+
+// Create a new user
+export const useCreateUser = (onSuccess?: () => void) => {
+  return useMutationData(
+    ['createUser'],
+    async (data: CreateUserRequest) => {
+      try {
+        const response = await api.post('/api/auth/register/', data);
+        return {
+          status: response.status,
+          data: response.data.message || 'User created successfully',
+          user_id: response.data.user_id,
+        };
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          return {
+            status: error.response.status,
+            data: error.response.data.message || 'Failed to create user',
+          };
+        }
+        throw error;
+      }
+    },
+    undefined,
+    onSuccess
+  );
+};
+
+// Create a new teacher with user
+export const useCreateTeacherWithUser = (onSuccess?: () => void) => {
+  return useMutationData(
+    ['createTeacherWithUser'],
+    async (data: CreateTeacherWithUserRequest) => {
+      try {
+        const response = await api.post('/api/teachers/add/', data);
+        return {
+          status: response.status,
+          data: response.data.message || 'Teacher created successfully',
+        };
+      } catch (error) {
+        if (axios.isAxiosError(error) && error.response) {
+          return {
+            status: error.response.status,
+            data: error.response.data.message || 'Failed to create teacher',
+          };
+        }
+        throw error;
+      }
+    },
+    'teachers',
     onSuccess
   );
 }; 

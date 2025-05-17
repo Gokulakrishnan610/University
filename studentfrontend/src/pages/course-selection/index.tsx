@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Search, Filter, Check, AlertCircle, ExternalLink, Bug } from 'lucide-react';
+import { Search, Filter, Check, AlertCircle, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
-import { studentCourseApi, debugApi } from '@/services/api';
+import { studentCourseApi } from '@/services/api';
 
 interface Course {
   id: number;
@@ -81,8 +81,6 @@ export default function CourseSelectionPage() {
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
   const [selectedDepartment, setSelectedDepartment] = useState<string>('');
   const [showFilter, setShowFilter] = useState(false);
-  const [debugInfo, setDebugInfo] = useState<any>(null);
-  const [showDebug, setShowDebug] = useState(false);
 
   // Fetch departments for filter
   const { data: departments = [] } = useQuery<Department[]>({
@@ -491,21 +489,6 @@ export default function CourseSelectionPage() {
     );
   };
 
-  // Debug function
-  const handleRunDiagnostics = async () => {
-    try {
-      toast.info('Running API diagnostics...');
-      const results = await debugApi.checkStudentCourseStatus();
-      setDebugInfo(results);
-      setShowDebug(true);
-      console.log('API Diagnostics Results:', results);
-      toast.success('Diagnostics completed');
-    } catch (error) {
-      console.error('Error running diagnostics:', error);
-      toast.error('Error running diagnostics');
-    }
-  };
-
   // Render a selected course in the My Selected Courses section
   const renderSelectedCourse = (selection: CourseSelection, courses: Course[], isDeleting: boolean, onDelete: (id: number) => void) => {
     const course = courses.find(c => c.course_id === selection.course_id);
@@ -544,58 +527,7 @@ export default function CourseSelectionPage() {
             Choose your courses for the upcoming semester
           </p>
         </div>
-        
-        <Button 
-          variant="outline" 
-          size="sm"
-          onClick={handleRunDiagnostics}
-          className="flex items-center"
-        >
-          <Bug className="h-4 w-4 mr-1" />
-          Diagnostics
-        </Button>
       </div>
-
-      {/* Debug Info */}
-      {showDebug && debugInfo && (
-        <Card className="bg-muted/40 border-dashed">
-          <CardHeader className="py-3">
-            <div className="flex justify-between items-center">
-              <CardTitle className="text-sm font-medium">API Diagnostics</CardTitle>
-              <Button 
-                variant="ghost" 
-                size="sm" 
-                onClick={() => setShowDebug(false)}
-                className="h-8 w-8 p-0"
-              >
-                &times;
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent className="text-xs py-0">
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <strong>Health Check:</strong> {debugInfo.health?.data?.status || 'Error'}
-              </div>
-              <div>
-                <strong>Auth Status:</strong> {debugInfo.debug?.data?.user?.is_authenticated ? 'Authenticated' : 'Not Authenticated'}
-              </div>
-              <div>
-                <strong>Course API:</strong> {debugInfo.courses?.status === 200 ? '✅ Working' : '❌ Error'}
-              </div>
-              <div>
-                <strong>Student Courses API:</strong> {debugInfo.studentCourses?.status === 200 ? '✅ Working' : '❌ Error'}
-              </div>
-            </div>
-            <div className="mt-2">
-              <strong>Student Info:</strong>
-              <pre className="text-xs mt-1 bg-background p-2 rounded overflow-auto max-h-20">
-                {JSON.stringify(debugInfo.studentCoursesDebug?.data?.student || {}, null, 2)}
-              </pre>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Search and Filter */}
       <div className="flex flex-col md:flex-row gap-4">

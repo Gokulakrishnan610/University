@@ -79,6 +79,7 @@ import {
 interface SlotAssignment {
   teacherId: number;
   slotId: number;
+  slotType: string;
 }
 
 interface ErrorDetail {
@@ -86,6 +87,7 @@ interface ErrorDetail {
   teacher_id: number;
   slot_id: number;
   day_of_week: number;
+  slot_type: string;
   error: string;
 }
 
@@ -99,6 +101,7 @@ const useEnhancedBatchAssignments = () => {
       teacher_id: number;
       slot_id: number;
       day_of_week: number;
+      slot_type: string;
       action: 'create' | 'update' | 'delete';
     }>;
   }) => {
@@ -132,6 +135,7 @@ const useEnhancedBatchAssignments = () => {
                   teacher_id: result.teacher_id,
                   slot_id: result.slot_id,
                   day_of_week: result.day_of_week,
+                  slot_type: result.slot_type,
                   error: result.error
                 }));
 
@@ -177,9 +181,9 @@ const ErrorResponseDisplay = ({
     return `${teacher.teacher_id?.first_name} ${teacher.teacher_id?.last_name}`;
   };
 
-  const getSlotName = (slotId: number): string => {
-    const slot = SLOT_TYPES.find(s => s.id === slotId);
-    return slot ? slot.name : `Slot ${slotId}`;
+  const getSlotName = (slotId: number, slotType: string): string => {
+    const slot = SLOT_TYPES.find(s => s.type === slotType);
+    return slot ? slot.name : `Slot ${slotType}`;
   };
 
   const getDayName = (dayIndex: number): string => {
@@ -213,7 +217,7 @@ const ErrorResponseDisplay = ({
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
                   <div className="font-medium">
-                    {getTeacherName(error.teacher_id)} / {getSlotName(error.slot_id)}
+                    {getTeacherName(error.teacher_id)} / {getSlotName(error.slot_id, error.slot_type)}
                   </div>
                   <div className="mt-1 text-destructive">
                     {error.error}
@@ -329,7 +333,8 @@ export default function SlotAllocationPage() {
       teacherSlotsData.assignments.forEach((assignment: TeacherSlotAssignment) => {
         dayAssignments.push({
           teacherId: assignment.teacher,
-          slotId: assignment.slot.id
+          slotId: assignment.slot.id,
+          slotType: assignment.slot.type
         });
       });
 
@@ -470,11 +475,11 @@ export default function SlotAllocationPage() {
       const teacherId = teacherData.teacher.id;
       const slotId = overData.slot.id;
 
-      assignTeacherToSlot(slotId, teacherId);
+      assignTeacherToSlot(slotId, teacherId, overData.slot.type);
     }
   };
 
-  const assignTeacherToSlot = (slotId: number, teacherId: number) => {
+  const assignTeacherToSlot = (slotId: number, teacherId: number, slotType: string) => {
     // Get the teacher object
     const teacher = teachers.find((t: TeacherType) => t.id === teacherId);
     if (!teacher) return;
@@ -609,7 +614,8 @@ export default function SlotAllocationPage() {
     // All checks passed, add to local state
     const newAssignment: SlotAssignment = {
       teacherId,
-      slotId
+      slotId,
+      slotType
     };
 
     // Add to slot assignments
@@ -624,9 +630,9 @@ export default function SlotAllocationPage() {
     updateTeacherAssignmentCounts();
   };
 
-  const getSlotName = (slotId: number): string => {
-    const slot = SLOT_TYPES.find(s => s.id === slotId);
-    return slot ? slot.name : `Slot ${slotId}`;
+  const getSlotName = (slotId: number, slotType: string): string => {
+    const slot = SLOT_TYPES.find(s => s.type === slotType);
+    return slot ? slot.name : `Slot ${slotType}`;
   };
 
   const getTeacherName = (teacherId: number): string => {
@@ -691,6 +697,7 @@ export default function SlotAllocationPage() {
       teacher_id: number;
       slot_id: number;
       day_of_week: number;
+      slot_type: string;
       action: 'create' | 'update' | 'delete';
     }> = [];
 
@@ -714,6 +721,7 @@ export default function SlotAllocationPage() {
             teacher_id: teacherId,
             slot_id: slotId,
             day_of_week: currentDayIndex,
+            slot_type: assignment.slotType,
             action: 'update'
           });
         }
@@ -724,6 +732,7 @@ export default function SlotAllocationPage() {
           teacher_id: teacherId,
           slot_id: slotId,
           day_of_week: currentDayIndex,
+          slot_type: assignment.slotType,
           action: 'create'
         });
       }
@@ -740,6 +749,7 @@ export default function SlotAllocationPage() {
           teacher_id: teacherId,
           slot_id: assignment.slotId,
           day_of_week: currentDayIndex,
+          slot_type: assignment.slotType,
           action: 'delete'
         });
       }
@@ -781,7 +791,7 @@ export default function SlotAllocationPage() {
 
       // Clear loading toast and show success
       toast.dismiss(toastId);
-      toast.success('Assignments saved successfully');
+      // toast.success('Assignments saved successfully');
     } catch (error) {
       console.error('Error in saveCurrentDayAssignments:', error);
       toast.error('Error saving assignments');

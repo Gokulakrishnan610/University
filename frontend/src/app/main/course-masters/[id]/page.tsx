@@ -256,6 +256,18 @@ export default function CourseMasterDetailPage() {
                           {getCourseTypeLabel(courseMaster.course_type)}
                         </Badge>
                       </div>
+                      <div className="flex justify-between border-b pb-3">
+                        <span className="text-sm text-muted-foreground">Degree Type</span>
+                        <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-200">
+                          {courseMaster.degree_type === 'BE' ? 'Bachelor of Engineering' :
+                           courseMaster.degree_type === 'BTECH' ? 'Bachelor of Technology' :
+                           courseMaster.degree_type === 'ME' ? 'Master of Engineering' :
+                           courseMaster.degree_type === 'MTECH' ? 'Master of Technology' :
+                           courseMaster.degree_type === 'MBA' ? 'Master of Business Administration' :
+                           courseMaster.degree_type === 'MCA' ? 'Master of Computer Applications' :
+                           courseMaster.degree_type}
+                        </Badge>
+                      </div>
                       <div className="flex justify-between">
                         <span className="text-sm text-muted-foreground">Zero Credit Course</span>
                         <Badge variant={courseMaster.is_zero_credit_course ? "outline" : "secondary"} className={courseMaster.is_zero_credit_course ? "bg-red-500/10 text-red-500 border-red-200" : ""}>

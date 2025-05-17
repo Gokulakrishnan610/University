@@ -3,12 +3,13 @@ from rest_framework import generics, permissions, status, serializers
 from rest_framework.response import Response
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.views import APIView
-from django.db.models import Count
+from django.db.models import Count, Sum
 from authentication.authentication import IsAuthenticated
 from .models import Student
 from .serializers import StudentSerializer
 from department.models import Department
 from django.db.models import Q
+from studentCourse.models import StudentCourse
 
 # Create your views here.
 class StudentPagination(PageNumberPagination):
@@ -189,6 +190,50 @@ class DepartmentStudentCountView(APIView):
             }
             
             return Response(response_data, status=status.HTTP_200_OK)
+            
+        except Exception as e:
+            return Response(
+                {"detail": str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+class StudentProfileView(APIView):
+    """API view to get the current student's profile information"""
+    authentication_classes = [IsAuthenticated]
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def get(self, request):
+        if request.user.user_type != 'student':
+            return Response(
+                {"detail": "Only students can access their profile information."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+            
+        try:
+            # Get the student profile for the current user
+            student = Student.objects.filter(student_id=request.user).select_related('dept_id').first()
+            
+            if not student:
+                return Response(
+                    {"detail": "Student profile not found."},
+                    status=status.HTTP_404_NOT_FOUND
+                )
+            
+            # Calculate total credits from all semesters
+            total_credits = StudentCourse.objects.filter(
+                student_id=student
+            ).select_related('course_id').aggregate(
+                total=Sum('course_id__credits')
+            )['total'] or 0
+                
+            # Serialize with depth to include department details
+            serializer = StudentSerializer(student, context={'request': request})
+            
+            # Combine student data with total credits
+            data = serializer.data
+            data['total_credits'] = total_credits
+            
+            return Response(data)
             
         except Exception as e:
             return Response(

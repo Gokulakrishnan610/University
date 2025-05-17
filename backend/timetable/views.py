@@ -6,8 +6,12 @@ from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from datetime import date
 
-from .models import Timetable, TimetableChange
-from .serializers import TimetableSerializer, TimetableWriteSerializer, TimetableChangeSerializer
+from .models import Timetable, TimetableChange, TimetableGenerationConfig
+from .serializers import (
+    TimetableSerializer, TimetableWriteSerializer, 
+    TimetableChangeSerializer, TimetableGenerationConfigSerializer
+)
+from .services import TimetableGenerationService
 from teacherCourse.models import TeacherCourse
 from slot.models import Slot
 from rooms.models import Room
@@ -187,3 +191,66 @@ class TimetableChangeViewSet(viewsets.ModelViewSet):
         timetable_change.status = 'Rejected'
         timetable_change.save()
         return Response({"status": "rejected"})
+
+
+class TimetableGenerationViewSet(viewsets.ModelViewSet):
+    """ViewSet for timetable generation configurations"""
+    queryset = TimetableGenerationConfig.objects.all()
+    serializer_class = TimetableGenerationConfigSerializer
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user)
+    
+    @action(detail=True, methods=['post'])
+    def generate(self, request, pk=None):
+        """Generate timetable (currently disabled)"""
+        config = self.get_object()
+        
+        # Check if already generated
+        if config.is_generated:
+            return Response(
+                {"error": "Timetable has already been generated with this configuration"},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Generate timetable
+        service = TimetableGenerationService(config_id=pk)
+        success = service.generate_timetable()
+        
+        return Response(
+            {"status": "error", "message": "Timetable generation functionality is currently disabled.", "log": config.generation_log},
+            status=status.HTTP_501_NOT_IMPLEMENTED
+        )
+    
+    @action(detail=False, methods=['get'])
+    def status(self, request):
+        """Get status of all timetable generation configs"""
+        configs = TimetableGenerationConfig.objects.all().order_by('-created_at')
+        
+        results = []
+        for config in configs:
+            results.append({
+                "id": config.id,
+                "name": config.name,
+                "is_generated": config.is_generated,
+                "created_at": config.created_at,
+                "generated_at": config.generation_completed_at,
+                "created_by": config.created_by.username
+            })
+        
+        return Response(results)
+    
+    @action(detail=True, methods=['get'])
+    def get_log(self, request, pk=None):
+        """Get generation log for a specific config"""
+        config = self.get_object()
+        
+        return Response({
+            "id": config.id,
+            "name": config.name,
+            "is_generated": config.is_generated,
+            "created_at": config.created_at,
+            "started_at": config.generation_started_at,
+            "completed_at": config.generation_completed_at,
+            "log": config.generation_log
+        })

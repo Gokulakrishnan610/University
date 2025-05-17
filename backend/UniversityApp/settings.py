@@ -24,12 +24,21 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('SECRET_KEY')
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-default-key-for-development')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '46.202.160.179']
+ALLOWED_HOSTS = [
+    'localhost', 
+    '127.0.0.1', 
+    '46.202.160.179', 
+    'e520-2409-4072-6e84-6ff3-15b8-5952-364b-473.ngrok-free.app', 
+    '*.ngrok-free.app',
+    'timetable-backend.onrender.com',
+    'backend-nz7c.onrender.com',
+    '*.onrender.com'
+]
 
 # CORS settings
 CORS_ALLOW_ALL_ORIGINS = True  # Only for development, set to False in production
@@ -39,10 +48,19 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # React default
     "http://127.0.0.1:5173",
     "http://127.0.0.1:3000",
-    'http://46.202.160.179'
+    'http://46.202.160.179',
+    "https://a030-2409-4072-6e84-6ff3-15b8-5952-364b-473.ngrok-free.app",
+    "http://e520-2409-4072-6e84-6ff3-15b8-5952-364b-473.ngrok-free.app",
+    "https://e520-2409-4072-6e84-6ff3-15b8-5952-364b-473.ngrok-free.app",
+    "https://backend-nz7c.onrender.com",
+    "https://*.onrender.com",
+    "https://recstudentsapp.netlify.app"
 ]
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r"^https?://localhost:\d+$",
+    r"^https?://.*\.ngrok-free\.app$",  # Allow all ngrok domains
+    r"^https?://.*\.onrender\.com$",    # Allow all render domains
+    r"^https?://.*\.netlify\.app$",    # Allow all netlify domains
 ]
 CORS_ALLOW_METHODS = [
     "DELETE",
@@ -70,13 +88,24 @@ CSRF_TRUSTED_ORIGINS = [
     "http://127.0.0.1:5173",
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    'http://46.202.160.179'
+    'http://46.202.160.179',
+    "https://4q95w77x-5173.inc1.devtunnels.ms",
+    "http://e520-2409-4072-6e84-6ff3-15b8-5952-364b-473.ngrok-free.app",
+    "https://e520-2409-4072-6e84-6ff3-15b8-5952-364b-473.ngrok-free.app",
+    "https://backend-nz7c.onrender.com",
+    "https://*.onrender.com",
+    "https://recstudentsapp.netlify.app",
+    "http://localhost:4173"
 ]
-CSRF_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'None'
 CSRF_COOKIE_HTTPONLY = False
 CSRF_USE_SESSIONS = False
-CSRF_COOKIE_SECURE = False  # Set to True in production with HTTPS
-CSRF_COOKIE_DOMAIN= config('COOKIE_DOMAIN')
+CSRF_COOKIE_SECURE = True
+CSRF_COOKIE_DOMAIN = None
+
+# Session settings for cross-domain
+SESSION_COOKIE_SAMESITE = 'None'
+SESSION_COOKIE_SECURE = True
 
 # Application definition
 
@@ -155,7 +184,9 @@ WSGI_APPLICATION = 'UniversityApp.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-if is_dev:
+USE_SQLITE = os.environ.get('USE_SQLITE', 'False').lower() == 'true'
+
+if is_dev or USE_SQLITE:
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
@@ -213,12 +244,11 @@ USE_TZ = True
 if not is_dev:
     STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-
 STATIC_URL = '/uv-static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
 if DEBUG:
-    STATICFILES_DIRS=[os.path.join(BASE_DIR, "static"),]
-else:
-    STATIC_ROOT = BASE_DIR / 'staticfiles'
+    STATICFILES_DIRS = [os.path.join(BASE_DIR, "static")]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -228,7 +258,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 JWT_KEY = config("JWT_KEY", default="secret")
 
-COOKIE_DOMAIN=config('COOKIE_DOMAIN')
+COOKIE_DOMAIN = None  # Let Django determine the domain
 
 
 UNFOLD = {
@@ -324,4 +354,4 @@ LOGGING = {
             'propagate': True,
         },
     },
-}
+} 

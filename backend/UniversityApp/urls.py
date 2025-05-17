@@ -19,9 +19,30 @@ from django.urls import path, include
 from django.http import JsonResponse
 from utlis.views import ImportDataView
 from django.conf import settings
+
 # Simple health check view
 def health_check(request):
     return JsonResponse({"status": "ok", "message": "API is running"})
+
+# Test authentication and permissions
+def auth_debug(request):
+    """Debug endpoint to check authentication without requiring auth"""
+    user_info = {
+        'is_authenticated': request.user.is_authenticated,
+        'user_id': request.user.id if request.user.is_authenticated else None,
+        'username': request.user.username if request.user.is_authenticated else None,
+    }
+    
+    auth_header = request.META.get('HTTP_AUTHORIZATION', '')
+    
+    return JsonResponse({
+        "status": "ok", 
+        "message": "API debug info", 
+        "user": user_info,
+        "auth_header": auth_header,
+        "method": request.method,
+        "path": request.path,
+    })
 
 # API URL patterns with a prefix
 api_urlpatterns = [
@@ -41,6 +62,8 @@ api_urlpatterns = [
     path('import/<str:resource_name>/', ImportDataView.as_view(), name="import-resource"),
     # Health check endpoint
     path('health/', health_check, name='health_check'),
+    # Debug endpoint
+    path('debug/', auth_debug, name='auth_debug'),
 ]
 
 # API_PATH = '/' if settings.ENVIRONMENT == 'production' else 'api/'

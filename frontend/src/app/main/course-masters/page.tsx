@@ -118,7 +118,7 @@ export default function CourseMastersPage() {
   const { data: departmentsData, isPending: loadingDepartments } = useGetDepartments();
   const { data: statsData, isPending: loadingStats } = useGetCourseMasterStats();
   const { data: currentDepartment, isPending: loadingCurrentDept } = useGetCurrentDepartment();
-
+  
   const departments = departmentsData || [];
   const courseMasters = courseMastersData?.results || [];
   const totalCount = courseMastersData?.count || 0;
@@ -179,31 +179,31 @@ export default function CourseMastersPage() {
     }
   };
 
+  const getDegreeTypeLabel = (type: string) => {
+    switch (type) {
+      case 'BE': return 'Bachelor of Engineering';
+      case 'BTECH': return 'Bachelor of Technology';
+      case 'ME': return 'Master of Engineering';
+      case 'MTECH': return 'Master of Technology';
+      case 'MBA': return 'Master of Business Administration';
+      case 'MCA': return 'Master of Computer Applications';
+      default: return type;
+    }
+  };
+
   // Check if the current department is the owner of the course master
   const canCreateCourse = !loadingCurrentDept && currentDepartment && currentDepartment.id !== undefined;
 
   const canEditOrDelete = (course: CourseMaster) => {
-    // If permissions are available, use them
-    if (course.permissions) {
-      return {
-        canEdit: course.permissions.can_edit,
-        canDelete: course.permissions.can_delete
-      };
-    }
-
-    // Otherwise, fallback to checking if current department is the owner
-    const isDeptOwner = !loadingCurrentDept &&
-      currentDepartment &&
-      course.course_dept_id === currentDepartment.id;
-
+    // Strictly use backend permissions
     return {
-      canEdit: isDeptOwner,
-      canDelete: isDeptOwner
+      canEdit: course.permissions?.can_edit || false,
+      canDelete: course.permissions?.can_delete || false
     };
   };
 
   const handleCreateCourse = () => {
-    navigate('/courses/create');
+    navigate('/course-masters/create');
   };
 
   const handleEditCourse = (id: number, e: React.MouseEvent) => {
@@ -388,8 +388,9 @@ export default function CourseMastersPage() {
                         <TableHead className="font-medium">Course Code</TableHead>
                         <TableHead className="font-medium">Course Name</TableHead>
                         <TableHead className="font-medium">Department</TableHead>
-                        <TableHead className="font-medium">Credits</TableHead>
                         <TableHead className="font-medium">Type</TableHead>
+                        <TableHead className="font-medium">Credits</TableHead>
+                        <TableHead className="font-medium">Degree</TableHead>
                         <TableHead className="text-right font-medium">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -443,14 +444,12 @@ export default function CourseMastersPage() {
                                   )}
                                 </div>
                               </TableCell>
+                              
                               <TableCell className="flex items-center gap-1.5">
                                 <School className="h-4 w-4 text-muted-foreground" />
                                 {course.course_dept_detail?.dept_name}
                               </TableCell>
-                              <TableCell className="flex items-center gap-1.5">
-                                <Clock className="h-4 w-4 text-muted-foreground" />
-                                {course.credits}
-                              </TableCell>
+                                  
                               <TableCell>
                                 <div className="flex flex-wrap gap-1.5">
                                   <Badge variant="outline" className={getCourseTypeBadgeClass(course.course_type)}>
@@ -462,6 +461,15 @@ export default function CourseMastersPage() {
                                     </Badge>
                                   )}
                                 </div>
+                              </TableCell>
+                              <TableCell className="flex items-center gap-1.5">
+                                <Clock className="h-4 w-4 text-muted-foreground" />
+                                {course.credits || 0}
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="bg-indigo-500/10 text-indigo-500 border-indigo-200">
+                                  {getDegreeTypeLabel(course.degree_type)}
+                                </Badge>
                               </TableCell>
                               <TableCell className="text-right">
                                 <div className="flex items-center justify-end gap-2">

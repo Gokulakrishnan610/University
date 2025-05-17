@@ -203,6 +203,48 @@ class VerifyTokenAPIView(APIView):
         except:
             return Response({'detail': 'Invalid Code.'}, status=status.HTTP_400_BAD_REQUEST)
 
+class AuthStatusAPIView(APIView):
+    """Check authentication status and basic user info without requiring auth"""
+    permission_classes = [permissions.AllowAny]
+    
+    def get(self, request):
+        user_data = {
+            'is_authenticated': request.user.is_authenticated,
+        }
+        
+        if request.user.is_authenticated:
+            # Add basic user info
+            user_data.update({
+                'id': request.user.id,
+                'email': request.user.email,
+                'user_type': request.user.user_type,
+                'first_name': request.user.first_name,
+                'last_name': request.user.last_name,
+            })
+            
+            # Add student info if applicable
+            if request.user.user_type == 'student':
+                try:
+                    student = Student.objects.get(student_id=request.user)
+                    user_data['student_profile'] = {
+                        'id': student.id,
+                        'has_department': student.dept_id is not None,
+                        'department_id': student.dept_id.id if student.dept_id else None,
+                        'department_name': student.dept_id.dept_name if student.dept_id else None,
+                        'current_semester': student.current_semester,
+                    }
+                except Student.DoesNotExist:
+                    user_data['student_profile'] = None
+            
+            # Add session info
+            session_data = {}
+            if hasattr(request, 'session'):
+                for key in request.session.keys():
+                    session_data[key] = request.session[key]
+            user_data['session'] = session_data
+        
+        return Response(user_data)
+
 class ForgotPasswordAPI(generics.GenericAPIView):
     def get_serializer_class(self):
         if self.request.method == 'POST':

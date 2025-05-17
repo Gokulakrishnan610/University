@@ -662,7 +662,15 @@ export default function CourseManagementPage() {
                             groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
                               groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
                                 'Lab & Theory'
-                          } • Regulation: {groupedCourse.courseDetail.regulation}
+                          } • Regulation: {groupedCourse.courseDetail.regulation} • {
+                            groupedCourse.courseDetail.degree_type === 'BE' ? 'Bachelor of Engineering' :
+                            groupedCourse.courseDetail.degree_type === 'BTECH' ? 'Bachelor of Technology' :
+                            groupedCourse.courseDetail.degree_type === 'ME' ? 'Master of Engineering' :
+                            groupedCourse.courseDetail.degree_type === 'MTECH' ? 'Master of Technology' :
+                            groupedCourse.courseDetail.degree_type === 'MBA' ? 'Master of Business Administration' :
+                            groupedCourse.courseDetail.degree_type === 'MCA' ? 'Master of Computer Applications' :
+                            groupedCourse.courseDetail.degree_type
+                          }
                         </p>
                       </div>
                     </div>
@@ -1200,7 +1208,15 @@ export default function CourseManagementPage() {
                                             groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
                                               groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
                                                 'Lab & Theory'
-                                          } • Regulation: {groupedCourse.courseDetail.regulation}
+                                          } • Regulation: {groupedCourse.courseDetail.regulation} • {
+                                            groupedCourse.courseDetail.degree_type === 'BE' ? 'Bachelor of Engineering' :
+                                            groupedCourse.courseDetail.degree_type === 'BTECH' ? 'Bachelor of Technology' :
+                                            groupedCourse.courseDetail.degree_type === 'ME' ? 'Master of Engineering' :
+                                            groupedCourse.courseDetail.degree_type === 'MTECH' ? 'Master of Technology' :
+                                            groupedCourse.courseDetail.degree_type === 'MBA' ? 'Master of Business Administration' :
+                                            groupedCourse.courseDetail.degree_type === 'MCA' ? 'Master of Computer Applications' :
+                                            groupedCourse.courseDetail.degree_type
+                                          }
                                         </p>
                                       </div>
                                     </div>
@@ -1391,7 +1407,15 @@ export default function CourseManagementPage() {
                                           groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
                                             groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
                                               'Lab & Theory'
-                                        } • Regulation: {groupedCourse.courseDetail.regulation}
+                                        } • Regulation: {groupedCourse.courseDetail.regulation} • {
+                                          groupedCourse.courseDetail.degree_type === 'BE' ? 'Bachelor of Engineering' :
+                                          groupedCourse.courseDetail.degree_type === 'BTECH' ? 'Bachelor of Technology' :
+                                          groupedCourse.courseDetail.degree_type === 'ME' ? 'Master of Engineering' :
+                                          groupedCourse.courseDetail.degree_type === 'MTECH' ? 'Master of Technology' :
+                                          groupedCourse.courseDetail.degree_type === 'MBA' ? 'Master of Business Administration' :
+                                          groupedCourse.courseDetail.degree_type === 'MCA' ? 'Master of Computer Applications' :
+                                          groupedCourse.courseDetail.degree_type
+                                        }
                                       </p>
                                     </div>
                                   </div>
@@ -1561,7 +1585,15 @@ export default function CourseManagementPage() {
                                           groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
                                             groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
                                               'Lab & Theory'
-                                        } • Regulation: {groupedCourse.courseDetail.regulation}
+                                        } • Regulation: {groupedCourse.courseDetail.regulation} • {
+                                          groupedCourse.courseDetail.degree_type === 'BE' ? 'Bachelor of Engineering' :
+                                          groupedCourse.courseDetail.degree_type === 'BTECH' ? 'Bachelor of Technology' :
+                                          groupedCourse.courseDetail.degree_type === 'ME' ? 'Master of Engineering' :
+                                          groupedCourse.courseDetail.degree_type === 'MTECH' ? 'Master of Technology' :
+                                          groupedCourse.courseDetail.degree_type === 'MBA' ? 'Master of Business Administration' :
+                                          groupedCourse.courseDetail.degree_type === 'MCA' ? 'Master of Computer Applications' :
+                                          groupedCourse.courseDetail.degree_type
+                                        }
                                       </p>
                                     </div>
                                   </div>
@@ -1746,7 +1778,15 @@ export default function CourseManagementPage() {
                                           groupedCourse.courseDetail.course_type === 'T' ? 'Theory' :
                                             groupedCourse.courseDetail.course_type === 'L' ? 'Lab' :
                                               'Lab & Theory'
-                                        } • Regulation: {groupedCourse.courseDetail.regulation}
+                                        } • Regulation: {groupedCourse.courseDetail.regulation} • {
+                                          groupedCourse.courseDetail.degree_type === 'BE' ? 'Bachelor of Engineering' :
+                                          groupedCourse.courseDetail.degree_type === 'BTECH' ? 'Bachelor of Technology' :
+                                          groupedCourse.courseDetail.degree_type === 'ME' ? 'Master of Engineering' :
+                                          groupedCourse.courseDetail.degree_type === 'MTECH' ? 'Master of Technology' :
+                                          groupedCourse.courseDetail.degree_type === 'MBA' ? 'Master of Business Administration' :
+                                          groupedCourse.courseDetail.degree_type === 'MCA' ? 'Master of Computer Applications' :
+                                          groupedCourse.courseDetail.degree_type
+                                        }
                                       </p>
                                     </div>
                                   </div>

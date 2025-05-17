@@ -305,6 +305,16 @@ export default function CourseDetails() {
                           <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
                           Regulation: {course.regulation}
                         </span>
+                        <span className="flex items-center gap-1.5">
+                          <GraduationCap className="h-3.5 w-3.5 text-muted-foreground" />
+                          {course.course_detail.degree_type === 'BE' ? 'Bachelor of Engineering' :
+                           course.course_detail.degree_type === 'BTECH' ? 'Bachelor of Technology' :
+                           course.course_detail.degree_type === 'ME' ? 'Master of Engineering' :
+                           course.course_detail.degree_type === 'MTECH' ? 'Master of Technology' :
+                           course.course_detail.degree_type === 'MBA' ? 'Master of Business Administration' :
+                           course.course_detail.degree_type === 'MCA' ? 'Master of Computer Applications' :
+                           course.course_detail.degree_type}
+                        </span>
                       </div>
                       <p className="text-sm">{getRelationshipContext(relationshipCode, userRoles, course)}</p>
                     </div>

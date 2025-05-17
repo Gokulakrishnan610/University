@@ -16,6 +16,7 @@ export interface CourseMaster {
   practical_hours: number;
   credits: number;
   course_type: string;
+  degree_type: string;
   is_zero_credit_course: boolean;
   regulation: string;
   permissions?: CourseMasterPermissions;
@@ -54,6 +55,7 @@ export interface CreateCourseMasterRequest {
   practical_hours?: number;
   credits?: number;
   course_type?: string;
+  degree_type?: string;
   is_zero_credit_course?: boolean;
   regulation?: string;
 }

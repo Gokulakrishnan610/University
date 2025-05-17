@@ -55,6 +55,7 @@ import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import TeacherForm from './form';
 import TeacherPlaceholderForm from './placeholder-form';
+import CreateTeacherForm from './create-form';
 
 export default function TeacherManagement() {
   const navigate = useNavigate();
@@ -62,6 +63,7 @@ export default function TeacherManagement() {
   const teachers = teachersData || [];
   const [teacherToRemove, setTeacherToRemove] = useState<TeacherType | null>(null);
   const [showPlaceholderForm, setShowPlaceholderForm] = useState<boolean>(false);
+  const [showCreateForm, setShowCreateForm] = useState<boolean>(false);
 
   // Search and filter states
   const [searchQuery, setSearchQuery] = useState<string>('');
@@ -224,6 +226,10 @@ export default function TeacherManagement() {
             <Button onClick={() => navigate('/teachers/slot-allocation')} className="gap-2">
               <Calendar className="h-4 w-4" />
               Slot Allocation
+            </Button>
+            <Button onClick={() => setShowCreateForm(true)} className="gap-2">
+              <UserPlus className="h-4 w-4" />
+              New Faculty
             </Button>
             <Button onClick={() => setShowPlaceholderForm(true)} className="gap-2">
               <UserPlus className="h-4 w-4" />
@@ -588,6 +594,18 @@ export default function TeacherManagement() {
           onSuccess={() => {
             refetch();
             setShowPlaceholderForm(false);
+          }}
+        />
+      )}
+
+      {/* Create Teacher Form Dialog */}
+      {showCreateForm && (
+        <CreateTeacherForm
+          onClose={() => setShowCreateForm(false)}
+          onSuccess={() => {
+            refetch();
+            setShowCreateForm(false);
+            toast.success("Teacher created successfully");
           }}
         />
       )}

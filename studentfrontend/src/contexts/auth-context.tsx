@@ -100,7 +100,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
           
           // Store user data in localStorage for offline/fallback access
           if (userData) {
-            localStorage.setItem('user', JSON.stringify(userData));
+          localStorage.setItem('user', JSON.stringify(userData));
           }
           
           return userData;

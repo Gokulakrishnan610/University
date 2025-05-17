@@ -20,6 +20,7 @@ class Student(models.Model):
     roll_no = models.CharField('Roll No', max_length=50, blank=True, null=True)
     student_type = models.CharField("Student Type", max_length=50, default='Mgmt', choices=STUDENT_TYPE)
     degree_type = models.CharField("Degree Type", max_length=50, default='UG', choices=DEGREE_TYPE)
+    current_year = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
         name = self.student_id.get_full_name() if self.student_id else "Unknown"

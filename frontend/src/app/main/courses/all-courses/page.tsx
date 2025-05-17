@@ -40,7 +40,8 @@ import {
   Group,
   AlignJustify,
   LayoutGrid,
-  ListFilter
+  ListFilter,
+  Clock,
 } from 'lucide-react';
 import { useGetCurrentDepartmentCourses, Course } from '@/action/course';
 import { getRelationshipBadgeColor, getRelationshipShortName } from '@/lib/utils';
@@ -486,6 +487,36 @@ export default function AllCoursesPage() {
         return 'Your department\'s students take this course taught and owned by another department.';
       default:
         return '';
+    }
+  };
+
+  const getCourseTypeBadgeClass = (courseType: string) => {
+    switch (courseType) {
+      case 'Core':
+        return 'bg-blue-500/10 text-blue-500 border-blue-200';
+      case 'Elective':
+        return 'bg-green-500/10 text-green-500 border-green-200';
+      case 'Lab':
+        return 'bg-yellow-500/10 text-yellow-500 border-yellow-200';
+      case 'Project':
+        return 'bg-red-500/10 text-red-500 border-red-200';
+      default:
+        return 'bg-gray-500/10 text-gray-500 border-gray-200';
+    }
+  };
+
+  const getCourseTypeLabel = (courseType: string) => {
+    switch (courseType) {
+      case 'Core':
+        return 'Core';
+      case 'Elective':
+        return 'Elective';
+      case 'Lab':
+        return 'Lab';
+      case 'Project':
+        return 'Project';
+      default:
+        return courseType;
     }
   };
 

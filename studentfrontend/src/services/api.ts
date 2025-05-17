@@ -52,83 +52,6 @@ api.setBaseUrl = (newBaseUrl: string): string => {
   return newBaseUrl;
 };
 
-// Test API connection and data consistency
-export const testApiConnection = async (urlsToTest: string[]) => {
-  const results: Record<string, { success: boolean; status?: number; duration?: number; error?: string }> = {};
-  let bestUrl: string | null = null;
-  let bestResponseTime = Infinity;
-
-  for (const url of urlsToTest) {
-    const startTime = performance.now();
-    try {
-      // Test basic endpoint (e.g., health check or version)
-      const response = await axios.get(`${url}/api/health/`, {
-        timeout: 5000,
-        headers: {
-          'Accept': 'application/json'
-        }
-      });
-
-      const duration = Math.round(performance.now() - startTime);
-      
-      results[url] = {
-        success: true,
-        status: response.status,
-        duration
-      };
-
-      // Track the fastest successful response
-      if (duration < bestResponseTime) {
-        bestResponseTime = duration;
-        bestUrl = url;
-      }
-    } catch (error: any) {
-      results[url] = {
-        success: false,
-        error: error.message,
-        status: error.response?.status
-      };
-    }
-  }
-
-  return {
-    results,
-    bestUrl
-  };
-};
-
-// Function to validate data consistency
-export const validateDataConsistency = async () => {
-  try {
-    // Test a few key endpoints that should return consistent data
-    const endpoints = [
-      '/api/courses/',
-      '/api/profile/',
-      '/api/timetable/'
-    ];
-
-    const results = await Promise.all(endpoints.map(async (endpoint) => {
-      const response = await api.get(endpoint);
-      return {
-        endpoint,
-        status: response.status,
-        dataSize: JSON.stringify(response.data).length,
-        hasData: Array.isArray(response.data) ? response.data.length > 0 : Object.keys(response.data).length > 0
-      };
-    }));
-
-    return {
-      success: true,
-      results
-    };
-  } catch (error: any) {
-    return {
-      success: false,
-      error: error.message
-    };
-  }
-};
-
 // Add request interceptor for authentication
 api.interceptors.request.use(
   (config) => {
@@ -286,64 +209,6 @@ export const dashboardApi = {
   markNotificationAsRead: (id: number) => api.post(`/api/dashboard/notifications/${id}/read/`),
 };
 
-// Debug API
-export const debugApi = {
-  // Check API health
-  checkHealth: () => api.get('/api/health/'),
-  
-  // Get all debug info
-  getDebugInfo: () => api.get('/api/debug/'),
-  
-  // Get information about current student course API status
-  checkStudentCourseStatus: async () => {
-    const results: Record<string, any> = {};
-    
-    try {
-      // Try health check
-      results.health = await api.get('/api/health/');
-    } catch (e) {
-      results.health = { error: e };
-    }
-    
-    try {
-      // Try debug info
-      results.debug = await api.get('/api/debug/');
-    } catch (e) {
-      results.debug = { error: e };
-    }
-    
-    try {
-      // Try general courses
-      results.courses = await api.get('/api/course/');
-    } catch (e) {
-      results.courses = { error: e };
-    }
-    
-    try {
-      // Try student course API - available_courses
-      results.studentCourses = await api.get('/api/student-courses/courses/available_courses/');
-    } catch (e) {
-      results.studentCourses = { error: e };
-    }
-    
-    try {
-      // Try student course API - available_courses_all
-      results.allCourses = await api.get('/api/student-courses/courses/available_courses_all/');
-    } catch (e) {
-      results.allCourses = { error: e };
-    }
-    
-    try {
-      // Check student info
-      results.studentCoursesDebug = await api.get('/api/student-courses/courses/debug_info/');
-    } catch (e) {
-      results.studentCoursesDebug = { error: e };
-    }
-    
-    return results;
-  }
-};
-
 // Timetable API
 export const timetableApi = {
   // Get student timetable
@@ -366,54 +231,9 @@ export const timetableApi = {
 export const studentCourseApi = {
   // Get available courses for selection
   getAvailableCourses: async () => {
-    // First try to get student profile to ensure we're authenticated
     try {
-      const profileCheck = await api.get('/api/auth/profile/');
-      if (!profileCheck.data) {
-        throw new Error('No profile data available');
-      }
-      
-      // Get student info for proper filtering
-      const studentInfo = await api.get('/api/students/profile/');
-      console.log('Student info:', studentInfo.data);
-      
-      // Try to get courses from the primary endpoint
-      try {
-        console.log('Trying primary endpoint for courses');
-        const response = await api.get('/api/student-courses/courses/available_courses/');
-        console.log('Primary endpoint response:', response.data);
-        return response;
-      } catch (primaryError) {
-        console.warn('Primary endpoint failed:', primaryError);
-        
-        // Fall back to filtered courses endpoint
-        try {
-          console.log('Trying filtered courses endpoint');
-          const response = await api.get('/api/student-courses/courses/filtered_courses/', {
-            params: {
-              department_id: studentInfo.data.dept_id,
-              semester: studentInfo.data.current_semester,
-              year: studentInfo.data.current_year
-            }
-          });
-          console.log('Filtered endpoint response:', response.data);
-          return response;
-        } catch (filteredError) {
-          console.warn('Filtered endpoint failed:', filteredError);
-          
-          // Last resort: Get all courses and filter client-side
-          console.log('Falling back to all courses with client-side filtering');
-          const allCoursesResponse = await api.get('/api/course/');
-          
-          // Filter courses based on student info
-          const filteredCourses = allCoursesResponse.data.filter((course: any) => 
-            course.for_dept_id === studentInfo.data.dept_id &&
-            course.course_semester === studentInfo.data.current_semester
-          );
-          
-          return { data: filteredCourses };
-        }
-      }
+      const response = await api.get('/api/student-courses/courses/available_courses/');
+      return response;
     } catch (error) {
       console.error('Course fetching error:', error);
       throw error;

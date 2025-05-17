@@ -1,18 +1,28 @@
 from django.conf import settings
-from rest_framework import authentication, exceptions
+from rest_framework import authentication, exceptions, permissions
 from .models import User
 import jwt
 
 class IsAuthenticated(authentication.BaseAuthentication):
     def authenticate(self, request):
         try:
+            # First try to get token from cookies
             token = request.COOKIES.get('token')
+            
+            # If not in cookies, try to get from Authorization header
+            if not token and 'Authorization' in request.headers:
+                auth_header = request.headers['Authorization']
+                if auth_header.startswith('Bearer '):
+                    token = auth_header[7:]  # Remove 'Bearer ' prefix
+            
             if not token:
                 raise exceptions.AuthenticationFailed('Authentication Failed')
+                
             try:
                 payload = jwt.decode(token, settings.JWT_KEY, 'HS256')
             except:
                 raise exceptions.AuthenticationFailed('Authentication Failed')
+                
             email = payload['id']
 
             try:
@@ -23,13 +33,35 @@ class IsAuthenticated(authentication.BaseAuthentication):
             return (user, None)
         except:
             raise exceptions.AuthenticationFailed('Authentication Failed')
+            
+    def has_permission(self, request, view):
+        """
+        Required method when using as a permission class.
+        Return True if the user is authenticated.
+        """
+        return bool(request.user and request.user.is_authenticated)
+
+class CustomIsAuthenticated(permissions.BasePermission):
+    """
+    Dedicated permission class to check if the user is authenticated.
+    """
+    def has_permission(self, request, view):
+        return bool(request.user and request.user.is_authenticated)
 
 class JWTCookieAuthentication(authentication.BaseAuthentication):
     def authenticate(self, request):
+        # First try to get token from cookies
         token = request.COOKIES.get('token')
+        
+        # If not in cookies, try to get from Authorization header
+        if not token and 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            if auth_header.startswith('Bearer '):
+                token = auth_header[7:]  # Remove 'Bearer ' prefix
         
         if not token:
             return None 
+            
         try:
             payload = jwt.decode(token, settings.JWT_KEY, algorithms=['HS256'])
             email = payload['id']

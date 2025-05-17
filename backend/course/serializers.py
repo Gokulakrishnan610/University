@@ -5,6 +5,149 @@ from courseMaster.serializers import CourseMasterSerializer
 from slot.serializers import SlotSerializer
 from rooms.serializers import RoomSerializer
 
+class StudentCourseListSerializer(serializers.ModelSerializer):
+    """A simplified serializer for student course selection with just the essential fields"""
+    # Get basic course details from CourseMaster
+    course_code = serializers.SerializerMethodField()
+    course_name = serializers.SerializerMethodField()
+    credits = serializers.SerializerMethodField()
+    course_type = serializers.SerializerMethodField()
+    # Department info
+    dept_name = serializers.SerializerMethodField()
+    teaching_dept_name = serializers.SerializerMethodField()
+    course_description = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Course
+        fields = [
+            'id',
+            'course_code',
+            'course_name',
+            'credits',
+            'course_type',
+            'course_year',
+            'course_semester',
+            'dept_name',
+            'teaching_dept_name',
+            'elective_type',
+            'course_description',
+        ]
+    
+    def get_course_code(self, obj):
+        try:
+            if obj.course_id and hasattr(obj.course_id, 'course_id'):
+                return obj.course_id.course_id
+        except:
+            pass
+        return "Unknown Code"
+    
+    def get_course_name(self, obj):
+        try:
+            if obj.course_id and hasattr(obj.course_id, 'course_name'):
+                return obj.course_id.course_name
+        except:
+            pass
+        return "Unnamed Course"
+    
+    def get_credits(self, obj):
+        try:
+            if obj.course_id and hasattr(obj.course_id, 'credits'):
+                return obj.course_id.credits
+        except:
+            pass
+        return 0
+    
+    def get_course_type(self, obj):
+        try:
+            if obj.course_id and hasattr(obj.course_id, 'course_type'):
+                return obj.course_id.course_type
+        except:
+            pass
+        return "T"
+    
+    def get_dept_name(self, obj):
+        try:
+            if obj.for_dept_id and hasattr(obj.for_dept_id, 'dept_name'):
+                return obj.for_dept_id.dept_name
+        except:
+            pass
+        return "Unknown Department"
+    
+    def get_teaching_dept_name(self, obj):
+        try:
+            if obj.teaching_dept_id and hasattr(obj.teaching_dept_id, 'dept_name'):
+                return obj.teaching_dept_id.dept_name
+        except:
+            pass
+        return "Unknown Teaching Department"
+    
+    def get_course_description(self, obj):
+        """Generate a description from available data"""
+        try:
+            # Map course type
+            course_type_map = {
+                'T': 'Theory',
+                'L': 'Lab',
+                'LoT': 'Lab and Theory'
+            }
+            
+            # Map elective type
+            elective_type_map = {
+                'NE': 'Core Course',
+                'PE': 'Professional Elective',
+                'OE': 'Open Elective'
+            }
+            
+            # Get values with fallbacks
+            course_type = "Course"
+            try:
+                if obj.course_id and hasattr(obj.course_id, 'course_type'):
+                    course_type = course_type_map.get(obj.course_id.course_type, 'Course')
+            except:
+                pass
+            
+            elective_type = ""
+            try:
+                if hasattr(obj, 'elective_type'):
+                    elective_type = elective_type_map.get(obj.elective_type, '')
+            except:
+                pass
+            
+            # Build description
+            description = f"{course_type}"
+            if elective_type:
+                description += f" ({elective_type})"
+            
+            # Add teaching department if different
+            try:
+                if (obj.teaching_dept_id and obj.for_dept_id and 
+                    obj.teaching_dept_id != obj.for_dept_id):
+                    description += f". Taught by {obj.teaching_dept_id.dept_name} department."
+            except:
+                pass
+                
+            # Add year and semester
+            try:
+                description += f" Year {obj.course_year}, Semester {obj.course_semester}."
+            except:
+                pass
+                
+            return description
+        except Exception as e:
+            # Fallback for any unexpected errors
+            import logging
+            logger = logging.getLogger('django')
+            logger.error(f"Error generating course description: {str(e)}")
+            
+            # Use the course ID if available, otherwise a generic description
+            try:
+                if obj.course_id and hasattr(obj.course_id, 'course_name'):
+                    return f"Course: {obj.course_id.course_name}"
+            except:
+                pass
+                
+            return "Course information"
+
 class CourseSerializer(serializers.ModelSerializer):
     course_detail = CourseMasterSerializer(source='course_id', read_only=True)
     for_dept_detail = DepartmentSerializer(source='for_dept_id', read_only=True)

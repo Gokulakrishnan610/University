@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: timetable-backend
+    runtime: python
+    buildCommand: chmod +x build.sh && ./build.sh
+    startCommand: cd /opt/render/project/src && gunicorn UniversityApp.wsgi:application
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.11
+      - key: DJANGO_SETTINGS_MODULE
+        value: UniversityApp.settings
+      - key: ENVIRONMENT
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_KEY
+        generateValue: true
+      - key: USE_SQLITE
+        value: "True"
+    plan: free 
